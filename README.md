@@ -7,11 +7,12 @@ Curated high-performance developer tooling for AI coding agents.
 brew tap artagon/aitools
 
 # Install tools:
-brew install ripwire
-brew install tgrep
+brew install artagon/aitools/ripwire
+brew install artagon/aitools/tgrep
 ```
 
-Or install directly without tapping:
+Use the qualified names to select this tap; Homebrew core also has a `tgrep` formula.
+You can also install directly without tapping:
 
 ```sh
 brew install artagon/aitools/ripwire
@@ -46,7 +47,7 @@ The tap provides `ripwire-agent-install` to manage skills and hooks across 6 AI 
 | :--- | :--- | :--- | :--- |
 | **Claude Code** | `claude` / `~/.claude` | `~/.claude/skills` | `~/.claude/settings.json` |
 | **OpenAI Codex** | `codex` / `~/.codex` | `${AGENTS_HOME:-$HOME/.agents}/skills` | `${CODEX_HOME:-$HOME/.codex}/hooks.json` |
-| **Google Antigravity** | `agy` / `~/.gemini` | `~/.gemini/antigravity-cli/skills` | MCP server (`ripwire --mcp`) |
+| **Google Antigravity** | `agy` / `~/.gemini` / existing `AGY_SKILLS_DIR` | `${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}` | MCP server (`ripwire --mcp`) |
 | **Moonshot Kimi** | `kimi` / `~/.kimi-code` | `${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills` | MCP server (`ripwire --mcp`) |
 | **Grok CLI** | `grok` / `~/.grok` | `${GROK_HOME:-$HOME/.grok}/skills` | MCP server (`ripwire --mcp`) |
 | **GitHub Copilot** | `copilot` / `~/.copilot` | `${COPILOT_HOME:-$HOME/.copilot}/skills` | MCP server (`ripwire --mcp`) |
@@ -59,6 +60,10 @@ To automatically detect installed CLIs and link skills:
 ```sh
 ripwire-agent-install
 ```
+
+An existing shared `~/.agents` directory alone does not identify a Codex installation.
+If no agent is detected, activation installs shared skills without registering client hooks.
+Both installers support stock macOS Bash 3.2.
 
 Or from a local git checkout:
 
@@ -94,6 +99,7 @@ ripwire-agent-install --shared
 `--hook` explicitly updates `~/.claude/settings.json` or `${CODEX_HOME:-$HOME/.codex}/hooks.json`. For Codex, review and trust the installed hooks through `/hooks`. Upstream hooks can record local usage metrics under `~/.ripwire`; review bundled hook scripts before enabling.
 
 Rerun `ripwire-agent-install` after formula upgrades to refresh added, renamed, or retired skills.
+Formula revision `0.5.0_1` delivers the activation command to existing `0.5.0` installations through `brew upgrade`.
 
 ### Manual / Upstream Activation
 
@@ -147,3 +153,8 @@ tgrep --no-index "pattern" .
 
 For AI coding agents (Claude, Codex, Antigravity, Kimi, Grok), see [tgrep AGENTS.md](https://github.com/microsoft/tgrep/blob/main/AGENTS.md).
 
+## Validation
+
+See [integration tests](tests/README.md) for isolated checks of both activation
+entrypoints under Bash 3.2 and modern Bash, including opt-in hook registration.
+These tests use the real bundled installer and temporary agent homes.

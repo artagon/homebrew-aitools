@@ -1,0 +1,11 @@
+# Tap maintenance
+
+- Keep formula-generated and standalone agent installer behavior aligned.
+- Support macOS `/bin/bash` 3.2 with nounset enabled. Argument arrays must remain nonempty.
+- Use fully qualified `artagon/aitools/` formula names in installation examples.
+- Bump the formula revision when changing installed files without changing the upstream version.
+- Exercise both installer entrypoints against the real bundled payload in isolated homes.
+- Never activate hooks or modify live agent configuration during tests.
+- Keep review packets immutable; rerun affected tests and independent reviews after fixes.
+
+See [integration tests](tests/README.md) and [maintenance context](docs/agent-context.md).

@@ -52,11 +52,11 @@ detect_claude() {
 }
 
 detect_codex() {
-  command -v codex >/dev/null 2>&1 || [ -d "${CODEX_HOME:-$HOME/.codex}" ] || [ -d "${AGENTS_HOME:-$HOME/.agents}" ]
+  command -v codex >/dev/null 2>&1 || [ -d "${CODEX_HOME:-$HOME/.codex}" ]
 }
 
 detect_agy() {
-  command -v agy >/dev/null 2>&1 || [ -d "$HOME/.gemini" ]
+  command -v agy >/dev/null 2>&1 || [ -d "${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}" ] || [ -d "$HOME/.gemini" ]
 }
 
 detect_kimi() {
@@ -167,26 +167,27 @@ if [ "$explicit_selection" -eq 0 ] || [ "$want_all" -eq 1 ]; then
 fi
 
 # ── Execution ────────────────────────────────────────────────────────────────
-extra_flags=()
-[ "$want_contributor" -eq 1 ] && extra_flags+=("--contributor")
+# Keep every argument array nonempty for Bash 3.2 with nounset.
+installer_args=("$INSTALLER")
+[ "$want_contributor" -eq 1 ] && installer_args+=("--contributor")
 
 installed_count=0
 
 # Claude Code
 if [ "$want_claude" -eq 1 ]; then
   echo "==> Installing Ripwire skills for Claude Code (~/.claude/skills)..."
-  claude_args=("${extra_flags[@]}")
+  claude_args=("${installer_args[@]}" --claude)
   [ "$want_hook" -eq 1 ] && claude_args+=("--hook")
-  bash "$INSTALLER" --claude "${claude_args[@]}"
+  bash "${claude_args[@]}"
   installed_count=$((installed_count + 1))
 fi
 
 # OpenAI Codex
 if [ "$want_codex" -eq 1 ]; then
   echo "==> Installing Ripwire skills for OpenAI Codex (${AGENTS_HOME:-$HOME/.agents}/skills)..."
-  codex_args=("${extra_flags[@]}")
+  codex_args=("${installer_args[@]}" --codex)
   [ "$want_hook" -eq 1 ] && codex_args+=("--hook")
-  bash "$INSTALLER" --codex "${codex_args[@]}"
+  bash "${codex_args[@]}"
   installed_count=$((installed_count + 1))
 fi
 
@@ -195,7 +196,7 @@ if [ "$want_agy" -eq 1 ]; then
   agy_dst="${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}"
   echo "==> Installing Ripwire skills for Google Antigravity ($agy_dst)..."
   mkdir -p "$agy_dst"
-  bash "$INSTALLER" "$agy_dst" "${extra_flags[@]}"
+  bash "${installer_args[@]}" "$agy_dst"
   installed_count=$((installed_count + 1))
 fi
 
@@ -204,7 +205,7 @@ if [ "$want_kimi" -eq 1 ]; then
   kimi_dst="${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills"
   echo "==> Installing Ripwire skills for Kimi Code ($kimi_dst)..."
   mkdir -p "$kimi_dst"
-  bash "$INSTALLER" "$kimi_dst" "${extra_flags[@]}"
+  bash "${installer_args[@]}" "$kimi_dst"
   installed_count=$((installed_count + 1))
 fi
 
@@ -213,7 +214,7 @@ if [ "$want_grok" -eq 1 ]; then
   grok_dst="${GROK_HOME:-$HOME/.grok}/skills"
   echo "==> Installing Ripwire skills for Grok ($grok_dst)..."
   mkdir -p "$grok_dst"
-  bash "$INSTALLER" "$grok_dst" "${extra_flags[@]}"
+  bash "${installer_args[@]}" "$grok_dst"
   installed_count=$((installed_count + 1))
 fi
 
@@ -222,7 +223,7 @@ if [ "$want_copilot" -eq 1 ]; then
   copilot_dst="${COPILOT_HOME:-$HOME/.copilot}/skills"
   echo "==> Installing Ripwire skills for GitHub Copilot ($copilot_dst)..."
   mkdir -p "$copilot_dst"
-  bash "$INSTALLER" "$copilot_dst" "${extra_flags[@]}"
+  bash "${installer_args[@]}" "$copilot_dst"
   installed_count=$((installed_count + 1))
 fi
 
@@ -231,7 +232,7 @@ if [ "$want_shared" -eq 1 ]; then
   shared_dst="${AGENTS_HOME:-$HOME/.agents}/skills"
   echo "==> Installing Ripwire skills for Cross-Agent shared root ($shared_dst)..."
   mkdir -p "$shared_dst"
-  bash "$INSTALLER" "$shared_dst" "${extra_flags[@]}"
+  bash "${installer_args[@]}" "$shared_dst"
   installed_count=$((installed_count + 1))
 fi
 

@@ -2,6 +2,7 @@ class Ripwire < Formula
   desc "Codebase symbol maps and call graphs for AI agents"
   homepage "https://github.com/redhat-et/ripwire"
   license "Apache-2.0"
+  revision 1
 
   on_macos do
     on_arm do
@@ -47,8 +48,8 @@ class Ripwire < Formula
       fi
 
       detect_claude() { command -v claude >/dev/null 2>&1 || [ -d "$HOME/.claude" ]; }
-      detect_codex() { command -v codex >/dev/null 2>&1 || [ -d "${CODEX_HOME:-$HOME/.codex}" ] || [ -d "${AGENTS_HOME:-$HOME/.agents}" ]; }
-      detect_agy() { command -v agy >/dev/null 2>&1 || [ -d "$HOME/.gemini" ]; }
+      detect_codex() { command -v codex >/dev/null 2>&1 || [ -d "${CODEX_HOME:-$HOME/.codex}" ]; }
+      detect_agy() { command -v agy >/dev/null 2>&1 || [ -d "${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}" ] || [ -d "$HOME/.gemini" ]; }
       detect_kimi() { command -v kimi >/dev/null 2>&1 || [ -d "${KIMI_CODE_HOME:-$HOME/.kimi-code}" ]; }
       detect_grok() { command -v grok >/dev/null 2>&1 || [ -d "${GROK_HOME:-$HOME/.grok}" ]; }
       detect_copilot() { command -v copilot >/dev/null 2>&1 || [ -d "${COPILOT_HOME:-$HOME/.copilot}" ]; }
@@ -125,23 +126,24 @@ class Ripwire < Formula
         fi
       fi
 
-      extra_flags=()
-      [ "$want_contributor" -eq 1 ] && extra_flags+=("--contributor")
+      # Keep every argument array nonempty for Bash 3.2 with nounset.
+      installer_args=("$INSTALLER")
+      [ "$want_contributor" -eq 1 ] && installer_args+=("--contributor")
       installed_count=0
 
       if [ "$want_claude" -eq 1 ]; then
         echo "==> Installing Ripwire skills for Claude Code (~/.claude/skills)..."
-        claude_args=("${extra_flags[@]}")
+        claude_args=("${installer_args[@]}" --claude)
         [ "$want_hook" -eq 1 ] && claude_args+=("--hook")
-        bash "$INSTALLER" --claude "${claude_args[@]}"
+        bash "${claude_args[@]}"
         installed_count=$((installed_count + 1))
       fi
 
       if [ "$want_codex" -eq 1 ]; then
         echo "==> Installing Ripwire skills for OpenAI Codex (${AGENTS_HOME:-$HOME/.agents}/skills)..."
-        codex_args=("${extra_flags[@]}")
+        codex_args=("${installer_args[@]}" --codex)
         [ "$want_hook" -eq 1 ] && codex_args+=("--hook")
-        bash "$INSTALLER" --codex "${codex_args[@]}"
+        bash "${codex_args[@]}"
         installed_count=$((installed_count + 1))
       fi
 
@@ -149,7 +151,7 @@ class Ripwire < Formula
         agy_dst="${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}"
         echo "==> Installing Ripwire skills for Google Antigravity ($agy_dst)..."
         mkdir -p "$agy_dst"
-        bash "$INSTALLER" "$agy_dst" "${extra_flags[@]}"
+        bash "${installer_args[@]}" "$agy_dst"
         installed_count=$((installed_count + 1))
       fi
 
@@ -157,7 +159,7 @@ class Ripwire < Formula
         kimi_dst="${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills"
         echo "==> Installing Ripwire skills for Kimi Code ($kimi_dst)..."
         mkdir -p "$kimi_dst"
-        bash "$INSTALLER" "$kimi_dst" "${extra_flags[@]}"
+        bash "${installer_args[@]}" "$kimi_dst"
         installed_count=$((installed_count + 1))
       fi
 
@@ -165,7 +167,7 @@ class Ripwire < Formula
         grok_dst="${GROK_HOME:-$HOME/.grok}/skills"
         echo "==> Installing Ripwire skills for Grok ($grok_dst)..."
         mkdir -p "$grok_dst"
-        bash "$INSTALLER" "$grok_dst" "${extra_flags[@]}"
+        bash "${installer_args[@]}" "$grok_dst"
         installed_count=$((installed_count + 1))
       fi
 
@@ -173,7 +175,7 @@ class Ripwire < Formula
         copilot_dst="${COPILOT_HOME:-$HOME/.copilot}/skills"
         echo "==> Installing Ripwire skills for GitHub Copilot ($copilot_dst)..."
         mkdir -p "$copilot_dst"
-        bash "$INSTALLER" "$copilot_dst" "${extra_flags[@]}"
+        bash "${installer_args[@]}" "$copilot_dst"
         installed_count=$((installed_count + 1))
       fi
 
@@ -181,7 +183,7 @@ class Ripwire < Formula
         shared_dst="${AGENTS_HOME:-$HOME/.agents}/skills"
         echo "==> Installing Ripwire skills for Cross-Agent shared root ($shared_dst)..."
         mkdir -p "$shared_dst"
-        bash "$INSTALLER" "$shared_dst" "${extra_flags[@]}"
+        bash "${installer_args[@]}" "$shared_dst"
         installed_count=$((installed_count + 1))
       fi
 
@@ -254,8 +256,9 @@ class Ripwire < Formula
     ENV["AGENTS_HOME"] = (testpath/".agents").to_s
     skills = (opt_pkgshare/"skills").glob("ripwire-*/SKILL.md")
     assert_equal 17, skills.length
+    installer_shell = OS.mac? ? "/bin/bash" : "bash"
     %w[claude codex].each do |agent|
-      system "bash", installer, "--#{agent}"
+      system installer_shell, bin/"ripwire-agent-install", "--#{agent}"
       destination = testpath/((agent == "claude") ? ".claude/skills" : ".agents/skills")
       assert_path_exists destination/".ripwire-manifest-v1"
       skills.each do |skill|
@@ -273,7 +276,7 @@ class Ripwire < Formula
     refute_path_exists testpath/".codex/hooks.json"
     refute_path_exists testpath/".codex/config.toml"
 
-    system bin/"ripwire-agent-install", "--agy", "--kimi", "--grok", "--copilot"
+    system installer_shell, bin/"ripwire-agent-install", "--agy", "--kimi", "--grok", "--copilot"
     assert_path_exists testpath/".gemini/antigravity-cli/skills/.ripwire-manifest-v1"
     assert_path_exists testpath/".kimi-code/skills/.ripwire-manifest-v1"
     assert_path_exists testpath/".grok/skills/.ripwire-manifest-v1"
