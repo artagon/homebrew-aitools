@@ -45,7 +45,8 @@ EOF
 }
 
 sha256_of() {
-  if command -v shasum >/dev/null 2>&1; then
+  if command -v shasum >/dev/null 2>&1
+  then
     curl -fsSL --retry 3 --user-agent artagon-aitools-autobump "$1" | shasum -a 256 | awk '{ print $1 }'
   else
     curl -fsSL --retry 3 --user-agent artagon-aitools-autobump "$1" | sha256sum | awk '{ print $1 }'
@@ -59,14 +60,17 @@ bump_text() {
   # in Bash 3.2 and 5 alike.
   [[ "${old}" =~ ${version_re} ]] || die "unexpected version: ${old}"
   [[ "${new}" =~ ${version_re} ]] || die "unexpected version: ${new}"
-  while IFS= read -r line || [ -n "${line}" ]; do
-    if [ -n "${pending}" ]; then
+  while IFS= read -r line || [[ -n "${line}" ]]
+  do
+    if [[ -n "${pending}" ]]
+    then
       [[ "${line}" =~ ${sha_re} ]] || die "no sha256 line after a url naming ${old} in ${file}"
       printf '%ssha256 "%s"\n' "${BASH_REMATCH[1]}" "${pending}"
       pending=""
       continue
     fi
-    if [[ "${line}" =~ ${url_re} ]] && [[ "${BASH_REMATCH[2]}" == *"${old}"* ]]; then
+    if [[ "${line}" =~ ${url_re} ]] && [[ "${BASH_REMATCH[2]}" == *"${old}"* ]]
+    then
       indent="${BASH_REMATCH[1]}"
       new_url="${BASH_REMATCH[2]//${old}/${new}}"
       pending="$(sha256_of "${new_url}")"
@@ -75,40 +79,46 @@ bump_text() {
       changed=$((changed + 1))
       continue
     fi
-    if [ "${dropped}" -eq 0 ] && [[ "${line}" =~ ${revision_re} ]]; then
+    if [[ "${dropped}" -eq 0 ]] && [[ "${line}" =~ ${revision_re} ]]
+    then
       dropped=1
       continue
     fi
     printf '%s\n' "${line}"
-  done < "${file}"
-  [ "${changed}" -gt 0 ] || die "no url names version ${old} in ${file}"
+  done <"${file}"
+  [[ "${changed}" -gt 0 ]] || die "no url names version ${old} in ${file}"
 }
 
 # Print FILE with its revision incremented, or with `revision 1` added after its license.
 bump_revision() {
   local file="$1" line done=0 had_revision=0
-  if grep -Eq "${revision_re}" "${file}"; then
+  if grep -Eq "${revision_re}" "${file}"
+  then
     had_revision=1
   fi
-  while IFS= read -r line || [ -n "${line}" ]; do
-    if [ "${had_revision}" -eq 1 ] && [ "${done}" -eq 0 ] && [[ "${line}" =~ ${revision_re} ]]; then
+  while IFS= read -r line || [[ -n "${line}" ]]
+  do
+    if [[ "${had_revision}" -eq 1 ]] && [[ "${done}" -eq 0 ]] && [[ "${line}" =~ ${revision_re} ]]
+    then
       printf '  revision %d\n' "$((BASH_REMATCH[1] + 1))"
       done=1
       continue
     fi
     printf '%s\n' "${line}"
-    if [ "${had_revision}" -eq 0 ] && [ "${done}" -eq 0 ] && [[ "${line}" =~ ${license_re} ]]; then
+    if [[ "${had_revision}" -eq 0 ]] && [[ "${done}" -eq 0 ]] && [[ "${line}" =~ ${license_re} ]]
+    then
       printf '  revision 1\n'
       done=1
     fi
-  done < "${file}"
-  [ "${done}" -eq 1 ] || die "no license line in ${file} to place a revision after"
+  done <"${file}"
+  [[ "${done}" -eq 1 ]] || die "no license line in ${file} to place a revision after"
 }
 
 # Print the formulae a bump of NAME changes: the formula, and its dependents for the grammar.
 affected() {
   printf '%s\n' "$1"
-  if [ "$1" = "${grammar}" ]; then
+  if [[ "$1" = "${grammar}" ]]
+  then
     printf '%s\n' ast-grep-valhalla ripwire
   fi
 }
@@ -117,15 +127,17 @@ affected() {
 replace_with() {
   local file="$1"
   shift
-  "$@" > "${file}.autobump"
+  "$@" >"${file}.autobump"
   mv "${file}.autobump" "${file}"
 }
 
 # Write the bump for NAME into the working tree.
 apply_bump() {
   local name="$1" old="$2" new="$3" formula
-  for formula in $(affected "${name}"); do
-    if [ "${formula}" = "${name}" ]; then
+  for formula in $(affected "${name}")
+  do
+    if [[ "${formula}" = "${name}" ]]
+    then
       replace_with "${formula_dir}/${formula}.rb" bump_text "${formula_dir}/${formula}.rb" "${old}" "${new}"
     else
       replace_with "${formula_dir}/${formula}.rb" bump_revision "${formula_dir}/${formula}.rb"
@@ -137,9 +149,11 @@ apply_bump() {
 outdated() {
   local json name old new
   local -a targets=(--tap "${tap}")
-  if [ "$#" -gt 0 ]; then
+  if [[ "$#" -gt 0 ]]
+  then
     targets=()
-    for name in "$@"; do
+    for name in "$@"
+    do
       targets+=("${tap}/${name}")
     done
   fi
@@ -148,9 +162,11 @@ outdated() {
   printf '%s' "${json:-[]}" |
     jq -r '.[] | select(.version.outdated == true)
            | [(.formula | split("/") | last), .version.current, .version.latest] | @tsv' |
-    while IFS=$'\t' read -r name old new; do
-      [ -f "${formula_dir}/${name}.rb" ] || die "livecheck named an unknown formula: ${name}"
-      if [[ ! "${old}" =~ ${version_re} ]] || [[ ! "${new}" =~ ${version_re} ]] || [[ "${new}" == *..* ]]; then
+    while IFS=$'\t' read -r name old new
+    do
+      [[ -f "${formula_dir}/${name}.rb" ]] || die "livecheck named an unknown formula: ${name}"
+      if [[ ! "${old}" =~ ${version_re} ]] || [[ ! "${new}" =~ ${version_re} ]] || [[ "${new}" == *..* ]]
+      then
         die "refusing unexpected version for ${name}: ${new}"
       fi
       printf '%s\t%s\t%s\n' "${name}" "${old}" "${new}"
@@ -160,16 +176,19 @@ outdated() {
 # Open one pull request for a bump. Runs in its own process, so a failure stops
 # only this bump: `pr` restores the base branch and moves on.
 open_pull_request() {
-  local name="$1" old="$2" new="$3" base="$4" branch formula formulae=""
+  local name="$1" old="$2" new="$3" base="$4" branch formula formulae="" existing
   local -a paths=()
   branch="bump/${name}-${new}"
-  if [ -n "$(git ls-remote --heads origin "${branch}")" ]; then
+  existing="$(git ls-remote --heads origin "${branch}")"
+  if [[ -n "${existing}" ]]
+  then
     printf '%s: branch %s already exists\n' "${name}" "${branch}"
     return 0
   fi
   git switch --create "${branch}" "origin/${base}"
   apply_bump "${name}" "${old}" "${new}"
-  for formula in $(affected "${name}"); do
+  for formula in $(affected "${name}")
+  do
     paths+=("Formula/${formula}.rb")
     formulae="${formulae:+${formulae} }${tap}/${formula}"
   done
@@ -177,7 +196,7 @@ open_pull_request() {
   git add -- "${paths[@]}"
   git commit --message "${name} ${new}"
   git push origin "${branch}"
-  gh pr create --base "${base}" --head "${branch}" --title "${name} ${new}" --body "$(cat <<EOF
+  gh pr create --base "${base}" --head "${branch}" --title "${name} ${new}" --body-file - <<EOF
 Upstream released ${name} ${new}; the formula had ${old}.
 
 Opened by \`scripts/autobump.sh\`, which dispatched the \`brew test-bot\` workflow
@@ -189,7 +208,6 @@ A Ripwire bump fails the installer integration suite on purpose when the
 bundled installer or skill set changes: review the payload, then update the
 pins in \`tests/integration_agent_install.py\`.
 EOF
-)"
   # Events from GITHUB_TOKEN start no pull_request run; a dispatch is allowed, and
   # brew pr-pull finds its bottles through the check suite on the branch head.
   gh workflow run tests.yml --ref "${branch}" -f "formulae=${formulae}"
@@ -198,48 +216,54 @@ EOF
 
 main() {
   local command base="main" name old new failures=0
-  [ "$#" -gt 0 ] || usage
+  [[ "$#" -gt 0 ]] || usage
   command="$1"
   shift
   cd "${repo}"
   case "${command}" in
     rewrite)
-      [ "$#" -eq 3 ] || usage
+      [[ "$#" -eq 3 ]] || usage
       bump_text "$1" "$2" "$3"
       ;;
     _pr_one)
       open_pull_request "$@"
       ;;
     _revision)
-      [ "$#" -eq 1 ] || usage
+      [[ "$#" -eq 1 ]] || usage
       bump_revision "$1"
       ;;
     check | write | pr)
-      if [ "${command}" = pr ] && [ "${1:-}" = --base ]; then
-        [ "$#" -ge 2 ] || usage
+      if [[ "${command}" = pr ]] && [[ "${1:-}" = --base ]]
+      then
+        [[ "$#" -ge 2 ]] || usage
         base="$2"
         shift 2
       fi
       # Global, not local: the EXIT trap runs after main returns.
       list="$(mktemp)"
       trap 'rm -f "${list:-}"' EXIT
-      outdated "$@" > "${list}"
-      while IFS=$'\t' read -r name old new; do
+      outdated "$@" >"${list}"
+      while IFS=$'\t' read -r name old new
+      do
         printf '%s: %s -> %s\n' "${name}" "${old}" "${new}"
         case "${command}" in
           write)
             apply_bump "${name}" "${old}" "${new}"
             ;;
           pr)
-            if ! bash "$0" _pr_one "${name}" "${old}" "${new}" "${base}" < /dev/null; then
+            if ! bash "$0" _pr_one "${name}" "${old}" "${new}" "${base}" </dev/null
+            then
               printf 'autobump: %s %s failed\n' "${name}" "${new}" >&2
               failures=$((failures + 1))
               git switch --discard-changes "${base}"
             fi
             ;;
+          *)
+            # check: list the bumps only.
+            ;;
         esac
-      done < "${list}"
-      [ "${failures}" -eq 0 ]
+      done <"${list}"
+      [[ "${failures}" -eq 0 ]]
       ;;
     *)
       usage
