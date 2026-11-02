@@ -3,6 +3,11 @@ class Tgrep < Formula
   homepage "https://github.com/microsoft/tgrep"
   license "MIT"
 
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-aarch64-apple-darwin.tar.gz"

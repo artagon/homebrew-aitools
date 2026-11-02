@@ -5,6 +5,11 @@ class Ripwire < Formula
   sha256 "4eb842aea2f486485203aa13f571fa173912f6bba5bb8fd4a56f6f375334b3cf"
   license "Apache-2.0"
 
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
   depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
   depends_on "cmake" => :build
 

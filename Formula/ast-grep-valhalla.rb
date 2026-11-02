@@ -5,6 +5,11 @@ class AstGrepValhalla < Formula
   sha256 "a9cb3f5cac1c0d22df189117df8d78fa3d7e9fdcd83fb5b6ab1f0b66c8835a55"
   license "MIT"
 
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
   depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
   depends_on "rust" => :build
 
@@ -20,6 +25,12 @@ class AstGrepValhalla < Formula
       tree-sitter-java = { path = "#{grammar}" }
     TOML
     system "cargo", "update", "--package", "tree-sitter-java"
+    # Cargo ignores a patch whose version no longer satisfies ast-grep's pin. Fail
+    # instead of building upstream's grammar; a path dependency has no `source`.
+    locked = (buildpath/"Cargo.lock").read.split("\n\n").find do |entry|
+      entry.include?('name = "tree-sitter-java"')
+    end
+    odie "Cargo did not substitute the Valhalla tree-sitter-java crate" if locked.nil? || locked.include?("source =")
 
     system "cargo", "install", *std_cargo_args(path: "crates/cli")
     generate_completions_from_executable(bin/"ast-grep", "completions", shells: [:bash, :zsh, :fish, :pwsh])

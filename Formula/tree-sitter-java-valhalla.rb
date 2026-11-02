@@ -5,6 +5,11 @@ class TreeSitterJavaValhalla < Formula
   sha256 "cb199e0faae4b2c08425f88cbb51c1a9319612e7b96315a174a624db9bf3d9f0"
   license "MIT"
 
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
   depends_on "tree-sitter-cli" => [:build, :test]
 
   # Matches the JDK 28 Valhalla javac parser: the JEP 401 `value` modifier as a

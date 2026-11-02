@@ -1,0 +1,61 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  formulae:
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the tap
+        uses: actions/checkout@v7
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Trust this tap
+        run: brew trust --tap artagon/aitools
+
+      - name: Check style
+        run: brew style artagon/aitools
+
+      - name: Audit formulae
+        run: brew audit --strict --online --tap artagon/aitools
+
+      # The grammar comes first: ripwire and ast-grep-valhalla compile it in.
+      - name: Build and test formulae
+        run: |
+          if brew list --formula ast-grep >/dev/null 2>&1; then
+            brew unlink ast-grep
+          fi
+          for formula in tree-sitter-java-valhalla tgrep ripwire ast-grep-valhalla; do
+            brew install --build-from-source "artagon/aitools/${formula}"
+            brew test --verbose "artagon/aitools/${formula}"
+          done
+
+      - name: Run installer integration tests
+        run: |
+          brew install bash jq
+          python3 tests/integration_agent_install.py \
+            --receipt "${RUNNER_TEMP}/ripwire-integration.json" \
+            --bash32 /bin/bash \
+            --modern-bash "$(brew --prefix)/bin/bash"

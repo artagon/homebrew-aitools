@@ -1,0 +1,44 @@
+name: autobump
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+# contents and pull-requests open the bump; actions dispatches tests.yml on it,
+# because pull requests opened with GITHUB_TOKEN start no pull_request run.
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: autobump
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  autobump:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the tap
+        uses: actions/checkout@v7
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Trust this tap
+        run: brew trust --tap artagon/aitools
+
+      - name: Open bump pull requests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 scripts/autobump.py pr

@@ -203,6 +203,31 @@ tgrep --no-index "pattern" .
 
 For AI coding agents (Claude, Codex, Antigravity, Kimi, Grok), see [tgrep AGENTS.md](https://github.com/microsoft/tgrep/blob/main/AGENTS.md).
 
+## Automatic version updates
+
+[`autobump.yml`](.github/workflows/autobump.yml) runs daily and on demand. Each formula's
+`livecheck` block finds the latest upstream release, and
+[`scripts/autobump.py`](scripts/autobump.py) opens one pull request per new version. The script
+moves every versioned URL to the new release and recomputes its SHA-256, so tgrep's per-platform
+archives bump the same way as single-archive formulae. A `tree-sitter-java-valhalla` bump also
+bumps the `revision` of `ast-grep-valhalla` and `ripwire`, which compile the grammar in.
+
+Each bump pull request runs [`tests.yml`](.github/workflows/tests.yml), which builds every formula
+from source, runs `brew test`, and runs the installer integration suite. Merge only when it
+passes. A bump fails on purpose when:
+
+- the grammar patch or Ripwire's query patch no longer applies;
+- ast-grep pins a tree-sitter-java version that the patched crate cannot replace; or
+- Ripwire changes its bundled installer or skills, which `tests/integration_agent_install.py` pins.
+
+One-time repository setting: in Settings → Actions → General, allow GitHub Actions to create and
+approve pull requests. To check or apply bumps locally:
+
+```sh
+python3 scripts/autobump.py check
+python3 scripts/autobump.py write tgrep
+```
+
 ## Validation
 
 See [integration tests](tests/README.md) for isolated checks of both activation

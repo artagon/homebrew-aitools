@@ -38,6 +38,21 @@ install the `ast-grep` and `sg` binaries.
   `src/parser.c` and `src/tree_sitter/*.h` over its vendored copy and patches
   `queries/java/tags.scm`. Recheck both pins when bumping either upstream.
 
+## Version bumps
+
+- `autobump.yml` runs `scripts/autobump.py pr` daily. The script reads
+  `brew livecheck --tap artagon/aitools --newer-only --json`, rewrites each url
+  that names the current version, recomputes the sha256 after it, drops any
+  `revision`, and opens one pull request per formula on `bump/<formula>-<version>`.
+- Pull requests opened with `GITHUB_TOKEN` start no `pull_request` run, so the
+  script dispatches `tests.yml` on the bump branch; dispatch is the exception.
+- Every formula needs a `livecheck` block and a `url` with a following `sha256`
+  that contains the version string. Test a rewrite offline with
+  `python3 scripts/autobump.py rewrite FILE OLD NEW`.
+- The script never updates the integration test pins. A Ripwire bump that changes
+  the bundled installer or skill set fails `tests.yml` until a reviewer checks the
+  payload and updates `tests/integration_agent_install.py`.
+
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
 real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew
 installation, upgrade, permissions, or formula-test lifecycle behavior. Verify

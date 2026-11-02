@@ -6,6 +6,8 @@
 - Bump the formula revision when changing installed files without changing the upstream version.
 - Keep the Java grammar patch additive, and bump every formula that compiles it when it changes;
   see [Java grammar patch](docs/agent-context.md#java-grammar-patch).
+- Give every formula a `livecheck` block; `scripts/autobump.py` opens version bumps, and a
+  reviewer updates the pins it leaves alone; see [Version bumps](docs/agent-context.md#version-bumps).
 - Exercise both installer entrypoints against the real bundled payload in isolated homes.
 - Never activate hooks or modify live agent configuration during tests.
 - Keep review packets immutable; rerun affected tests and independent reviews after fixes.
