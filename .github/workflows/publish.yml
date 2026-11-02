@@ -1,0 +1,72 @@
+# Publishes the bottles that tests.yml built for a pull request, adds them to
+# the formulae, and pushes the result to main. Adapted from `brew tap-new`.
+# Run it with: gh workflow run publish.yml -f pull_request=<number>
+name: brew pr-pull
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Pull request number
+        required: true
+      head_sha:
+        description: Expected pull request head commit SHA (optional)
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  pr-pull:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      attestations: write
+      checks: read
+      contents: write
+      id-token: write
+      issues: read
+      pull-requests: write
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trust this tap
+        run: brew trust --tap artagon/aitools
+
+      - name: Set up git
+        id: git_setup
+        uses: Homebrew/actions/git-user-config@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+
+      # Bottles go to one GitHub Release per formula version, for example
+      # ast-grep-valhalla-0.51.1, which test-bot set as each bottle's root_url.
+      - name: Pull bottles
+        id: pull_bottles
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+        run: |
+          if [[ -n "$HEAD_SHA" ]]
+          then
+            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" \
+              "$PULL_REQUEST"
+          else
+            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" "$PULL_REQUEST"
+          fi
+
+      - name: Generate build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: "${{ steps.pull_bottles.outputs.bottle_path }}/*.tar.gz"
+
+      - name: Push commits
+        uses: Homebrew/actions/git-try-push@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+        with:
+          branch: main

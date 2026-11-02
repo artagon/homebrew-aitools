@@ -8,6 +8,8 @@
   see [Java grammar patch](docs/agent-context.md#java-grammar-patch).
 - Give every formula a `livecheck` block; `scripts/autobump.py` opens version bumps, and a
   reviewer updates the pins it leaves alone; see [Version bumps](docs/agent-context.md#version-bumps).
+- Land formula changes through `publish.yml` (`brew pr-pull`), never a direct merge, so bottles
+  ship with them; see [Bottles](docs/agent-context.md#bottles).
 - Exercise both installer entrypoints against the real bundled payload in isolated homes.
 - Never activate hooks or modify live agent configuration during tests.
 - Keep review packets immutable; rerun affected tests and independent reviews after fixes.

@@ -2,7 +2,8 @@
 
 The tap ships the pinned upstream tgrep binary. Ripwire and ast-grep-valhalla build
 from source against `tree-sitter-java-valhalla`, a patched tree-sitter-java 0.23.5
-that parses the JDK 28 Valhalla `javac` syntax. Ripwire bundles its upstream skills.
+that parses the JDK 28 Valhalla `javac` syntax; CI publishes bottles of all four
+formulae for Apple Silicon macOS 26. Ripwire bundles its upstream skills.
 Homebrew install and upgrade must not activate agent integrations. Activation is
 explicit through the formula-generated `ripwire-agent-install` or
 `scripts/install-agent-skills.sh`.
@@ -45,13 +46,30 @@ install the `ast-grep` and `sg` binaries.
   that names the current version, recomputes the sha256 after it, drops any
   `revision`, and opens one pull request per formula on `bump/<formula>-<version>`.
 - Pull requests opened with `GITHUB_TOKEN` start no `pull_request` run, so the
-  script dispatches `tests.yml` on the bump branch; dispatch is the exception.
+  script dispatches `tests.yml` on the bump branch with a `formulae` input: the
+  bumped formula, plus `ast-grep-valhalla` and `ripwire` for a grammar bump.
 - Every formula needs a `livecheck` block and a `url` with a following `sha256`
   that contains the version string. Test a rewrite offline with
   `python3 scripts/autobump.py rewrite FILE OLD NEW`.
 - The script never updates the integration test pins. A Ripwire bump that changes
   the bundled installer or skill set fails `tests.yml` until a reviewer checks the
   payload and updates `tests/integration_agent_install.py`.
+
+## Bottles
+
+- `tests.yml` and `publish.yml` follow the `brew tap-new` templates and pin the
+  same action SHAs. `tests.yml` runs `brew test-bot` on `macos-26` only; add a
+  Linux entry once Ripwire's C++23 build is proven there, because a failed job
+  blocks publishing.
+- test-bot sets each bottle's `root_url` to
+  `<tap remote>/releases/download/<formula>-<version>`, so `brew pr-pull` uploads
+  to GitHub Releases. Do not pass `--root-url` or enable GitHub Packages.
+- `brew pr-pull` reads bottle artifacts from the `tests.yml` check suite on the
+  pull request's head commit, whatever event started it.
+- Publish with `gh workflow run publish.yml -f pull_request=<number>`; GitHub
+  dispatches only workflows that exist on the default branch. A formula pull
+  request merged without it ships without bottles.
+- Installs need the tap trusted (`brew trust`); both workflows trust it first.
 
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
 real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew

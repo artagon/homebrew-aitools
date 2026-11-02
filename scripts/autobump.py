@@ -27,11 +27,14 @@ REVISION = re.compile(r"^  revision (\d+)\n", re.MULTILINE)
 LICENSE = re.compile(r'^  license "[^"]*"\n', re.MULTILINE)
 PR_NOTE = """Upstream released {name} {new}; the formula had {old}.
 
-Opened by `scripts/autobump.py`. The tests workflow builds every formula from
-source, runs `brew test`, and runs the installer integration suite. Merge only
-when it passes. A Ripwire bump fails that suite on purpose when the bundled
-installer or skill set changes: review the payload, then update the pins in
-`tests/integration_agent_install.py`.
+Opened by `scripts/autobump.py`, which dispatched the `brew test-bot` workflow
+to build, test, and bottle {formulae}. When it passes, publish the bottles and
+merge with `gh workflow run publish.yml -f pull_request=<this PR number>`. Do not
+merge this pull request directly: the formula would ship without bottles.
+
+A Ripwire bump fails the installer integration suite on purpose when the
+bundled installer or skill set changes: review the payload, then update the
+pins in `tests/integration_agent_install.py`.
 """
 
 
@@ -95,16 +98,20 @@ def outdated(formulae):
     return bumps
 
 
+def affected(name):
+    """Return the formulae a bump of `name` changes: the formula, and its dependents for the grammar."""
+    return [name, *GRAMMAR_DEPENDENTS] if name == GRAMMAR else [name]
+
+
 def apply_bump(name, old, new):
     """Write the bump for `name` into the working tree and return the changed paths."""
     path = FORMULA_DIR / (name + ".rb")
     path.write_text(bump_text(path.read_text(), old, new))
     changed = [path]
-    if name == GRAMMAR:
-        for dependent in GRAMMAR_DEPENDENTS:
-            dependent_path = FORMULA_DIR / (dependent + ".rb")
-            dependent_path.write_text(bump_revision(dependent_path.read_text()))
-            changed.append(dependent_path)
+    for dependent in affected(name)[1:]:
+        dependent_path = FORMULA_DIR / (dependent + ".rb")
+        dependent_path.write_text(bump_revision(dependent_path.read_text()))
+        changed.append(dependent_path)
     return changed
 
 
@@ -119,10 +126,13 @@ def open_pull_request(name, old, new, base):
     run(["git", "add", "--", *paths])
     run(["git", "commit", "--message", "{} {}".format(name, new)])
     run(["git", "push", "origin", branch])
-    run(["gh", "pr", "create", "--base", base, "--head", branch,
-         "--title", "{} {}".format(name, new), "--body", PR_NOTE.format(name=name, old=old, new=new)])
-    # Events from GITHUB_TOKEN start no pull_request run; a dispatch is allowed.
-    run(["gh", "workflow", "run", "tests.yml", "--ref", branch])
+    formulae = " ".join(TAP + "/" + formula for formula in affected(name))
+    note = PR_NOTE.format(name=name, old=old, new=new, formulae=formulae)
+    run(["gh", "pr", "create", "--base", base, "--head", branch, "--title", "{} {}".format(name, new),
+         "--body", note])
+    # Events from GITHUB_TOKEN start no pull_request run; a dispatch is allowed, and
+    # brew pr-pull finds its bottles through the check suite on the branch head.
+    run(["gh", "workflow", "run", "tests.yml", "--ref", branch, "-f", "formulae=" + formulae])
     run(["git", "switch", base])
 
 

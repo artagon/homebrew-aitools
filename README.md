@@ -21,7 +21,8 @@ brew install artagon/aitools/tgrep
 brew install artagon/aitools/ast-grep-valhalla
 ```
 
-`ripwire` and `ast-grep-valhalla` build from source against
+On Apple Silicon with macOS 26 or later, the formulae install from bottles that the tap's CI
+builds and publishes. Elsewhere, `ripwire` and `ast-grep-valhalla` build from source against
 `artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first.
 
 ---
@@ -212,9 +213,22 @@ moves every versioned URL to the new release and recomputes its SHA-256, so tgre
 archives bump the same way as single-archive formulae. A `tree-sitter-java-valhalla` bump also
 bumps the `revision` of `ast-grep-valhalla` and `ripwire`, which compile the grammar in.
 
-Each bump pull request runs [`tests.yml`](.github/workflows/tests.yml), which builds every formula
-from source, runs `brew test`, and runs the installer integration suite. Merge only when it
-passes. A bump fails on purpose when:
+## Bottles and publishing
+
+Every pull request runs [`tests.yml`](.github/workflows/tests.yml): `brew test-bot` builds, tests,
+and bottles the changed formulae on a macOS 26 Apple Silicon runner, and the installer integration
+suite runs against the new Ripwire bottle. When it passes, publish:
+
+```sh
+gh workflow run publish.yml -f pull_request=<number>
+```
+
+[`publish.yml`](.github/workflows/publish.yml) runs `brew pr-pull`. It uploads the bottles to one
+GitHub Release per formula version, adds `bottle do` blocks to the formulae, and pushes the result
+to `main`. Do not merge formula pull requests directly; the formulae would ship without bottles.
+
+Bump pull requests follow the same path; `scripts/autobump.py` dispatches `tests.yml` on each one.
+A bump fails on purpose when:
 
 - the grammar patch or Ripwire's query patch no longer applies;
 - ast-grep pins a tree-sitter-java version that the patched crate cannot replace; or
