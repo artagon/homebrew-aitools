@@ -1,6 +1,8 @@
 # Maintenance context
 
-The tap ships the pinned upstream tgrep binary. Ripwire and ast-grep-valhalla build
+The tap ships the pinned upstream tgrep, ck, and fff-mcp binaries; ck and fff-mcp
+skills and agent installers are planned in the `artagon-scripts` change
+`add-artagon-ck-fff-search-plugins`. Ripwire and ast-grep-valhalla build
 from source against `tree-sitter-java-valhalla`, a patched tree-sitter-java 0.23.5
 that parses the JDK 28 Valhalla `javac` syntax; CI publishes bottles of all four
 formulae for Apple Silicon macOS 26. Ripwire bundles its upstream skills.
