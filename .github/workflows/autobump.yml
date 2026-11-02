@@ -1,3 +1,5 @@
+# Opens one pull request per formula whose upstream released a newer version.
+# See scripts/autobump.sh and docs/agent-context.md.
 name: autobump
 
 on:
@@ -5,40 +7,52 @@ on:
     - cron: "17 6 * * *"
   workflow_dispatch:
 
-# contents and pull-requests open the bump; actions dispatches tests.yml on it,
-# because pull requests opened with GITHUB_TOKEN start no pull_request run.
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: autobump
+  cancel-in-progress: false
 
 defaults:
   run:
-    shell: bash
+    shell: bash -xeuo pipefail {0}
 
 jobs:
   autobump:
-    runs-on: macos-15
+    name: Open bump pull requests
+    runs-on: macos-26
     timeout-minutes: 60
+    permissions:
+      # Pull requests opened with GITHUB_TOKEN start no pull_request run.
+      actions: write # dispatch tests.yml on each bump branch
+      contents: write # push the bump branches
+      pull-requests: write # open the bump pull requests
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
-      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
-      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out the tap
-        uses: actions/checkout@v7
-
+      # setup-homebrew checks the tap out into the workspace, so no
+      # actions/checkout step stores a token in .git/config. stable: pin
+      # Homebrew to its latest release in a job that holds write tokens.
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@main
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+        with:
+          stable: true
+
+      - name: Set up git
+        uses: Homebrew/actions/git-user-config@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
 
       - name: Trust this tap
         run: brew trust --tap artagon/aitools
 
+      # Pushes authenticate through gh, which reads GH_TOKEN from the
+      # environment; the token itself is never written to disk.
+      - name: Use gh for Git credentials
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh auth setup-git
+
       - name: Open bump pull requests
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 scripts/autobump.py pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/autobump.sh pr

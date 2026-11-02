@@ -7,7 +7,7 @@ on:
     branches:
       - main
   pull_request:
-  # scripts/autobump.py dispatches this on bump branches, because pull requests
+  # scripts/autobump.sh dispatches this on bump branches, because pull requests
   # opened with GITHUB_TOKEN start no pull_request run.
   workflow_dispatch:
     inputs:
@@ -17,35 +17,38 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 defaults:
   run:
     shell: bash -xeuo pipefail {0}
 
 jobs:
   test-bot:
+    name: Build, test, and bottle (${{ matrix.os }})
     strategy:
       matrix:
         # The macOS 26 runner is Apple Silicon. Its bottles also pour on newer macOS.
         os: [macos-26]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    # Read-only token: pull requests from forks run here with no secrets.
     permissions:
-      actions: read
-      checks: read
-      contents: read
-      pull-requests: read
+      actions: read # brew test-bot reads workflow run metadata
+      checks: read # brew test-bot reads check runs of the commit under test
+      contents: read # check out the tap
+      pull-requests: read # brew test-bot reads the pull request and its labels
     steps:
+      # No `token:` input: the tap is public, and setup-homebrew would store the
+      # token in the global Git config, readable by the code this job builds.
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cache Homebrew Bundler RubyGems
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
-          key: ${{ matrix.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
-          restore-keys: ${{ matrix.os }}-rubygems-
+      # No dependency cache: this job produces the bottles that publish.yml
+      # ships, so it must not restore state that another run could have written.
 
       - name: Trust this tap
         run: brew trust --tap artagon/aitools
@@ -62,6 +65,12 @@ jobs:
           FORMULAE: ${{ inputs.formulae }}
         run: |
           read -r -a formulae <<< "${FORMULAE}"
+          for formula in ${formulae[@]+"${formulae[@]}"}; do
+            if [[ ! "${formula}" =~ ^artagon/aitools/[a-z0-9][a-z0-9@._+-]*$ ]]; then
+              echo "::error::Not a formula of this tap: ${formula}"
+              exit 1
+            fi
+          done
           brew test-bot --only-formulae ${formulae[@]+"${formulae[@]}"}
 
       # test-bot leaves each tested formula installed from its new bottle.
@@ -78,8 +87,10 @@ jobs:
             --bash32 /bin/bash \
             --modern-bash "$(brew --prefix)/bin/bash"
 
+      # Only a passing run uploads bottles: brew pr-pull checks that the run
+      # completed, not that it passed.
       - name: Upload bottles as artifact
-        if: always() && github.event_name != 'push'
+        if: success() && github.event_name != 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bottles_${{ matrix.os }}

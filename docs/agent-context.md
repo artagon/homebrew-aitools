@@ -41,7 +41,7 @@ install the `ast-grep` and `sg` binaries.
 
 ## Version bumps
 
-- `autobump.yml` runs `scripts/autobump.py pr` daily. The script reads
+- `autobump.yml` runs `scripts/autobump.sh pr` daily. The Bash script reads
   `brew livecheck --tap artagon/aitools --newer-only --json`, rewrites each url
   that names the current version, recomputes the sha256 after it, drops any
   `revision`, and opens one pull request per formula on `bump/<formula>-<version>`.
@@ -50,7 +50,7 @@ install the `ast-grep` and `sg` binaries.
   bumped formula, plus `ast-grep-valhalla` and `ripwire` for a grammar bump.
 - Every formula needs a `livecheck` block and a `url` with a following `sha256`
   that contains the version string. Test a rewrite offline with
-  `python3 scripts/autobump.py rewrite FILE OLD NEW`.
+  `scripts/autobump.sh rewrite FILE OLD NEW`.
 - The script never updates the integration test pins. A Ripwire bump that changes
   the bundled installer or skill set fails `tests.yml` until a reviewer checks the
   payload and updates `tests/integration_agent_install.py`.
@@ -69,7 +69,42 @@ install the `ast-grep` and `sg` binaries.
 - Publish with `gh workflow run publish.yml -f pull_request=<number>`; GitHub
   dispatches only workflows that exist on the default branch. A formula pull
   request merged without it ships without bottles.
-- Installs need the tap trusted (`brew trust`); both workflows trust it first.
+- Installs need the tap trusted (`brew trust`); every workflow trusts it first.
+
+## Workflow security
+
+- Pin every action to a full commit SHA with its tag in a comment, and verify
+  that the tag resolves to that commit before changing a pin.
+- Keep `permissions: {}` at the workflow level and grant each job only what it
+  uses. `tests.yml` runs pull request code, including fork code, with a
+  read-only token and no secrets.
+- `publish.yml` gives `brew pr-pull` a write token and signs what it uploads.
+  Before either, it requires: a run from `main` (git-try-push pushes the run's
+  checkout to `main`); an open pull request from a branch of this repository
+  that targets `main` (a fork's `tests.yml` run could upload arbitrary
+  `bottles_*` artifacts); a head equal to the required `head_sha` that already
+  contains current `main`; and a passing newest `tests.yml` run from this
+  repository, because `brew pr-pull` checks only that the run completed. The
+  push tries once, so a moved `main` fails instead of rebasing the bottles.
+- `tests.yml` uploads bottles only from a passing run and restores no cache,
+  because its artifacts become release assets.
+- Do not pass `token:` to setup-homebrew: it writes the token into the global
+  Git config for the rest of the job. The tap is public; git-try-push takes
+  its own token. Scope secrets to the steps that use them.
+- Jobs that hold write tokens set `stable: true`; otherwise setup-homebrew
+  runs Homebrew's `main` branch in taps.
+- Never use `pull_request_target` or `workflow_run`, and never expand `${{ }}`
+  inputs inside `run:`; pass them through `env` and validate them.
+- `autobump.yml` has no `actions/checkout`; pushes authenticate through
+  `gh auth setup-git`, so no token is stored in `.git/config`.
+  `scripts/autobump.sh` rejects unexpected formula names and upstream versions.
+- Lint with `actionlint` and audit with `zizmor --persona=auditor` after every
+  workflow change. When zizmor's online impostor-commit audit cannot reach
+  GitHub, verify each pin with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`.
+- Residual risks: `brew pr-upload` trusts the file paths in the bottle JSON of
+  the artifact, which matters only once this repository's own runs are
+  compromised; and `tests/integration_agent_install.py` pins Ripwire's
+  installer but not its hook scripts.
 
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
 real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew

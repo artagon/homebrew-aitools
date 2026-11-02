@@ -208,7 +208,7 @@ For AI coding agents (Claude, Codex, Antigravity, Kimi, Grok), see [tgrep AGENTS
 
 [`autobump.yml`](.github/workflows/autobump.yml) runs daily and on demand. Each formula's
 `livecheck` block finds the latest upstream release, and
-[`scripts/autobump.py`](scripts/autobump.py) opens one pull request per new version. The script
+[`scripts/autobump.sh`](scripts/autobump.sh) opens one pull request per new version. The script
 moves every versioned URL to the new release and recomputes its SHA-256, so tgrep's per-platform
 archives bump the same way as single-archive formulae. A `tree-sitter-java-valhalla` bump also
 bumps the `revision` of `ast-grep-valhalla` and `ripwire`, which compile the grammar in.
@@ -217,17 +217,22 @@ bumps the `revision` of `ast-grep-valhalla` and `ripwire`, which compile the gra
 
 Every pull request runs [`tests.yml`](.github/workflows/tests.yml): `brew test-bot` builds, tests,
 and bottles the changed formulae on a macOS 26 Apple Silicon runner, and the installer integration
-suite runs against the new Ripwire bottle. When it passes, publish:
+suite runs against the new Ripwire bottle. When it passes, review the diff and publish the
+commit you reviewed:
 
 ```sh
-gh workflow run publish.yml -f pull_request=<number>
+gh workflow run publish.yml -f pull_request=<number> \
+  -f head_sha="$(gh pr view <number> --json headRefOid --jq .headRefOid)"
 ```
+
+Publishing runs only from `main` and refuses pull requests from forks, pull requests behind
+`main`, a head other than the reviewed commit, and commits whose newest test run failed.
 
 [`publish.yml`](.github/workflows/publish.yml) runs `brew pr-pull`. It uploads the bottles to one
 GitHub Release per formula version, adds `bottle do` blocks to the formulae, and pushes the result
 to `main`. Do not merge formula pull requests directly; the formulae would ship without bottles.
 
-Bump pull requests follow the same path; `scripts/autobump.py` dispatches `tests.yml` on each one.
+Bump pull requests follow the same path; `scripts/autobump.sh` dispatches `tests.yml` on each one.
 A bump fails on purpose when:
 
 - the grammar patch or Ripwire's query patch no longer applies;
@@ -238,8 +243,8 @@ One-time repository setting: in Settings → Actions → General, allow GitHub A
 approve pull requests. To check or apply bumps locally:
 
 ```sh
-python3 scripts/autobump.py check
-python3 scripts/autobump.py write tgrep
+scripts/autobump.sh check
+scripts/autobump.sh write tgrep
 ```
 
 ## Validation

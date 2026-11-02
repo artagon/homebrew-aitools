@@ -1,6 +1,7 @@
 # Publishes the bottles that tests.yml built for a pull request, adds them to
 # the formulae, and pushes the result to main. Adapted from `brew tap-new`.
-# Run it with: gh workflow run publish.yml -f pull_request=<number>
+# Review the pull request first, then run from main:
+#   gh workflow run publish.yml -f pull_request=<number> -f head_sha=<reviewed commit>
 name: brew pr-pull
 
 on:
@@ -10,9 +11,14 @@ on:
         description: Pull request number
         required: true
       head_sha:
-        description: Expected pull request head commit SHA (optional)
+        description: Full SHA of the pull request head commit you reviewed
+        required: true
 
 permissions: {}
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -20,20 +26,62 @@ defaults:
 
 jobs:
   pr-pull:
+    name: Publish bottles
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
-      actions: read
-      attestations: write
-      checks: read
-      contents: write
-      id-token: write
-      issues: read
-      pull-requests: write
+      actions: read # download the tests.yml bottle artifacts
+      attestations: write # record build provenance for the bottles
+      checks: read # find the tests.yml check suite on the pull request head
+      contents: write # create the bottle releases and push to main
+      id-token: write # sign the provenance attestation
+      issues: read # brew pr-pull reads the pull request's labels
+      pull-requests: read # read the pull request; the push closes it
     steps:
+      # Publish only what was reviewed and tested:
+      # - from main, because git-try-push pushes this run's checkout to main;
+      # - an open pull request from a branch of this repository, never a fork,
+      #   whose tests.yml run could upload arbitrary bottles_* artifacts;
+      # - the reviewed head commit, already containing current main, so the
+      #   bottles were built against what they land on;
+      # - whose newest tests.yml run here passed, because brew pr-pull checks
+      #   only that the run completed.
+      - name: Check the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+        run: |
+          fail() {
+            echo "::error::$*"
+            exit 1
+          }
+          [[ "${GITHUB_REF}" == refs/heads/main ]] || fail "Run publish.yml from main, not ${GITHUB_REF}"
+          [[ "${PULL_REQUEST}" =~ ^[0-9]+$ ]] || fail "pull_request must be a number"
+          [[ "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]] || fail "head_sha must be a full 40-character commit SHA"
+
+          pr="$(gh pr view "${PULL_REQUEST}" --repo "${GITHUB_REPOSITORY}" \
+            --json state,isCrossRepository,baseRefName,headRefOid)"
+          [[ "$(jq -r .state <<< "${pr}")" == OPEN ]] || fail "Pull request #${PULL_REQUEST} is not open"
+          [[ "$(jq -r .isCrossRepository <<< "${pr}")" == false ]] || fail "Refusing to publish bottles built from a fork"
+          [[ "$(jq -r .baseRefName <<< "${pr}")" == main ]] || fail "The pull request must target main"
+          [[ "$(jq -r .headRefOid <<< "${pr}")" == "${HEAD_SHA}" ]] || fail "The pull request head is not ${HEAD_SHA}"
+
+          behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_SHA}" --jq .behind_by)"
+          [[ "${behind}" == 0 ]] || fail "The pull request is ${behind} commits behind main; update it and rerun tests"
+
+          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yml/runs?head_sha=${HEAD_SHA}&per_page=100" |
+            jq -r --arg repo "${GITHUB_REPOSITORY}" \
+              '[.workflow_runs[] | select(.head_repository.full_name == $repo)] | sort_by(.created_at) | last | .conclusion // "missing"')"
+          [[ "${conclusion}" == success ]] || fail "The newest tests.yml run for ${HEAD_SHA} is ${conclusion}, not success"
+
+      # stable: pin Homebrew to its latest release instead of its main branch in
+      # the job that holds write and signing tokens. No `token:` input: the tap
+      # is public, and the push below takes its own token.
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          stable: true
 
       - name: Trust this tap
         run: brew trust --tap artagon/aitools
@@ -53,20 +101,19 @@ jobs:
           HEAD_SHA: ${{ inputs.head_sha }}
           PULL_REQUEST: ${{ inputs.pull_request }}
         run: |
-          if [[ -n "$HEAD_SHA" ]]
-          then
-            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" \
-              "$PULL_REQUEST"
-          else
-            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" "$PULL_REQUEST"
-          fi
+          brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" \
+            "$PULL_REQUEST"
 
       - name: Generate build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: "${{ steps.pull_bottles.outputs.bottle_path }}/*.tar.gz"
 
+      # One try: if main moved since the check, fail instead of rebasing these
+      # bottles onto code they were not built against.
       - name: Push commits
         uses: Homebrew/actions/git-try-push@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: main
+          tries: 1
