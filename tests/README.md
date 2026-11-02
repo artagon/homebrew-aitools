@@ -7,13 +7,13 @@ rtk python3 tests/integration_agent_install.py --receipt /tmp/ripwire-integratio
 ```
 
 The suite requires Python 3.9+, Ruby, jq, macOS Bash 3.2, a modern Bash 5+, and the
-installed Ripwire 0.5.0 payload. Paths can be supplied with `--pkgshare`,
+installed Ripwire 0.6.9 payload. Paths can be supplied with `--pkgshare`,
 `--bash32`, and `--modern-bash`. Missing prerequisites fail the run; no cases skip.
 `--regressions-only` runs the twelve cases covering the original installer defects.
 
 Both entrypoints run: the standalone script and the exact formula wrapper heredoc
 evaluated by Ruby, preserving Ruby interpolation and shell escaping. Every run
-checks the bundled installer's SHA-256 against the pinned 0.5.0 installer. Tests
+checks the bundled installer's SHA-256 against the pinned 0.6.9 installer. Tests
 copy the real payload into temporary storage, so upstream hook chmod calls cannot
 touch the installed files. The installer is not mocked. This validates wrapper
 behavior, not Homebrew's complete installation or upgrade transaction.

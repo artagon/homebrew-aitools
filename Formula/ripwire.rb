@@ -1,36 +1,36 @@
 class Ripwire < Formula
   desc "Codebase symbol maps and call graphs for AI agents"
   homepage "https://github.com/redhat-et/ripwire"
+  url "https://github.com/redhat-et/ripwire/archive/refs/tags/v0.6.9.tar.gz"
+  sha256 "4eb842aea2f486485203aa13f571fa173912f6bba5bb8fd4a56f6f375334b3cf"
   license "Apache-2.0"
-  revision 1
+
+  depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
+  depends_on "cmake" => :build
 
   on_macos do
-    on_arm do
-      url "https://github.com/redhat-et/ripwire/releases/download/v0.5.0/ripwire-0.5.0-macos-arm64.tar.gz"
-      sha256 "f9b4d638f0f0efeac602fa6fc5037eb2871f933deccffc3b932b0c9c5dc1fe88"
-    end
-    on_intel do
-      url "https://github.com/redhat-et/ripwire/releases/download/v0.5.0/ripwire-0.5.0-macos-x64.tar.gz"
-      sha256 "0bc6b8b101cdd56c509825a8690c363cfb35a28b669076df0b32e1558a3c68cd"
-    end
-
     depends_on macos: :sonoma
   end
 
-  on_linux do
-    on_arm do
-      url "https://github.com/redhat-et/ripwire/releases/download/v0.5.0/ripwire-0.5.0-linux-arm64.tar.gz"
-      sha256 "efe049b1645045e96751a51b1bc321b2d8653aa1f6ab5d7c2390eb3d49716bf0"
-    end
-    on_intel do
-      url "https://github.com/redhat-et/ripwire/releases/download/v0.5.0/ripwire-0.5.0-linux-x64.tar.gz"
-      sha256 "f06e9d7e55032e8e5c397405ed72a19d6e70767d28c8c617a925de4401779f50"
-    end
-  end
+  # Index records, JEP 401 value records, compact constructors, and annotation
+  # interfaces as Java definitions; upstream's query captures none of them.
+  patch :DATA
 
   def install
-    bin.install "ripwire"
-    pkgshare.install "skills", "hooks"
+    # Build with the Valhalla-aware Java grammar instead of the vendored
+    # tree-sitter-java 0.23.5 parser. Both are generated at ABI 14.
+    grammar = Formula["artagon/aitools/tree-sitter-java-valhalla"].opt_pkgshare/"src"
+    vendored = buildpath/"third_party/deps/java/src"
+    cp grammar/"parser.c", vendored
+    cp Dir[grammar/"tree_sitter/*.h"], vendored/"tree_sitter"
+
+    system "cmake", "-S", ".", "-B", "build", *std_cmake_args
+    system "cmake", "--build", "build", "--target", "ripwire"
+    bin.install "build/ripwire"
+
+    # Same payload as the upstream release archive.
+    (pkgshare/"skills").install Dir["skills/ripwire-*"], "skills/install.sh"
+    pkgshare.install "hooks"
     doc.install "README.md"
     prefix.install "LICENSE"
 
@@ -233,6 +233,23 @@ class Ripwire < Formula
     assert_match(/<s t="fn" n="greet"[^>]*>/, output)
     assert_match %r{<s t="fn" n="main"[^>]*><c n="greet"/></s>}, output
 
+    # JEP 401 value classes and records parse cleanly and records are definitions.
+    (testpath/"java/Shapes.java").write <<~JAVA
+      sealed interface Shape permits Point {}
+
+      value record Point(int x, int y) implements Shape {
+        int sum() { return x + y; }
+      }
+
+      abstract value class Base {}
+    JAVA
+    skipped = shell_output("#{bin}/ripwire #{testpath}/java --skipped --no-cache")
+    assert_match 'degraded_parse="0"', skipped
+    uses = shell_output("#{bin}/ripwire #{testpath}/java --uses=Point --no-cache")
+    assert_match(/<uses [^>]*of="Point" defs="1"/, uses)
+    lego = shell_output("#{bin}/ripwire #{testpath}/java --lego=Shape --no-cache")
+    assert_match(/<impl n="Point"/, lego)
+
     assert_path_exists doc/"README.md"
     assert_path_exists prefix/"LICENSE"
     installer = opt_pkgshare/"skills/install.sh"
@@ -283,3 +300,29 @@ class Ripwire < Formula
     assert_path_exists testpath/".copilot/skills/.ripwire-manifest-v1"
   end
 end
+
+__END__
+diff --git a/queries/java/tags.scm b/queries/java/tags.scm
+index 9157b3e..49c5455 100644
+--- a/queries/java/tags.scm
++++ b/queries/java/tags.scm
+@@ -27,6 +27,19 @@
+ (enum_declaration
+   name: (identifier) @name) @definition.type
+ 
++; JEP 395 records and JEP 401 value records (`value record P(int x) {}`): a record is a
++; container like a class, so its methods and constructors scope to it.
++(record_declaration
++  name: (identifier) @name) @definition.class
++
++; `@interface Tag { .. }` — an annotation interface declaration.
++(annotation_type_declaration
++  name: (identifier) @name) @definition.interface
++
++; `P { .. }` — a record's compact canonical constructor; name is the record identifier.
++(compact_constructor_declaration
++  name: (identifier) @name) @definition.method
++
+ (method_declaration
+   name: (identifier) @name) @definition.method
+ 

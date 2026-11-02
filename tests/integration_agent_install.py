@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 
-INSTALLER_SHA256 = "3fe291e647cf7f779aa164f638e3033bb69ffe3c969e21740d708517a5d79b9f"
+INSTALLER_SHA256 = "f1bebd22a59539d92f061bbc3609e5a408f193209f905f60781eb2c533bf9e96"
 TARGETS = {
     "claude": ".claude/skills", "codex": ".agents/skills",
     "agy": ".gemini/antigravity-cli/skills", "kimi": ".kimi-code/skills",
@@ -43,7 +43,7 @@ class Suite:
         original = Path(args.pkgshare).resolve()
         installer = original / "skills/install.sh"
         if not installer.is_file() or digest(installer) != INSTALLER_SHA256:
-            raise RuntimeError("Requires the unmodified Ripwire 0.5.0 bundled installer")
+            raise RuntimeError("Requires the unmodified Ripwire 0.6.9 bundled installer")
         self.payload = self.scratch / "payload"
         shutil.copytree(original, self.payload, symlinks=False)
         self.expected = {}

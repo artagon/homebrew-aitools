@@ -9,21 +9,72 @@ brew tap artagon/aitools
 # Install tools:
 brew install artagon/aitools/ripwire
 brew install artagon/aitools/tgrep
+brew install artagon/aitools/ast-grep-valhalla
 ```
 
-Use the qualified names to select this tap; Homebrew core also has a `tgrep` formula.
+Use the qualified names to select this tap; Homebrew core also has `tgrep` and `ast-grep` formulas.
 You can also install directly without tapping:
 
 ```sh
 brew install artagon/aitools/ripwire
 brew install artagon/aitools/tgrep
+brew install artagon/aitools/ast-grep-valhalla
 ```
+
+`ripwire` and `ast-grep-valhalla` build from source against
+`artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first.
+
+---
+
+## JDK 28 Valhalla Java grammar
+
+`artagon/aitools/tree-sitter-java-valhalla` patches tree-sitter-java 0.23.5, the grammar that
+both ast-grep 0.51.1 and Ripwire 0.6.9 pin, to parse what the JDK 28 Valhalla `javac` accepts:
+
+| Syntax | Example | Specification |
+| :--- | :--- | :--- |
+| Value classes and value records | `value record Point(int x, int y) {}` | JEP 401 (preview) |
+| Statements before `super(...)` and `this(...)` | `this.x = x; super();` | JEP 513 |
+| Module imports | `import module java.base;` | JEP 511 |
+| Qualified record patterns | `o instanceof Shape.Circle(int r)` | JEP 440 |
+| Annotations before a varargs ellipsis | `Object @Nullable ... rest` | JLS 8.4.1 |
+
+`value` stays a contextual keyword: fields, methods, locals, enum constants, labels, and
+annotation elements named `value` keep their upstream trees. For code without these forms the
+patched grammar produces byte-identical trees. The upstream corpus and
+`test/corpus/valhalla.txt` run in `brew test`.
+
+The formula installs `libtree-sitter-java-valhalla` and the full grammar sources under
+`$(brew --prefix tree-sitter-java-valhalla)/share/tree-sitter-java-valhalla`.
+
+---
+
+## ast-grep-valhalla
+
+Builds [ast-grep 0.51.1](https://github.com/ast-grep/ast-grep/releases/tag/0.51.1) from source with
+the Valhalla grammar compiled in as `java`. CLI patterns, `sgconfig.yml` rules, and the ast-grep
+MCP server work without configuration changes.
+
+It replaces Homebrew core's `ast-grep`, which installs the same `ast-grep` and `sg` binaries:
+
+```sh
+brew unlink ast-grep   # only when core ast-grep is installed
+brew install artagon/aitools/ast-grep-valhalla
+```
+
+Core ast-grep cannot replace its built-in `java` parser from `sgconfig.yml`. To use the grammar
+with it anyway, follow the `brew info artagon/aitools/tree-sitter-java-valhalla` caveats, which
+register it under a custom language name.
 
 ---
 
 ## ripwire
 
-Install [Ripwire v0.5.0](https://github.com/redhat-et/ripwire/releases/tag/v0.5.0) — Codebase symbol maps and call graphs for AI agents. Supports macOS 14 or later on Apple Silicon and Intel, and Linux on ARM64 and x86-64 with glibc. Musl is not supported.
+Builds [Ripwire v0.6.9](https://github.com/redhat-et/ripwire/releases/tag/v0.6.9) — Codebase symbol maps and call graphs for AI agents — from source with the Valhalla Java grammar.
+A query patch also indexes records, value records, compact constructors, and annotation
+interfaces as Java definitions, which upstream 0.6.9 omits. Requires macOS 14 or later with
+C++23 command-line tools, or Linux with a C++23 compiler. Linux builds are not yet verified by
+this tap.
 
 ```sh
 ripwire . --for="find the code that handles authentication"
@@ -99,7 +150,6 @@ ripwire-agent-install --shared
 `--hook` explicitly updates `~/.claude/settings.json` or `${CODEX_HOME:-$HOME/.codex}/hooks.json`. For Codex, review and trust the installed hooks through `/hooks`. Upstream hooks can record local usage metrics under `~/.ripwire`; review bundled hook scripts before enabling.
 
 Rerun `ripwire-agent-install` after formula upgrades to refresh added, renamed, or retired skills.
-Formula revision `0.5.0_1` delivers the activation command to existing `0.5.0` installations through `brew upgrade`.
 
 ### Manual / Upstream Activation
 
@@ -126,7 +176,7 @@ Uninstalling the formula does not alter agent configurations. To remove the inte
 
 ## tgrep
 
-Install [tgrep v1.0.8](https://github.com/microsoft/tgrep/releases/tag/v1.0.8) — Trigram-indexed grep with a client/server architecture for fast regex search in large codebases:
+Install [tgrep v1.2.6](https://github.com/microsoft/tgrep/releases/tag/v1.2.6) — Trigram-indexed grep with a client/server architecture for fast regex search in large codebases:
 
 ```sh
 brew install artagon/aitools/tgrep

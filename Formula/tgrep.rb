@@ -5,23 +5,23 @@ class Tgrep < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/microsoft/tgrep/releases/download/v1.0.8/tgrep-v1.0.8-aarch64-apple-darwin.tar.gz"
-      sha256 "b3a352060c329913750f9481c8f01de7e9b8ac33f533fd8c715b92542571659e"
+      url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-aarch64-apple-darwin.tar.gz"
+      sha256 "960c0d1bfe0c89b17275056d68f9e807d7fae4fd9fcc74a9320c4b962a78d584"
     end
     on_intel do
-      url "https://github.com/microsoft/tgrep/releases/download/v1.0.8/tgrep-v1.0.8-x86_64-apple-darwin.tar.gz"
-      sha256 "62a1c4448aac4413363f1dedd4f73b35fb2999c46b9971fed8b8e2f2a9967aad"
+      url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-x86_64-apple-darwin.tar.gz"
+      sha256 "32585e597066067895557cb3f6a35b00707f232ef5cd4e05b8b2728af4daaef8"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/microsoft/tgrep/releases/download/v1.0.8/tgrep-v1.0.8-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "618e1b80a7e95b47cb91a6ececd07294c397b34ffb00e25d78600c74eb87566e"
+      url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "acda2a527df618ec69db59ef6b20db394be7f22b27be6cbddb3bd7f09ba96ef9"
     end
     on_intel do
-      url "https://github.com/microsoft/tgrep/releases/download/v1.0.8/tgrep-v1.0.8-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "2e3de5b7735eb84aa150d3a48e8cff8f27c05795bfccb8b52c9bd8881f7225ce"
+      url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "582737741d93c1281802188da6b7207d4a5f16b1dbe010badff12f03414d99c4"
     end
   end
 
