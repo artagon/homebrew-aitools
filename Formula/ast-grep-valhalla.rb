@@ -20,17 +20,21 @@ class AstGrepValhalla < Formula
     # Both are version 0.23.5, so only that lock entry changes.
     grammar = buildpath/"tree-sitter-java-valhalla"
     cp_r Formula["artagon/aitools/tree-sitter-java-valhalla"].opt_pkgshare, grammar
-    (buildpath/".cargo/config.toml").write <<~TOML
+    # Append: upstream ships .cargo/config.toml with linker settings and aliases.
+    cargo_config = buildpath/".cargo/config.toml"
+    cargo_config.dirname.mkpath
+    touch cargo_config
+    cargo_config.append_lines <<~TOML
       [patch.crates-io]
       tree-sitter-java = { path = "#{grammar}" }
     TOML
-    system "cargo", "update", "--package", "tree-sitter-java"
-    # Cargo ignores a patch whose version no longer satisfies ast-grep's pin. Fail
-    # instead of building upstream's grammar; a path dependency has no `source`.
-    locked = (buildpath/"Cargo.lock").read.split("\n\n").find do |entry|
-      entry.include?('name = "tree-sitter-java"')
-    end
-    odie "Cargo did not substitute the Valhalla tree-sitter-java crate" if locked.nil? || locked.include?("source =")
+    # Point the lock entry at the patched crate without re-resolving the graph: a
+    # path dependency has no source or checksum. If the patch stops matching
+    # ast-grep's pin, `cargo install --locked` rejects the lock instead of
+    # building upstream's grammar.
+    inreplace "Cargo.lock",
+              /^(name = "tree-sitter-java"\nversion = "[^"]+"\n)source = "[^"]+"\nchecksum = "[^"]+"\n/,
+              "\\1"
 
     system "cargo", "install", *std_cargo_args(path: "crates/cli")
     generate_completions_from_executable(bin/"ast-grep", "completions", shells: [:bash, :zsh, :fish, :pwsh])

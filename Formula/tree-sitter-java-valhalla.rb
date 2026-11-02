@@ -23,6 +23,7 @@ class TreeSitterJavaValhalla < Formula
     # ABI 14 matches upstream's generated v0.23.5 parser, so consumers that vendor
     # src/parser.c and src/tree_sitter/*.h can drop these files in unchanged.
     system "tree-sitter", "generate", "--abi", "14", "--js-runtime", "native"
+    lib.mkpath
     system ENV.cc, "-std=c11", "-O2", "-fPIC", "-shared", "-Isrc", "src/parser.c",
            "-o", lib/shared_library("libtree-sitter-java-valhalla")
 
