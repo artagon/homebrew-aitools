@@ -10,6 +10,8 @@ brew tap artagon/aitools
 brew install artagon/aitools/ripwire
 brew install artagon/aitools/tgrep
 brew install artagon/aitools/ast-grep-valhalla
+brew install artagon/aitools/ck
+brew install artagon/aitools/fff-mcp
 ```
 
 Use the qualified names to select this tap; Homebrew core also has `tgrep` and `ast-grep` formulas.
@@ -19,11 +21,14 @@ You can also install directly without tapping:
 brew install artagon/aitools/ripwire
 brew install artagon/aitools/tgrep
 brew install artagon/aitools/ast-grep-valhalla
+brew install artagon/aitools/ck
+brew install artagon/aitools/fff-mcp
 ```
 
 On Apple Silicon with macOS 26 or later, the formulae install from bottles that the tap's CI
 builds and publishes. Elsewhere, `ripwire` and `ast-grep-valhalla` build from source against
-`artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first.
+`artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first. `tgrep`,
+`ck`, and `fff-mcp` install upstream release binaries.
 
 ---
 
@@ -203,6 +208,35 @@ tgrep --no-index "pattern" .
 ```
 
 For AI coding agents (Claude, Codex, Antigravity, Kimi, Grok), see [tgrep AGENTS.md](https://github.com/microsoft/tgrep/blob/main/AGENTS.md).
+
+---
+
+## ck
+
+Installs [ck 0.8.1](https://github.com/BeaconBay/ck/releases/tag/0.8.1) — local regex, BM25, and
+semantic code search, with an MCP server (`ck --serve`). It keeps its index in a `.ck/` directory
+next to the code.
+
+```sh
+ck --regex 'retry_failed_start' .
+ck --lex 'failed server start' .
+ck --hybrid 'where does the server retry a failed start' .
+```
+
+The first `--sem` or `--hybrid` search downloads an embedding model into
+`${XDG_CACHE_HOME:-~/.cache}/ck/models`. The Intel macOS binary has no embedding support, so use
+`--lex` or `--regex` there. Linux binaries need glibc 2.39 or newer. ck chunks code with tree-sitter
+but has no Java grammar, so Java files are searched as plain-text chunks.
+
+## fff-mcp
+
+Installs [fff-mcp 0.11.0](https://github.com/dmtrKovalenko/fff/releases/tag/v0.11.0) — a fast,
+frecency-ranked file search MCP server. Register `$(brew --prefix)/bin/fff-mcp` as a stdio MCP
+server; pass `--no-update-check` to skip its startup update check and `--frecency-db <file>` to
+rank by frecency. Requires macOS 13 or later.
+
+Agent skills and `ck-agent-install` / `fff-agent-install` commands for both tools are planned in
+the `artagon-scripts` change `add-artagon-ck-fff-search-plugins` and will ship as a formula revision.
 
 ## Automatic version updates
 
