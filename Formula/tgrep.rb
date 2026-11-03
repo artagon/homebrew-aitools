@@ -8,6 +8,11 @@ class Tgrep < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/tgrep-1.2.6"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "4290a043e68ef888507a70faaa84cec3b5540735f48e8c1c16821ed85540d228"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/microsoft/tgrep/releases/download/v1.2.6/tgrep-v1.2.6-aarch64-apple-darwin.tar.gz"
