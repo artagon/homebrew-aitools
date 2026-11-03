@@ -8,6 +8,11 @@ class FffMcp < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/fff-mcp-0.11.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "b4e95d364d63360fdb85a30b2575c039f5d65754ca12ec0fe555d393d2901719"
+  end
+
   on_macos do
     # Upstream release builds set MACOSX_DEPLOYMENT_TARGET=13.
     depends_on macos: :ventura
