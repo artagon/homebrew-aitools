@@ -8,6 +8,11 @@ class Ck < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ck-0.8.1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "5f2e284ae5689eab88e4ba9028e3cc43651d81b7a301b5b91cd5e71fc3c47630"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/BeaconBay/ck/releases/download/0.8.1/ck-0.8.1-aarch64-apple-darwin.tar.gz"
