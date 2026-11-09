@@ -1,8 +1,8 @@
 class Ripwire < Formula
   desc "Codebase symbol maps and call graphs for AI agents"
   homepage "https://github.com/redhat-et/ripwire"
-  url "https://github.com/redhat-et/ripwire/archive/refs/tags/v0.6.9.tar.gz"
-  sha256 "4eb842aea2f486485203aa13f571fa173912f6bba5bb8fd4a56f6f375334b3cf"
+  url "https://github.com/redhat-et/ripwire/archive/refs/tags/v0.6.10.tar.gz"
+  sha256 "a3ce6ce7e8bd0a7b854f0a3a14f8986f39618a1ae8362203e15d17431cd23bb0"
   license "Apache-2.0"
 
   livecheck do
