@@ -6,29 +6,47 @@ Curated high-performance developer tooling for AI coding agents.
 # Tap this repository once:
 brew tap artagon/aitools
 
-# Install tools:
+# Code search, AST analysis, and hash-anchored editing:
 brew install artagon/aitools/ripwire
-brew install artagon/aitools/tgrep
 brew install artagon/aitools/ast-grep-valhalla
+brew install artagon/aitools/tree-sitter-java-valhalla
+brew install artagon/aitools/tgrep
 brew install artagon/aitools/ck
 brew install artagon/aitools/fff-mcp
+brew install artagon/aitools/hashline
+
+# Multi-agent coordination, messaging, and Beads tracking:
+brew install artagon/aitools/agent-mail
+brew install artagon/aitools/br
+brew install artagon/aitools/bd
+brew install artagon/aitools/bv
+brew install artagon/aitools/nats
+brew install artagon/aitools/herdr
+
+# Architecture decisions and agent skill/config management:
+brew install artagon/aitools/adrkit
+brew install artagon/aitools/agentsync
+brew install artagon/aitools/skillfile
+brew install artagon/aitools/skillprism
 ```
 
-Use the qualified names to select this tap; Homebrew core also has `tgrep` and `ast-grep` formulas.
-You can also install directly without tapping:
+Use the qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships
+same-named `tgrep`, `nats`, and `herdr` formulae, plus differently named formulae that install
+overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, and `adr-tools`; run
+`brew unlink <formula>` first when one of those is already linked).
+You can also install any formula directly without tapping first:
 
 ```sh
 brew install artagon/aitools/ripwire
-brew install artagon/aitools/tgrep
-brew install artagon/aitools/ast-grep-valhalla
-brew install artagon/aitools/ck
-brew install artagon/aitools/fff-mcp
+brew install artagon/aitools/hashline
 ```
 
 On Apple Silicon with macOS 26 or later, the formulae install from bottles that the tap's CI
-builds and publishes. Elsewhere, `ripwire` and `ast-grep-valhalla` build from source against
-`artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first. `tgrep`,
-`ck`, and `fff-mcp` install upstream release binaries.
+builds and publishes. Elsewhere, `tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`,
+`hashline`, `adrkit`, `nats`, `skillfile`, and `skillprism` build from source (`ast-grep-valhalla`
+and `ripwire` compile against `artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs
+that grammar first). `tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, and
+`agentsync` install upstream release binaries.
 
 ---
 
@@ -237,6 +255,156 @@ rank by frecency. Requires macOS 13 or later.
 
 Agent skills and `ck-agent-install` / `fff-agent-install` commands for both tools are planned in
 the `artagon-scripts` change `add-artagon-ck-fff-search-plugins` and will ship as a formula revision.
+
+---
+
+## hashline
+
+Builds [hashline v0.9.24](https://github.com/quangdang46/hashline/releases/tag/v0.9.24) (`MIT OR Apache-2.0`) from Rust source — hash-anchored line reading and patching for AI coding agents via CLI and stdio MCP server:
+
+```sh
+brew install artagon/aitools/hashline
+```
+
+This tap (`artagon/aitools`) is maintained by Artagon and is **not** an official `hashline` or Homebrew core distribution channel.
+
+### Upgrade and configuration caveats
+
+- Homebrew manages upgrades: run `brew upgrade artagon/aitools/hashline` (do **not** run `hashline update`).
+- The installed wrapper sets `HASHLINE_NO_UPDATE_CHECK=1` to suppress upstream startup update checks.
+- Installing, upgrading, or uninstalling this formula never modifies any agent configuration file.
+
+### Bundled skill and confirmed agent skill directories
+
+The formula installs a bundled `SKILL.md` directory at:
+
+```sh
+$(brew --prefix hashline)/share/hashline/skills/hashline
+```
+
+Copy or symlink that `hashline` directory into your agent's skill directory (`<name>` = `hashline` below). Confirmed skill paths from official provider documentation:
+
+| Agent | Personal skill path | Project skill path |
+| :--- | :--- | :--- |
+| **Claude Code** | `~/.claude/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` |
+| **OpenAI Codex** | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+| **Google Antigravity CLI** | `${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+
+### MCP registration
+
+Register the stable opt binary path `<path>` = `$(brew --prefix)/opt/hashline/bin/hashline` so upgrades do not break client configs:
+
+| Client | Config file | Config key | Registration command or entry | Source |
+| :--- | :--- | :--- | :--- | :--- |
+| **Claude Code** | `~/.claude.json` | `mcpServers` | `claude mcp add hashline -- <path> mcp` | Provider docs + upstream `install.sh` (`4b7f8de`) |
+| **OpenAI Codex** | `~/.codex/config.toml` | `mcp_servers.hashline` | `command = "<path>"`, `args = ["mcp"]` | Provider docs + upstream `install.sh` (`4b7f8de`) |
+| **Google Antigravity CLI** | `~/.gemini/config/mcp_config.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Provider docs |
+| **Cursor** | `~/.cursor/mcp.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **VS Code** | `.vscode/mcp.json` | `servers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **Gemini CLI** | `~/.gemini/settings.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **Amp** | `~/.config/amp/settings.json` | `amp.mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **Droid** | `~/.factory/mcp.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+| **OpenCode** | `~/.config/opencode/opencode.json` | `mcp.servers` | `{"type": "local", "command": ["<path>", "mcp"]}` | Upstream `install.sh` (`4b7f8de`) |
+
+Host plugins (`pi install npm:hashline-pi` and `npm i hashline-opencode-plugin`) resolve `hashline` directly from `PATH`.
+
+---
+
+## agent-mail
+
+Installs [mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) `0.3.40` prebuilt release binaries for multi-agent mail, thread coordination, and file reservations:
+
+```sh
+brew install artagon/aitools/agent-mail
+```
+
+Provides both `mcp-agent-mail` (register `$(brew --prefix)/opt/agent-mail/bin/mcp-agent-mail` as a stdio MCP server) and `am` (CLI and local HTTP server via `am serve-http`). Distributed under the `MIT License with OpenAI/Anthropic Rider` (`license :cannot_represent` in Homebrew); the full license text is installed at `$(brew --prefix agent-mail)/LICENSE`.
+
+## br
+
+Installs [beads_rust](https://github.com/Dicklesworthstone/beads_rust) `0.7.6` prebuilt release binaries — the Rust `br` issue-tracker CLI with shell completions:
+
+```sh
+brew install artagon/aitools/br
+```
+
+Distributed under the `MIT License with OpenAI/Anthropic Rider` (`license :cannot_represent`); the full license text is installed at `$(brew --prefix br)/LICENSE`.
+
+## bd
+
+Installs [beads](https://github.com/gastownhall/beads) `1.3.4` (`MIT`) prebuilt release binaries — the `bd` distributed graph issue tracker built with the pure-Go embedded Dolt store, plus shell completions. It conflicts with `beads`, which installs the same `bd` binary:
+
+```sh
+brew unlink beads   # only when beads is installed
+brew install artagon/aitools/bd
+```
+
+## bv
+
+Installs [beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) `0.26.0` prebuilt release binaries — the `bv` terminal UI and `--robot-*` graph triage CLI for Beads repositories. It conflicts with `beads_viewer`, which installs the same `bv` binary:
+
+```sh
+brew unlink beads_viewer   # only when beads_viewer is installed
+brew install artagon/aitools/bv
+```
+
+Upgrade through Homebrew (`brew upgrade artagon/aitools/bv`); do **not** run `bv --update`. Distributed under the `MIT License with OpenAI/Anthropic Rider` (`license :cannot_represent`); the full license text is installed at `$(brew --prefix bv)/LICENSE`.
+
+## adrkit
+
+Builds [adrkit](https://github.com/mbeacom/adrkit) `0.20.0` (`Apache-2.0`) from source (`bun` build targeting the `node` runtime), installing `adr`, `adrkit`, and the stdio MCP server `adrkit-mcp` (`$(brew --prefix)/opt/adrkit/bin/adrkit-mcp`). Bundled agent skills are installed under `$(brew --prefix adrkit)/share/adrkit/skills`. It conflicts with Homebrew core's `adr-tools`, which also installs `adr`:
+
+```sh
+brew unlink adr-tools   # only when core adr-tools is installed
+brew install artagon/aitools/adrkit
+```
+
+## nats
+
+Builds [natscli](https://github.com/nats-io/natscli) `0.5.1` (`Apache-2.0`) from Go source with bash and zsh completions. Use the qualified tap name because Homebrew core also has a `nats` formula:
+
+```sh
+brew install artagon/aitools/nats
+```
+
+## herdr
+
+Installs [herdr](https://github.com/herdrdev/herdr) `0.9.5` (`Apache-2.0`) prebuilt release binaries, shell completions, and `LICENSE`. Use the qualified tap name because Homebrew core also has a `herdr` formula:
+
+```sh
+brew install artagon/aitools/herdr
+```
+
+## agentsync
+
+Installs [agentsync](https://github.com/dallay/agentsync) `1.53.1` (`MIT`) prebuilt release binaries to synchronize agent rules, skills, and MCP configurations across coding clients:
+
+```sh
+brew install artagon/aitools/agentsync
+```
+
+The installed wrapper sets `AGENTSYNC_NO_UPDATE_CHECK=1`; upgrade with `brew upgrade artagon/aitools/agentsync`.
+
+## skillfile
+
+Builds [skillfile](https://github.com/eljulians/skillfile) `1.9.2` (`Apache-2.0`) from Rust source with shell completions:
+
+```sh
+brew install artagon/aitools/skillfile
+```
+
+The installed wrapper sets `SKILLFILE_NO_UPDATE_NOTIFIER=1`; upgrade with `brew upgrade artagon/aitools/skillfile`.
+
+## skillprism
+
+Builds [skillprism](https://github.com/Tuvren/skillprism) `0.5.0` (`Apache-2.0`) from Rust source with shell completions:
+
+```sh
+brew install artagon/aitools/skillprism
+```
+
+---
 
 ## Automatic version updates
 

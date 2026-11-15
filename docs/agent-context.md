@@ -1,14 +1,30 @@
 # Maintenance context
 
-The tap ships the pinned upstream tgrep, ck, and fff-mcp binaries; ck and fff-mcp
-skills and agent installers are planned in the `artagon-scripts` change
-`add-artagon-ck-fff-search-plugins`. Ripwire and ast-grep-valhalla build
-from source against `tree-sitter-java-valhalla`, a patched tree-sitter-java 0.23.5
-that parses the JDK 28 Valhalla `javac` syntax; CI publishes bottles of all four
-formulae for Apple Silicon macOS 26. Ripwire bundles its upstream skills.
-Homebrew install and upgrade must not activate agent integrations. Activation is
-explicit through the formula-generated `ripwire-agent-install` or
-`scripts/install-agent-skills.sh`.
+The tap maintains 17 formulae split between upstream release binaries and source
+builds. Nine formulae package pinned upstream release binaries or archives:
+`tgrep`, `ck`, `fff-mcp`, `agent-mail` (`mcp-agent-mail` and `am`), `br`, `bd`,
+`bv`, `herdr`, and `agentsync` (`ck` and `fff-mcp` skills and agent installers are
+planned in the `artagon-scripts` change `add-artagon-ck-fff-search-plugins`).
+Eight formulae build from source: `tree-sitter-java-valhalla` (a patched
+`tree-sitter-java` 0.23.5 that parses JDK 28 Valhalla `javac` syntax),
+`ast-grep-valhalla` and `ripwire` (compiled against `tree-sitter-java-valhalla`),
+`hashline`, `skillfile`, and `skillprism` (Rust), `nats` (Go), and `adrkit` (`bun`
+build targeting the `node` runtime). CI builds and publishes Apple Silicon
+`macos-26` bottles across the tap.
+
+`ripwire`, `hashline`, and `adrkit` bundle agent skills under `pkgshare`. Homebrew
+install, upgrade, and uninstall must not activate agent integrations or modify live
+agent configuration files. Ripwire activation is explicit through the
+formula-generated `ripwire-agent-install` or `scripts/install-agent-skills.sh`.
+Where upstream tools run startup update checks, Homebrew wrappers disable them
+(`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
+`SKILLFILE_NO_UPDATE_NOTIFIER=1`; `fff-mcp` accepts `--no-update-check`), and
+formula `caveats` warn against in-place self-updaters (`hashline update`,
+`bv --update`).
+
+`agent-mail`, `br`, and `bv` use the `MIT License with OpenAI/Anthropic Rider`.
+Because SPDX has no identifier for custom riders, those formulae declare
+`license :cannot_represent` and install the full upstream `LICENSE` into `prefix`.
 
 Both entrypoints support stock macOS Bash 3.2. Keep invocation arrays nonempty:
 expanding an empty array under `set -u` aborts Bash 3.2. The installer path is the
@@ -18,9 +34,14 @@ Codex detection uses its executable or its own configuration root. The shared
 `.agents` root is a fallback destination and does not establish Codex presence.
 Antigravity detection also recognizes an existing `AGY_SKILLS_DIR` directory.
 
-The README qualifies formula names because Homebrew core also contains `tgrep` and
-`ast-grep`. ast-grep-valhalla declares `conflicts_with "ast-grep"` because both
-install the `ast-grep` and `sg` binaries.
+The README qualifies formula names with `artagon/aitools/` because Homebrew core
+also contains same-named `tgrep`, `nats`, and `herdr` formulae and differently
+named formulae with overlapping binaries. Declare `conflicts_with` only when a
+differently named formula installs conflicting executables: `ast-grep-valhalla`
+(`ast-grep`, installing `ast-grep` and `sg`), `bd` (`beads`, installing `bd`),
+`bv` (`beads_viewer`, installing `bv`), and `adrkit` (`adr-tools`, installing
+`adr`). Same-named formulae across taps (`tgrep`, `nats`, `herdr`) do not declare
+`conflicts_with`.
 
 ## Java grammar patch
 
