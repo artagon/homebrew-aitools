@@ -9,6 +9,11 @@ class AgentMail < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-mail-0.3.40"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "2dcff69a3a2ac74e215f4f74bec75ad93e4124ce0e99f8de213abbb85721179f"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.40/mcp-agent-mail-aarch64-apple-darwin.tar.xz"
