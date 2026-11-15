@@ -9,6 +9,11 @@ class Bv < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bv-0.26.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "949c3e637953729383216d0af65738b4918120332f1190caf0c321c4e81d6eb3"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.26.0/bv_0.26.0_darwin_arm64.tar.gz"
