@@ -9,6 +9,11 @@ class Br < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/br-0.7.6"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "e79478b198025358c79c6dc57d6f13c384bcc3ded7f1076aafb19978e3ea38c6"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/Dicklesworthstone/beads_rust/releases/download/v0.7.6/br-0.7.6-darwin_arm64.tar.gz"
