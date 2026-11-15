@@ -38,6 +38,7 @@ class Herdr < Formula
 
   def install
     bin.install Dir["herdr-*"].first => "herdr"
+    chmod 0755, bin/"herdr"
     resource("license").stage { prefix.install "LICENSE" }
     generate_completions_from_executable(bin/"herdr", "completion")
   end

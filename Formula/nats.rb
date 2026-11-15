@@ -15,8 +15,9 @@ class Nats < Formula
 
   def install
     system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=#{version}"), "./nats"
-    generate_completions_from_executable(bin/"nats", "--completion-script-",
-                                        shells: [:bash, :zsh], shell_parameter_format: :none)
+    generate_completions_from_executable(bin/"nats",
+                                         shell_parameter_format: "--completion-script-",
+                                         shells:                 [:bash, :zsh])
   end
 
   test do
