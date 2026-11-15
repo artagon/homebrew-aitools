@@ -20,7 +20,7 @@ Where upstream tools run startup update checks, Homebrew wrappers disable them
 (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
 `SKILLFILE_NO_UPDATE_NOTIFIER=1`; `fff-mcp` accepts `--no-update-check`), and
 formula `caveats` warn against in-place self-updaters (`hashline update`,
-`bv --update`).
+`am self-update`, `br upgrade`, `bv --update`, `herdr update`).
 
 `agent-mail`, `br`, and `bv` use the `MIT License with OpenAI/Anthropic Rider`.
 Because SPDX has no identifier for custom riders, those formulae declare

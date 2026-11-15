@@ -398,7 +398,7 @@ The installed wrapper sets `SKILLFILE_NO_UPDATE_NOTIFIER=1`; upgrade with `brew 
 
 ## skillprism
 
-Builds [skillprism](https://github.com/Tuvren/skillprism) `0.5.0` (`Apache-2.0`) from Rust source with shell completions:
+Builds [skillprism](https://github.com/Tuvren/skillprism) `0.5.0` (`Apache-2.0`) from Rust source with shell completions and a man page:
 
 ```sh
 brew install artagon/aitools/skillprism
