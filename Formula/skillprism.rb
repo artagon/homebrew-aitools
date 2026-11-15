@@ -11,6 +11,11 @@ class Skillprism < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillprism-0.5.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "bc2d0a11595523e14ffd7ae94202485d47ba5199355f9febfb3f32a68c24fd56"
+  end
+
   depends_on "rust" => :build
 
   def install
