@@ -8,6 +8,11 @@ class Herdr < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/herdr-0.9.5"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "4dfdf6be14ea11c985bda408b1d946552e6a048e661e26c844df4fffd16a28c3"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-macos-aarch64"
