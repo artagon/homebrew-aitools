@@ -11,6 +11,11 @@ class Adrkit < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/adrkit-0.20.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "345413cfc7e64a2352710e60f6d93d8a39409966323ddb0753e3bf58e86c3c26"
+  end
+
   depends_on "bun" => :build
   depends_on "node"
 
