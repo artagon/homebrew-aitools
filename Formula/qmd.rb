@@ -15,7 +15,7 @@ class Qmd < Formula
   depends_on "node"
 
   def install
-    # Remove bun/pnpm lockfiles so bin/qmd always selects Homebrew's Node runtime.
+    # Remove bun/pnpm lockfiles so bin/qmd selects Homebrew's Node runtime deterministically.
     rm ["bun.lock", "pnpm-lock.yaml"]
 
     # Compile TypeScript dist/ first, then pack and install production + native addons into libexec.

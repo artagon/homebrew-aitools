@@ -46,7 +46,7 @@ class Hindsight < Formula
     #    selected/migrated URLs as loopback before saving, and disable autoUpdate.
     cd "hindsight-integrations/coding-agents" do
       inreplace "src/core/config.ts" do |s|
-        s.gsub! <<~TS_OLD.chomp, <<~TS_NEW.chomp
+        s.gsub! <<~TS_OLD.chomp.b, <<~TS_NEW.chomp.b
           export function resolveConfig(raw: RawConfig = {}): Config {
             const serverMode = ["cloud", "self-hosted", "daemon"].includes(raw.serverMode as string)
               ? (raw.serverMode as "cloud" | "self-hosted" | "daemon")
@@ -108,7 +108,7 @@ class Hindsight < Formula
                 ""
         s.gsub! "Choose [1-3] (default 1): ", "Choose [1-2] (default 1): "
         s.gsub! 'if (answer === "") return "cloud";', 'if (answer === "") return "self-hosted";'
-        s.gsub! <<~SERVER_OLD.chomp, <<~SERVER_NEW.chomp
+        s.gsub! <<~SERVER_OLD.chomp.b, <<~SERVER_NEW.chomp.b
           function configureServer(c: InstallCtx, args: string[], installing: readonly string[]): boolean {
             const explicit = flagValue(args, "server");
             if (explicit && !SERVER_MODES.includes(explicit as ServerMode)) {

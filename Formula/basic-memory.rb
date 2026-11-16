@@ -25,6 +25,18 @@ class BasicMemory < Formula
     # Python 3.13 is required for macOS onnxruntime/fastembed wheels.
     system "uv", "tool", "install", ".", "--python", "3.13", "--no-cache"
 
+    # Set @rpath dylib IDs on bundled wheel dylibs (e.g. Pillow's PIL/.dylibs) so
+    # preserve_rpath prevents Mach-O header overflow during bottle relocation.
+    if OS.mac?
+      libexec.glob("**/*.dylib").each do |dylib|
+        next if dylib.symlink?
+
+        chmod 0755, dylib
+        system "install_name_tool", "-id", "@rpath/#{dylib.basename}", dylib
+        system "codesign", "--force", "--sign", "-", dylib
+      end
+    end
+
     (pkgshare/"skills").install Dir["skills/memory-*"]
 
     %w[basic-memory bm].each do |cmd|

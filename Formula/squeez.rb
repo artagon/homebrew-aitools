@@ -14,7 +14,7 @@ class Squeez < Formula
   depends_on "rust" => :build
 
   def install
-    # Enforce conservative out-of-the-box and `squeez setup` defaults without mutating
+    # Enforce conservative out-of-the-box and `squeez setup` defaults without modifying
     # live user config during formula install:
     # persona=off, auto_compress_md=false, and wrap_bash=false.
     inreplace "src/commands/persona.rs", "Persona::Ultra\n    }", "Persona::Off\n    }"
