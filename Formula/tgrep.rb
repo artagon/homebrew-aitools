@@ -9,8 +9,8 @@ class Tgrep < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/tgrep-1.2.6"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "4290a043e68ef888507a70faaa84cec3b5540735f48e8c1c16821ed85540d228"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/tgrep-1.2.7"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "718b1691a9b773922513479892c527484a738f3b0601385c080da6e6dec62d10"
   end
 
   on_macos do
