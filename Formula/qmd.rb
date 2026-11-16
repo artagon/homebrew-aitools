@@ -23,11 +23,21 @@ class Qmd < Formula
     system "npm", "run", "build"
     system "npm", "install", *std_npm_args(ignore_scripts: false)
 
+    # Prune prebuilt native Node addons targeting other OS/CPU architectures so the bottle stays pure.
+    native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
+    (libexec/"lib/node_modules/@tobilu/qmd/node_modules").glob("**/prebuilds/*").each do |entry|
+      name = entry.basename.to_s
+      next if name == native_tag || name.start_with?("#{native_tag}.")
+
+      entry.directory? ? rm_r(entry) : rm(entry)
+    end
+
     (pkgshare/"skills").install "skills/qmd"
 
     node_bin = formula_opt_bin("node")/"node"
     (bin/"qmd").write <<~SH
       #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
       set -euo pipefail
       export QMD_SOURCE_MODE="0"
       exec "#{node_bin}" "#{libexec}/lib/node_modules/@tobilu/qmd/bin/qmd" "$@"
