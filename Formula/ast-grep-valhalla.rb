@@ -52,7 +52,7 @@ class AstGrepValhalla < Formula
     output = shell_output("#{bin}/ast-grep run -l java -p '#{pattern}' #{testpath}/Shapes.java")
     assert_match "value record Point", output
     refute_match "Plain", output
-    # Exit status 1 means no ERROR node matched.
+    # Exit status 1 means no ERROR syntax node matched in the Valhalla source.
     assert_empty shell_output("#{bin}/ast-grep run -l java -k ERROR #{testpath}/Shapes.java", 1)
 
     assert_match version.to_s, shell_output("#{bin}/ast-grep --version")

@@ -81,7 +81,8 @@ class Waza < Formula
 
     proj = testpath/"eval-demo"
     proj.mkpath
-    system bin/"waza", "init", "--no-skill", proj
+    pipe_output("#{bin}/waza init --no-skill #{proj}", "", 0)
+    assert_path_exists proj/".waza.yaml"
     assert_path_exists proj/"skills"
     assert_path_exists proj/"evals"
     assert_path_exists pkgshare/"skills/waza/SKILL.md"
