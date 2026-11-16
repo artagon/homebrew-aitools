@@ -90,7 +90,7 @@ Every formula in `artagon/aitools` is listed below with links to its tap formula
 ## ast-grep-valhalla
 
 - **Tap formula**: [`Formula/ast-grep-valhalla.rb`](Formula/ast-grep-valhalla.rb) (`brew install artagon/aitools/ast-grep-valhalla`)
-- **Upstream project**: [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`0.51.1`, `MIT`) — structural code search, linting, rewriting, and MCP server (`ast-grep` and `sg`).
+- **Upstream project**: [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`0.51.2`, `MIT`) — structural code search, linting, rewriting, and MCP server (`ast-grep` and `sg`).
 - **Tap build defaults**: Built from Rust source (`cargo install --locked`, `crates/cli`) with `[patch.crates-io]` replacing `tree-sitter-java` with `artagon/aitools/tree-sitter-java-valhalla`, plus `bash`, `zsh`, `fish`, and `pwsh` completions. Declares `conflicts_with "ast-grep"`.
 - **Tap config defaults**: Built-in `-l java` patterns, `sgconfig.yml` lint gates, and `ast-grep lsp` / MCP modes parse JDK 28 Valhalla Java out of the box without `--custom-languages`.
 
