@@ -28,8 +28,8 @@ class BasicMemory < Formula
     # Set @rpath dylib IDs on bundled wheel dylibs (e.g. Pillow's PIL/.dylibs) so
     # preserve_rpath prevents Mach-O header overflow during bottle relocation.
     if OS.mac?
-      libexec.glob("**/*.dylib").each do |dylib|
-        next if dylib.symlink?
+      libexec.glob("**/*.dylib", File::FNM_DOTMATCH).each do |dylib|
+        next if dylib.symlink? || !dylib.file?
 
         change_dylib_id dylib, "@rpath/#{dylib.basename}"
       end
