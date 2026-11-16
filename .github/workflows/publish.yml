@@ -1,5 +1,6 @@
-# Publishes the bottles that tests.yml built for a pull request, adds them to
-# the formulae, and pushes the result to main. Adapted from `brew tap-new`.
+# Publishes the bottles that tests.yml built for a pull request, attests and
+# signs them in an isolated OIDC job, pushes bottle commits to main, publishes
+# the draft releases, and verifies Homebrew attestations.
 # Review the pull request first, then run from main:
 #   gh workflow run publish.yml -f pull_request=<number> -f head_sha=<reviewed commit>
 name: brew pr-pull
@@ -10,14 +11,26 @@ on:
       pull_request:
         description: Pull request number
         required: true
+        type: string
       head_sha:
         description: Full SHA of the pull request head commit you reviewed
         required: true
+        type: string
+      allow_missing_manifest:
+        description: Allow legacy PRs built before provenance_macos-26 existed
+        required: false
+        default: false
+        type: boolean
+      allow_workflow_changes:
+        description: Allow publishing a PR that also modifies .github/workflows/
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
 concurrency:
-  group: publish
+  group: bottle-releases
   cancel-in-progress: false
 
 defaults:
@@ -25,29 +38,33 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
-  pr-pull:
-    name: Publish bottles
+  stage-bottles:
+    name: Stage bottles and commits
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
+    # Strictly read-only: no OIDC token, no attestations, and no repository writes.
     permissions:
-      actions: read # download the tests.yml bottle artifacts
-      attestations: write # record build provenance for the bottles
-      checks: read # find the tests.yml check suite on the pull request head
-      contents: write # create the bottle releases and push to main
-      id-token: write # sign the provenance attestation
-      issues: read # brew pr-pull reads the pull request's labels
-      pull-requests: read # read the pull request; the push closes it
+      actions: read # download pinned tests.yml bottle and provenance artifacts
+      checks: read # inspect check suites on the reviewed pull request head
+      contents: read # check out the tap and inspect pull request commits
+      issues: read # brew pr-pull reads pull request labels
+      pull-requests: read # validate pull request state and head commit
+    outputs:
+      base_main_sha: ${{ steps.stage.outputs.base_main_sha }}
+      release_map_sha256: ${{ steps.stage.outputs.release_map_sha256 }}
+      test_run_id: ${{ steps.validate.outputs.test_run_id }}
     steps:
       # Publish only what was reviewed and tested:
-      # - from main, because git-try-push pushes this run's checkout to main;
-      # - an open pull request from a branch of this repository, never a fork,
-      #   whose tests.yml run could upload arbitrary bottles_* artifacts;
-      # - the reviewed head commit, already containing current main, so the
-      #   bottles were built against what they land on;
-      # - whose newest tests.yml run here passed, because brew pr-pull checks
-      #   only that the run completed.
-      - name: Check the pull request
+      # - from main, because git-try-push pushes this run's base to main;
+      # - an open pull request from a branch of this repository, never a fork;
+      # - the reviewed head commit, already containing current main;
+      # - a single passing tests.yml run whose bottle and provenance artifacts
+      #   are fetched by immutable artifact ID and GitHub-verified SHA-256 digest.
+      - name: Validate pull request and download verified builder artifacts
+        id: validate
         env:
+          ALLOW_MISSING_MANIFEST: ${{ inputs.allow_missing_manifest }}
+          ALLOW_WORKFLOW_CHANGES: ${{ inputs.allow_workflow_changes }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ inputs.head_sha }}
           PULL_REQUEST: ${{ inputs.pull_request }}
@@ -56,64 +73,431 @@ jobs:
             echo "::error::$*"
             exit 1
           }
-          [[ "${GITHUB_REF}" == refs/heads/main ]] || fail "Run publish.yml from main, not ${GITHUB_REF}"
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]] || fail "Run publish.yml from main, not ${GITHUB_REF}"
           [[ "${PULL_REQUEST}" =~ ^[0-9]+$ ]] || fail "pull_request must be a number"
           [[ "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]] || fail "head_sha must be a full 40-character commit SHA"
 
           pr="$(gh pr view "${PULL_REQUEST}" --repo "${GITHUB_REPOSITORY}" \
             --json state,isCrossRepository,baseRefName,headRefOid)"
-          [[ "$(jq -r .state <<< "${pr}")" == OPEN ]] || fail "Pull request #${PULL_REQUEST} is not open"
-          [[ "$(jq -r .isCrossRepository <<< "${pr}")" == false ]] || fail "Refusing to publish bottles built from a fork"
-          [[ "$(jq -r .baseRefName <<< "${pr}")" == main ]] || fail "The pull request must target main"
+          [[ "$(jq -r .state <<< "${pr}")" == "OPEN" ]] || fail "Pull request #${PULL_REQUEST} is not open"
+          [[ "$(jq -r .isCrossRepository <<< "${pr}")" == "false" ]] || fail "Refusing to publish bottles built from a fork"
+          [[ "$(jq -r .baseRefName <<< "${pr}")" == "main" ]] || fail "The pull request must target main"
           [[ "$(jq -r .headRefOid <<< "${pr}")" == "${HEAD_SHA}" ]] || fail "The pull request head is not ${HEAD_SHA}"
 
-          behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_SHA}" --jq .behind_by)"
-          [[ "${behind}" == 0 ]] || fail "The pull request is ${behind} commits behind main; update it and rerun tests"
+          cmp_json="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_SHA}")"
+          behind="$(jq -r .behind_by <<< "${cmp_json}")"
+          [[ "${behind}" == "0" ]] || fail "The pull request is ${behind} commits behind main; update it and rerun tests"
 
-          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yml/runs?head_sha=${HEAD_SHA}&per_page=100" |
-            jq -r --arg repo "${GITHUB_REPOSITORY}" \
-              '[.workflow_runs[] | select(.head_repository.full_name == $repo)] | sort_by(.created_at) | last | .conclusion // "missing"')"
-          [[ "${conclusion}" == success ]] || fail "The newest tests.yml run for ${HEAD_SHA} is ${conclusion}, not success"
+          if [[ "${ALLOW_WORKFLOW_CHANGES}" != "true" ]]; then
+            if jq -e 'any(.files[]; .filename | startswith(".github/workflows/"))' <<< "${cmp_json}" >/dev/null; then
+              fail "Pull request #${PULL_REQUEST} modifies .github/workflows/; pass allow_workflow_changes=true only after auditing workflow diffs"
+            fi
+          fi
 
-      # stable: pin Homebrew to its latest release instead of its main branch in
-      # the job that holds write and signing tokens. No `token:` input: the tap
-      # is public, and the push below takes its own token.
+          # On pull_request events GITHUB_SHA is the merge ref, while workflow runs API
+          # indexes head_sha by the PR branch head SHA (HEAD_SHA).
+          run_obj="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yml/runs?head_sha=${HEAD_SHA}&per_page=100" |
+              jq -c --arg repo "${GITHUB_REPOSITORY}" \
+                '[.workflow_runs[] | select(.head_repository.full_name == $repo)] | sort_by(.created_at) | last // empty'
+          )"
+          [[ -n "${run_obj}" ]] || fail "No tests.yml run found for ${HEAD_SHA}"
+          conclusion="$(jq -r '.conclusion // "missing"' <<< "${run_obj}")"
+          [[ "${conclusion}" == "success" ]] || fail "Newest tests.yml run for ${HEAD_SHA} is ${conclusion}, not success"
+
+          test_run_id="$(jq -r '.id | tostring' <<< "${run_obj}")"
+          echo "test_run_id=${test_run_id}" >> "${GITHUB_OUTPUT}"
+
+          arts_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${test_run_id}/artifacts?per_page=100")"
+          bottles_art="$(jq -c '[.artifacts[] | select(.name == "bottles_macos-26" and .expired == false)] | first // empty' <<< "${arts_json}")"
+          [[ -n "${bottles_art}" ]] || fail "Run ${test_run_id} has no active bottles_macos-26 artifact"
+
+          bottles_id="$(jq -r '.id | tostring' <<< "${bottles_art}")"
+          bottles_digest="$(jq -r '.digest // empty' <<< "${bottles_art}")"
+          [[ "${bottles_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bottles_macos-26 missing sha256 digest"
+
+          mkdir -p "${RUNNER_TEMP}/verified-bottles" "${RUNNER_TEMP}/verified-provenance"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${bottles_id}/zip" > "${RUNNER_TEMP}/bottles.zip"
+          [[ "sha256:$(sha256sum "${RUNNER_TEMP}/bottles.zip" | awk '{print $1}')" == "${bottles_digest}" ]] ||
+            fail "bottles_macos-26 ZIP digest mismatch"
+          unzip -q "${RUNNER_TEMP}/bottles.zip" -d "${RUNNER_TEMP}/verified-bottles"
+
+          prov_art="$(jq -c '[.artifacts[] | select(.name == "provenance_macos-26" and .expired == false)] | first // empty' <<< "${arts_json}")"
+          if [[ -n "${prov_art}" ]]; then
+            prov_id="$(jq -r '.id | tostring' <<< "${prov_art}")"
+            prov_digest="$(jq -r '.digest // empty' <<< "${prov_art}")"
+            [[ "${prov_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "provenance_macos-26 missing sha256 digest"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${prov_id}/zip" > "${RUNNER_TEMP}/provenance.zip"
+            [[ "sha256:$(sha256sum "${RUNNER_TEMP}/provenance.zip" | awk '{print $1}')" == "${prov_digest}" ]] ||
+              fail "provenance_macos-26 ZIP digest mismatch"
+            unzip -q "${RUNNER_TEMP}/provenance.zip" -d "${RUNNER_TEMP}/verified-provenance"
+          elif [[ "${ALLOW_MISSING_MANIFEST}" != "true" ]]; then
+            fail "Run ${test_run_id} has no active provenance_macos-26 artifact (set allow_missing_manifest=true only for pre-provenance PRs)"
+          fi
+
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
         with:
           stable: true
 
       - name: Trust this tap
-        run: brew trust --tap artagon/aitools
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/brew-xdg
+        run: |
+          export USER="${USER:-$(id -un)}"
+          mkdir -p "${XDG_CONFIG_HOME}"
+          brew trust --tap artagon/aitools
 
       - name: Set up git
         id: git_setup
         uses: Homebrew/actions/git-user-config@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
 
-      # Bottles go to one GitHub Release per formula version, for example
-      # ast-grep-valhalla-0.51.1, which test-bot set as each bottle's root_url.
-      - name: Pull bottles
-        id: pull_bottles
-        env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
-          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-          PULL_REQUEST: ${{ inputs.pull_request }}
-        run: |
-          brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" \
-            "$PULL_REQUEST"
-
-      - name: Generate build provenance
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+      - name: Install Anchore syft for legacy fallback SBOMs
+        if: inputs.allow_missing_manifest
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
-          subject-path: "${{ steps.pull_bottles.outputs.bottle_path }}/*.tar.gz"
+          syft-version: v1.56.0
+
+      - name: Prepare bottle commits and provenance stage
+        id: stage
+        env:
+          HEAD_SHA: ${{ inputs.head_sha }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+          TEST_RUN_ID: ${{ steps.validate.outputs.test_run_id }}
+          XDG_CONFIG_HOME: ${{ runner.temp }}/brew-xdg
+        run: |
+          fail() {
+            echo "::error::$*"
+            exit 1
+          }
+          export USER="${USER:-$(id -un)}"
+
+          base_main_sha="$(git rev-parse HEAD)"
+          echo "base_main_sha=${base_main_sha}" >> "${GITHUB_OUTPUT}"
+
+          # Cherry-pick and sign off PR commits without uploading any release assets.
+          brew pr-pull --debug --no-upload --tap="${GITHUB_REPOSITORY}" --head-sha="${HEAD_SHA}" \
+            "${PULL_REQUEST}"
+
+          # Write bottle blocks strictly from the digest-verified bottles_macos-26 artifact.
+          (
+            cd "${RUNNER_TEMP}/verified-bottles"
+            shopt -s nullglob
+            json_files=( ./*.bottle.json )
+            shopt -u nullglob
+            (( ${#json_files[@]} > 0 )) || fail "No *.bottle.json files in verified bottles_macos-26 artifact"
+            brew bottle --merge --write "${json_files[@]}"
+          )
+
+          stage_dir="${RUNNER_TEMP}/publish-stage"
+          mkdir -p "${stage_dir}/files"
+          entries_jsonl="${RUNNER_TEMP}/map-entries.jsonl"
+          : > "${entries_jsonl}"
+          expected_formula_paths=()
+
+          shopt -s nullglob
+          json_files=( "${RUNNER_TEMP}/verified-bottles"/*.bottle.json )
+          shopt -u nullglob
+
+          for json_file in "${json_files[@]}"; do
+            formula_name="$(jq -r 'to_entries[0].value.formula.name' "${json_file}")"
+            pkg_version="$(jq -r 'to_entries[0].value.formula.pkg_version' "${json_file}")"
+            root_url="$(jq -r 'to_entries[0].value.bottle.root_url' "${json_file}")"
+            rebuild="$(jq -r 'to_entries[0].value.bottle.rebuild' "${json_file}")"
+            release_tag="${formula_name}-${pkg_version}"
+            expected_root_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}"
+            [[ "${root_url}" == "${expected_root_url}" ]] ||
+              fail "Unexpected root_url ${root_url} (expected ${expected_root_url})"
+
+            expected_formula_paths+=( "Formula/${formula_name}.rb" )
+            brew audit --skip-style "artagon/aitools/${formula_name}"
+
+            while IFS=$'\t' read -r tag rel_fn brew_fn expected_sha; do
+              bottle_file="${RUNNER_TEMP}/verified-bottles/${brew_fn}"
+              [[ -f "${bottle_file}" ]] || fail "Missing bottle file ${bottle_file}"
+              actual_sha="$(sha256sum "${bottle_file}" | awk '{print $1}')"
+              [[ "${actual_sha}" == "${expected_sha}" ]] ||
+                fail "Bottle digest mismatch on ${brew_fn}: expected ${expected_sha}, got ${actual_sha}"
+
+              grep -Fq "${expected_sha}" "Formula/${formula_name}.rb" ||
+                fail "Formula/${formula_name}.rb does not contain merged bottle sha256 ${expected_sha}"
+
+              spdx_src="${RUNNER_TEMP}/verified-provenance/${rel_fn}.spdx.json"
+              cdx_src="${RUNNER_TEMP}/verified-provenance/${rel_fn}.cdx.json"
+              if [[ -f "${RUNNER_TEMP}/verified-provenance/build-manifest.json" ]]; then
+                [[ -f "${spdx_src}" && -f "${cdx_src}" ]] ||
+                  fail "Missing SBOM files for ${rel_fn} in provenance_macos-26"
+                spdx_sha="$(sha256sum "${spdx_src}" | awk '{print $1}')"
+                cdx_sha="$(sha256sum "${cdx_src}" | awk '{print $1}')"
+                jq -e \
+                  --arg head "${HEAD_SHA}" \
+                  --arg run_id "${TEST_RUN_ID}" \
+                  --arg formula "${formula_name}" \
+                  --arg brew_fn "${brew_fn}" \
+                  --arg rel_fn "${rel_fn}" \
+                  --arg bottle_sha "${actual_sha}" \
+                  --arg spdx_sha "${spdx_sha}" \
+                  --arg cdx_sha "${cdx_sha}" \
+                  '.head_sha == $head and .run_id == $run_id and any(.bottles[];
+                    .formula == $formula
+                    and .brew_filename == $brew_fn
+                    and .release_filename == $rel_fn
+                    and .bottle_sha256 == $bottle_sha
+                    and .spdx_sha256 == $spdx_sha
+                    and .cdx_sha256 == $cdx_sha
+                  )' "${RUNNER_TEMP}/verified-provenance/build-manifest.json" >/dev/null ||
+                  fail "build-manifest.json cross-check failed for ${rel_fn}"
+              else
+                spdx_src="${RUNNER_TEMP}/generated-${rel_fn}.spdx.json"
+                cdx_src="${RUNNER_TEMP}/generated-${rel_fn}.cdx.json"
+                syft scan "file:${bottle_file}" \
+                  --source-name "${formula_name}" \
+                  --source-version "${pkg_version}" \
+                  --select-catalogers "+javascript-package-cataloger" \
+                  -o "spdx-json=${spdx_src}" \
+                  -o "cyclonedx-json=${cdx_src}"
+                spdx_sha="$(sha256sum "${spdx_src}" | awk '{print $1}')"
+                cdx_sha="$(sha256sum "${cdx_src}" | awk '{print $1}')"
+              fi
+
+              cp "${bottle_file}" "${stage_dir}/files/${rel_fn}"
+              cp "${spdx_src}" "${stage_dir}/files/${rel_fn}.spdx.json"
+              cp "${cdx_src}" "${stage_dir}/files/${rel_fn}.cdx.json"
+
+              jq -c -n \
+                --arg formula "${formula_name}" \
+                --arg pkg_version "${pkg_version}" \
+                --arg release_tag "${release_tag}" \
+                --arg root_url "${root_url}" \
+                --argjson rebuild "${rebuild}" \
+                --arg tag "${tag}" \
+                --arg brew_filename "${brew_fn}" \
+                --arg release_filename "${rel_fn}" \
+                --arg bottle_sha256 "${actual_sha}" \
+                --arg spdx_sha256 "${spdx_sha}" \
+                --arg cdx_sha256 "${cdx_sha}" \
+                '{
+                  formula: $formula,
+                  pkg_version: $pkg_version,
+                  release_tag: $release_tag,
+                  root_url: $root_url,
+                  rebuild: $rebuild,
+                  tag: $tag,
+                  brew_filename: $brew_filename,
+                  release_filename: $release_filename,
+                  bottle_sha256: $bottle_sha256,
+                  spdx_sha256: $spdx_sha256,
+                  cdx_sha256: $cdx_sha256
+                }' >> "${entries_jsonl}"
+            done < <(
+              jq -r '
+                to_entries[0].value.bottle.tags
+                | to_entries[]
+                | [.key, .value.filename, .value.local_filename, .value.sha256]
+                | @tsv
+              ' "${json_file}"
+            )
+          done
+
+          # Enforce tree policy: between reviewed HEAD_SHA and staged HEAD, ONLY
+          # Formula/<name>.rb files in the release map may differ.
+          git fetch --no-tags origin "${HEAD_SHA}"
+          while IFS= read -r changed_path; do
+            [[ -z "${changed_path}" ]] && continue
+            matched=0
+            for allowed in "${expected_formula_paths[@]}"; do
+              if [[ "${changed_path}" == "${allowed}" ]]; then
+                matched=1
+                break
+              fi
+            done
+            (( matched == 1 )) || fail "Unexpected tree difference outside bottled formulae: ${changed_path}"
+          done < <(git diff --name-only "${HEAD_SHA}" HEAD)
+
+          git format-patch --stdout "${base_main_sha}..HEAD" > "${stage_dir}/commits.mbox"
+          [[ -s "${stage_dir}/commits.mbox" ]] || fail "commits.mbox is empty"
+
+          jq -s '{
+            schema: "artagon-bottle-release-map/v1",
+            bottles: .
+          }' "${entries_jsonl}" > "${stage_dir}/release-map.json"
+
+          map_sha="$(sha256sum "${stage_dir}/release-map.json" | awk '{print $1}')"
+          echo "release_map_sha256=${map_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload staged commits and bottles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: publish-stage
+          path: ${{ runner.temp }}/publish-stage/*
+          retention-days: 1
+
+  sign-bottles:
+    name: Sign and attest bottles
+    needs: stage-bottles
+    permissions:
+      actions: read # download publish-stage and verify provenance_macos-26 digest
+      attestations: write # store SLSA v1 and bottle-lineage/v1 attestations
+      contents: write # create draft releases and upload bottles and provenance sidecars
+      id-token: write # mint OIDC tokens for GitHub Attestations and Sigstore Fulcio
+    uses: ./.github/workflows/sign-bottles.yml # zizmor: ignore[self-repository] -- actionlint 1.7.12 rejects $/ syntax for local reusable workflows.
+    with:
+      allow_missing_manifest: ${{ inputs.allow_missing_manifest }}
+      head_sha: ${{ inputs.head_sha }}
+      mode: publish
+      release_map_sha256: ${{ needs.stage-bottles.outputs.release_map_sha256 }}
+      stage_artifact: publish-stage
+      test_run_id: ${{ needs.stage-bottles.outputs.test_run_id }}
+
+  push-main:
+    name: Push commits, publish releases, and verify bottles
+    needs:
+      - stage-bottles
+      - sign-bottles
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read # download publish-stage artifact
+      attestations: read # brew verify queries GitHub Attestations API
+      contents: write # fast-forward main and publish draft GitHub Releases
+      pull-requests: write # close pull request if still open at reviewed head_sha
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+        with:
+          stable: true
+
+      - name: Download staged commits and release map
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: publish-stage
+          path: ${{ runner.temp }}/publish-stage
+
+      - name: Set up git
+        uses: Homebrew/actions/git-user-config@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+
+      - name: Verify staged patch policy and apply commits
+        env:
+          BASE_MAIN_SHA: ${{ needs.stage-bottles.outputs.base_main_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          RELEASE_MAP_SHA256: ${{ needs.stage-bottles.outputs.release_map_sha256 }}
+        run: |
+          fail() {
+            echo "::error::$*"
+            exit 1
+          }
+          current_sha="$(git rev-parse HEAD)"
+          [[ "${current_sha}" == "${BASE_MAIN_SHA}" ]] ||
+            fail "main moved from ${BASE_MAIN_SHA} to ${current_sha} during signing; aborting without rebasing"
+
+          stage_dir="${RUNNER_TEMP}/publish-stage"
+          actual_map_sha="$(sha256sum "${stage_dir}/release-map.json" | awk '{print $1}')"
+          [[ "${actual_map_sha}" == "${RELEASE_MAP_SHA256}" ]] ||
+            fail "release-map.json digest mismatch in push-main"
+
+          git am "${stage_dir}/commits.mbox"
+          git merge-base --is-ancestor "${BASE_MAIN_SHA}" HEAD ||
+            fail "Applied patch series does not descend from ${BASE_MAIN_SHA}"
+
+          git fetch --no-tags origin "${HEAD_SHA}"
+          while IFS= read -r changed_path; do
+            [[ -z "${changed_path}" ]] && continue
+            jq -e --arg path "${changed_path}" \
+              'any(.bottles[]; ("Formula/" + .formula + ".rb") == $path)' \
+              "${stage_dir}/release-map.json" >/dev/null ||
+              fail "Refusing to push unexpected file modification relative to reviewed HEAD_SHA: ${changed_path}"
+
+            # Every added/removed content line between HEAD_SHA and HEAD must be inside bottle block DSL.
+            if git diff -U0 "${HEAD_SHA}" HEAD -- "${changed_path}" |
+              grep -E '^[+-][^+-]' |
+              grep -Ev '^[+-][[:space:]]*(bottle do|root_url |rebuild |sha256 |end)?$' >/dev/null; then
+              fail "Patch diff relative to HEAD_SHA modifies lines outside bottle do ... end in ${changed_path}"
+            fi
+          done < <(git diff --name-only "${HEAD_SHA}" HEAD)
 
       # One try: if main moved since the check, fail instead of rebasing these
       # bottles onto code they were not built against.
-      - name: Push commits
+      - name: Push commits to main
+        id: push
         uses: Homebrew/actions/git-try-push@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: main
           tries: 1
+
+      - name: Publish draft GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          stage_dir="${RUNNER_TEMP}/publish-stage"
+          while IFS= read -r release_tag; do
+            [[ -z "${release_tag}" ]] && continue
+            draft_id="$(
+              gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
+                jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
+            )"
+            if [[ -n "${draft_id}" ]]; then
+              gh release edit "${release_tag}" --repo "${GITHUB_REPOSITORY}" --draft=false
+            fi
+          done < <(jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u)
+
+      - name: Clean up unshipped draft releases on push failure
+        if: failure() && steps.push.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          stage_dir="${RUNNER_TEMP}/publish-stage"
+          [[ -f "${stage_dir}/release-map.json" ]] || exit 0
+          while IFS= read -r release_tag; do
+            [[ -z "${release_tag}" ]] && continue
+            draft_id="$(
+              gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
+                jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
+            )"
+            if [[ -n "${draft_id}" ]]; then
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${draft_id}"
+            fi
+          done < <(jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u)
+
+      - name: Verify published bottles with Homebrew attestation gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XDG_CONFIG_HOME: ${{ runner.temp }}/brew-verify-xdg
+        run: |
+          export USER="${USER:-$(id -un)}"
+          mkdir -p "${XDG_CONFIG_HOME}"
+          brew trust --tap artagon/aitools
+
+          stage_dir="${RUNNER_TEMP}/publish-stage"
+          while IFS= read -r formula; do
+            [[ -z "${formula}" ]] && continue
+            verify_out="${RUNNER_TEMP}/brew-verify-${formula}.json"
+            brew verify \
+              --bottle-tag=arm64_tahoe \
+              --force \
+              --json \
+              "artagon/aitools/${formula}" > "${verify_out}"
+            jq -e 'type == "array" and length == 1' "${verify_out}" >/dev/null
+          done < <(jq -r '.bottles[].formula' "${stage_dir}/release-map.json" | sort -u)
+
+      - name: Close pull request if still open at reviewed head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+        run: |
+          published_sha="$(git rev-parse HEAD)"
+          pr="$(gh pr view "${PULL_REQUEST}" --repo "${GITHUB_REPOSITORY}" \
+            --json state,isCrossRepository,baseRefName,headRefOid)"
+          if [[ "$(jq -r .state <<< "${pr}")" == "OPEN" &&
+                "$(jq -r .isCrossRepository <<< "${pr}")" == "false" &&
+                "$(jq -r .baseRefName <<< "${pr}")" == "main" &&
+                "$(jq -r .headRefOid <<< "${pr}")" == "${HEAD_SHA}" ]]; then
+            gh pr close "${PULL_REQUEST}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --comment "Published bottles and build provenance on \`main\` at ${published_sha} (from reviewed head ${HEAD_SHA})."
+          fi

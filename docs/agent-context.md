@@ -80,37 +80,88 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
 
 ## Bottles
 
-- `tests.yml` and `publish.yml` follow the `brew tap-new` templates and pin the
-  same action SHAs. `tests.yml` runs `brew test-bot` on `macos-26` only; add a
-  Linux entry once Ripwire's C++23 build is proven there, because a failed job
-  blocks publishing.
-- test-bot sets each bottle's `root_url` to
-  `<tap remote>/releases/download/<formula>-<version>`, so `brew pr-pull` uploads
-  to GitHub Releases. Do not pass `--root-url` or enable GitHub Packages.
-- `brew pr-pull` reads bottle artifacts from the `tests.yml` check suite on the
-  pull request's head commit, whatever event started it.
-- Publish with `gh workflow run publish.yml -f pull_request=<number>`; GitHub
-  dispatches only workflows that exist on the default branch. A formula pull
-  request merged without it ships without bottles.
-- Installs need the tap trusted (`brew trust`); every workflow trusts it first.
+- `tests.yml` runs `brew test-bot` on `macos-26` only; add a Linux entry once
+  Ripwire's C++23 build is proven there, because a failed job blocks publishing.
+- `tests.yml` sets each bottle's `root_url` to
+  `<tap remote>/releases/download/<formula>-<pkg_version>` (`<pkg_version>` is
+  `<version>` or `<version>_<revision>`). Do not pass `--root-url` or enable
+  GitHub Packages. Alongside `bottles_macos-26`, `tests.yml` scans each built
+  bottle tarball via `syft` (`file:<tarball>`, `+javascript-package-cataloger`)
+  and uploads `provenance_macos-26` containing `.spdx.json`, `.cdx.json`, and
+  `build-manifest.json` pinned to the pull request head SHA (`PR_HEAD_SHA`).
+- `publish.yml` splits bottle publishing into three privilege-separated jobs
+  under concurrency group `bottle-releases`:
+  1. `stage-bottles` (`contents: read`, no OIDC): fetches `bottles_macos-26` and
+     `provenance_macos-26` from the single passing `tests.yml` run by immutable
+     artifact ID and GitHub-verified SHA-256 digest, runs
+     `brew pr-pull --no-upload` and `brew bottle --merge --write`, enforces that
+     only bottled `Formula/<name>.rb` files changed relative to `head_sha`, and
+     uploads `publish-stage` (`commits.mbox`, `release-map.json`, bottles, SBOMs).
+  2. `sign-bottles` (`.github/workflows/sign-bottles.yml`): runs with zero
+     Homebrew, zero `syft`, and no repository checkout, verifies the builder
+     manifest digest against the GitHub Actions API, attests SLSA v1 and
+     `bottle-lineage/v1`, signs blobs and SPDX SBOMs with `cosign` v3, self-verifies
+     online and air-gapped bundles, and uploads assets to **draft** GitHub Releases.
+  3. `push-main`: verifies `commits.mbox` modifies only `bottle do ... end` DSL
+     lines relative to `head_sha`, fast-forwards `main` (`tries: 1`), flips draft
+     releases to published (or deletes unshipped drafts if the push fails), runs
+     `brew verify --bottle-tag=arm64_tahoe --force --json`, and closes the pull
+     request only if its `headRefOid` still equals `head_sha`.
+- Publish with `gh workflow run publish.yml -f pull_request=<number> -f head_sha=<sha>`;
+  GitHub dispatches only workflows that exist on `main`. A formula pull request
+  merged directly ships without bottles or attestations.
+- Installs need the tap trusted (`brew trust`); isolated verification jobs export
+  `USER="${USER:-$(id -un)}"` (`trust/store.rb` requires `ENV.fetch("USER")`) and
+  a temporary `XDG_CONFIG_HOME` while preserving `GH_CONFIG_DIR`.
+
+## Build provenance
+
+- Every signed bottle binds **both** filenames to the same bottle SHA-256 inside
+  a single attestation statement:
+  - `<formula>--<pkg_version>.<tag>.bottle[.<rebuild>].tar.gz` (`Bottle::Filename#to_s`),
+    matched by `HOMEBREW_VERIFY_ATTESTATIONS=1` and `brew verify` (`attestation.rb:292`);
+  - `<formula>-<pkg_version>.<tag>.bottle[.<rebuild>].tar.gz` (`Bottle::Filename#url_encode`,
+    encoding `@` as `%40` and `+` as `%2B`), matched by users verifying downloaded
+    GitHub Release assets directly.
+  Note that `Bottle::Filename#json` omits `.rebuild` while `to_s` and `url_encode`
+  include `.rebuild` when `rebuild > 0`.
+- Both `publish.yml` and `attest.yml` invoke `.github/workflows/sign-bottles.yml`
+  from `refs/heads/main`, so every bottle carries one canonical Fulcio X.509 SAN:
+  `https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main`.
+- `attest.yml` backfills or refreshes provenance sidecars (`mode: backfill`,
+  `lineage_status: backfill-unverified`) for bottles already pinned in `Formula/*.rb`
+  on `main` without rebuilding or overwriting existing bottle tarballs.
+- Detached `.spdx.json` and `.cdx.json` sidecars are authenticated by `spdx_sha256`
+  and `cdx_sha256` inside the signed `bottle-lineage/v1` attestation, and `.spdx.json`
+  is additionally checked against the base64-decoded DSSE `.predicate` inside
+  `.spdx.sigstore.json` (`jq -S` canonical comparison).
+- SBOM fidelity depends on upstream binary metadata: Go binaries (`bd`, `bv`,
+  `nats`, `tgrep`) and `cargo-auditable` Rust binaries carry full embedded module
+  lists, whereas standard Rust/C/C++ binaries without embedded audit tables and
+  `adrkit` (`bun build --target=node` single-file JS bundle) report archive-level
+  and lockfile/package metadata visible in the bottle tarball.
+- Air-gapped verification (`scripts/verify-provenance.sh --offline`) passes
+  `trusted_root.jsonl` to `gh attestation verify --custom-trusted-root` and extracts
+  the single-JSON Sigstore Public Good Instance `TrustedRoot` entry for
+  `cosign --trusted-root` (never passing deprecated `--offline` to `cosign` v3,
+  and isolating `TUF_ROOT` so `$HOME/.sigstore` is never created).
 
 ## Workflow security
 
 - Pin every action to a full commit SHA with its tag in a comment, and verify
   that the tag resolves to that commit before changing a pin.
 - Keep `permissions: {}` at the workflow level and grant each job only what it
-  uses. `tests.yml` runs pull request code, including fork code, with a
-  read-only token and no secrets.
-- `publish.yml` gives `brew pr-pull` a write token and signs what it uploads.
-  Before either, it requires: a run from `main` (git-try-push pushes the run's
-  checkout to `main`); an open pull request from a branch of this repository
-  that targets `main` (a fork's `tests.yml` run could upload arbitrary
-  `bottles_*` artifacts); a head equal to the required `head_sha` that already
-  contains current `main`; and a passing newest `tests.yml` run from this
-  repository, because `brew pr-pull` checks only that the run completed. The
-  push tries once, so a moved `main` fails instead of rebasing the bottles.
-- `tests.yml` uploads bottles only from a passing run and restores no cache,
-  because its artifacts become release assets.
+  uses. `tests.yml` and `publish.yml`'s `stage-bottles` job run with read-only
+  tokens and no `id-token` or `attestations` permissions.
+- Before staging or signing, `publish.yml` requires: a run from `main`; an open
+  same-repository pull request targeting `main`; `headRefOid == head_sha` with
+  `behind_by == 0`; no `.github/workflows/` changes unless `allow_workflow_changes=true`
+  is explicitly passed after workflow review; and a single passing `tests.yml` run
+  whose `bottles_macos-26` and `provenance_macos-26` ZIP digests match GitHub's
+  artifact metadata (`allow_missing_manifest=true` is an audited break-glass flag
+  only for pre-provenance PRs).
+- `tests.yml` uploads bottles and provenance manifests only from a passing run
+  and restores no cache, because its artifacts become release assets.
 - Do not pass `token:` to setup-homebrew: it writes the token into the global
   Git config for the rest of the job. The tap is public; git-try-push takes
   its own token. Scope secrets to the steps that use them.
@@ -122,12 +173,21 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
   `gh auth setup-git`, so no token is stored in `.git/config`.
   `scripts/autobump.sh` rejects unexpected formula names and upstream versions.
 - Lint with `actionlint` and audit with `zizmor --persona=auditor` after every
-  workflow change. When zizmor's online impostor-commit audit cannot reach
-  GitHub, verify each pin with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`.
-- Residual risks: `brew pr-upload` trusts the file paths in the bottle JSON of
-  the artifact, which matters only once this repository's own runs are
-  compromised; and `tests/integration_agent_install.py` pins Ripwire's
-  installer but not its hook scripts.
+  workflow change. Note that `actionlint` 1.7.12 rejects GitHub's `$/` local
+  reusable workflow syntax, so `publish.yml` and `attest.yml` use `./.github/workflows/sign-bottles.yml`
+  with an inline `# zizmor: ignore[self-repository]` annotation.
+- Residual risks:
+  1. Homebrew's built-in `HOMEBREW_VERIFY_ATTESTATIONS=1` / `brew verify` enforces
+     repository identity (`--repo artagon/homebrew-aitools`) rather than pinning a
+     specific workflow SAN; `scripts/verify-provenance.sh` enforces the exact
+     `sign-bottles.yml@refs/heads/main` SAN, `--source-ref refs/heads/main`,
+     `--deny-self-hosted-runners`, and atomic dual-subject checks.
+  2. Formulae packaging upstream prebuilt release binaries (`tgrep`, `ck`, `fff-mcp`,
+     `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest that this tap's
+     CI fetched the SHA-256-pinned upstream binary and packaged the bottle, not
+     that upstream compiled the binary reproducibly from source.
+  3. `tests/integration_agent_install.py` pins Ripwire's installer SHA-256 but not
+     its hook scripts.
 
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
 real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew

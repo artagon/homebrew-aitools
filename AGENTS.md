@@ -20,9 +20,16 @@
   (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`), not for same-named formulae across taps
   (`tgrep`, `nats`, `herdr`).
 - Land formula changes through `publish.yml` (`brew pr-pull`), never a direct merge, so bottles
-  ship with them; see [Bottles](docs/agent-context.md#bottles).
-- Exercise both installer entrypoints against the real bundled payload in isolated homes.
-- Never activate hooks or modify live agent configuration during tests.
+  and provenance sidecars ship with them; see [Bottles](docs/agent-context.md#bottles) and
+  [Build provenance](docs/agent-context.md#build-provenance).
+- Keep `.github/workflows/sign-bottles.yml` (`@refs/heads/main`) as the sole OIDC signing
+  workflow, binding both `--` (`Bottle::Filename#to_s`) and `-` (`Bottle::Filename#url_encode`)
+  subjects in one attestation statement; backfill existing releases with `attest.yml`.
+- Exercise both installer entrypoints against the real bundled payload in isolated homes, and run
+  `tests/test_verify_provenance.py` across `/bin/bash` 3.2 and Bash 5+ when changing provenance
+  scripts, workflows, or bottle conventions.
+- Never activate hooks or modify live agent, Homebrew trust (`~/.homebrew/trust.json`), or
+  Sigstore (`~/.sigstore`) configuration during tests.
 - Keep review packets immutable; rerun affected tests and independent reviews after fixes.
 
 See [project overview](ABOUT.md), [integration tests](tests/README.md), and [maintenance context](docs/agent-context.md).
