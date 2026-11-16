@@ -1343,6 +1343,28 @@ end
         )
         assert bad_policy.returncode == 1 and "outside bottle do" in bad_policy.stderr
 
+        # Ruby interpolation inside quoted cellar value must also fail closed!
+        subprocess.run(["git", "reset", "--hard", base_sha], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        subprocess.run(["git", "checkout", "pr"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        interp_cellar = bottled_formula.replace(
+            "cellar: :any_skip_relocation", 'cellar: "#{Kernel.system(%q(id))}"'
+        )
+        (git_repo / "Formula/demo.rb").write_text(interp_cellar, encoding="utf-8")
+        subprocess.run(["git", "commit", "-am", "interp"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        interp_mbox = subprocess.check_output(["git", "format-patch", "--stdout", f"{base_sha}..HEAD"], cwd=git_repo)
+        (rtemp / "publish-stage/commits.mbox").write_bytes(interp_mbox)
+        subprocess.run(["git", "checkout", "main"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+
+        bad_interp = subprocess.run(
+            [str(shell), str(pub_script), "verify-patch-policy"],
+            cwd=git_repo,
+            env=policy_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert bad_interp.returncode == 1
+
     def run(self) -> list[dict]:
         cases = (
             ("parse-all-17-live", self.test_parse_all_17_live_formulae),

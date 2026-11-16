@@ -14,7 +14,7 @@ BOTTLE_STMT_RE = re.compile(
     r"^(?:"
     r'    root_url "https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/releases/download/[A-Za-z0-9@.%_+-]+"|'
     r"    rebuild [0-9]+|"
-    r'    sha256 (?:cellar: (?::any|:any_skip_relocation|"[^"]+"), )?[a-z0-9_]+: "[0-9a-f]{64}"'
+    r'    sha256 (?:cellar: (?::any|:any_skip_relocation|"/[A-Za-z0-9_./+-]+"), )?[a-z0-9_]+: "[0-9a-f]{64}"'
     r")$"
 )
 
@@ -64,8 +64,15 @@ def cmd_verify_formula_git(head_sha: str, formula_path: str) -> int:
         return 1
 
     def strip_bottle(text: str) -> str:
-        stripped = BOTTLE_BLOCK_RE.sub("", text, count=1)
-        return re.sub(r"\n{3,}", "\n\n", stripped)
+        match = BOTTLE_BLOCK_RE.search(text)
+        if not match:
+            return text
+        start, end = match.span()
+        if text[end : end + 1] == "\n":
+            end += 1
+        elif start > 0 and text[start - 1 : start] == "\n":
+            start -= 1
+        return text[:start] + text[end:]
 
     if strip_bottle(before) != strip_bottle(after):
         return 1
