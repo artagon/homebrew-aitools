@@ -80,18 +80,6 @@ class BasicMemory < Formula
     end
   end
 
-  def post_install
-    # Re-sign bundled wheel Mach-O extensions after Homebrew ruby-macho relocation on Apple Silicon.
-    return unless OS.mac?
-    return unless Hardware::CPU.arm?
-
-    Dir.glob(libexec/"**/*.{so,dylib}", File::FNM_DOTMATCH).each do |file|
-      next if quiet_system("codesign", "--verify", file)
-
-      system "codesign", "--force", "--sign", "-", file
-    end
-  end
-
   def caveats
     <<~EOS
       Homebrew manages upgrades; do not run `basic-memory update` or `bm update`. Use:
@@ -123,6 +111,11 @@ class BasicMemory < Formula
     assert_match "HTTP/SSE transports", shell_output("#{bin}/basic-memory mcp --transport sse 2>&1", 2)
     assert_match "HTTP/SSE transports", shell_output("#{bin}/bm mcp --transport=streamable-http 2>&1", 2)
     assert_match "brew upgrade artagon/aitools/basic-memory", shell_output("#{bin}/bm update 2>&1", 2)
+
+    requests = <<~JSON
+      {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"brew","version":"1"}}}
+    JSON
+    assert_match "protocolVersion", pipe_output("#{bin}/basic-memory mcp", requests, 0)
 
     assert_path_exists pkgshare/"skills/memory-notes/SKILL.md"
   end

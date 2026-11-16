@@ -24,17 +24,17 @@ class Hindsight < Formula
     inreplace "hindsight-cli/src/config.rs" do |s|
       s.gsub! 'const DEFAULT_API_URL: &str = "http://localhost:8888";',
               'const DEFAULT_API_URL: &str = "http://127.0.0.1:8888";'
-      s.gsub! '        Ok(Config {', <<~RUST.chomp
-                let parsed = reqwest::Url::parse(&api_url)
-                    .map_err(|e| anyhow::anyhow!("Invalid API URL {}: {}", api_url, e))?;
-                match parsed.host_str() {
-                    Some("127.0.0.1") | Some("localhost") | Some("[::1]") | Some("::1") => {}
-                    _ => anyhow::bail!(
-                        "Remote/cloud Hindsight URLs are disabled ({}); use loopback (127.0.0.1, ::1, or localhost)",
-                        api_url
-                    ),
-                }
-                Ok(Config {
+      s.gsub! "        Ok(Config {", <<~RUST.chomp
+        let parsed = reqwest::Url::parse(&api_url)
+            .map_err(|e| anyhow::anyhow!("Invalid API URL {}: {}", api_url, e))?;
+        match parsed.host_str() {
+            Some("127.0.0.1") | Some("localhost") | Some("[::1]") | Some("::1") => {}
+            _ => anyhow::bail!(
+                "Remote/cloud Hindsight URLs are disabled ({}); use loopback (127.0.0.1, ::1, or localhost)",
+                api_url
+            ),
+        }
+        Ok(Config {
       RUST
     end
 
@@ -108,7 +108,7 @@ class Hindsight < Formula
                                 "skills/hindsight-local", "skills/hindsight-self-hosted"
     (pkgshare/"skills/hindsight-coding-agent").install Dir[libexec/"coding-agents/skill/*"]
 
-    node_bin = Formula["node"].opt_bin/"node"
+    node_bin = formula_opt_bin("node")/"node"
 
     (bin/"hindsight").write <<~SH
       #!/bin/bash
