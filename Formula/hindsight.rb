@@ -38,10 +38,12 @@ class Hindsight < Formula
       RUST
     end
 
-    system "cargo", "install", *std_cargo_args(locked: false, path: "hindsight-cli", root: libexec/"cli")
+    system "cargo", "generate-lockfile", "--manifest-path", "hindsight-cli/Cargo.toml"
+    system "cargo", "install", *std_cargo_args(root: libexec/"cli", path: "hindsight-cli")
 
-    # 2. Harden coding-agents stdio MCP server & hooks: default to loopback self-hosted,
-    #    disable autoUpdate, and reject serverMode="cloud" or non-loopback apiUrl.
+    # 2. Harden coding-agents stdio MCP server, hooks, and interactive installer:
+    #    default to loopback self-hosted, remove Cloud choices/defaults, validate
+    #    selected/migrated URLs as loopback before saving, and disable autoUpdate.
     cd "hindsight-integrations/coding-agents" do
       inreplace "src/core/config.ts" do |s|
         s.gsub! <<~TS_OLD.chomp, <<~TS_NEW.chomp
@@ -61,7 +63,7 @@ class Hindsight < Formula
                   ? `http://127.0.0.1:${apiPort}`
                   : (raw.apiUrl ?? "https://api.hindsight.vectorize.io"),
         TS_OLD
-          function assertLoopbackUrl(candidate: string): string {
+          export function assertLoopbackUrl(candidate: string): string {
             let parsed: URL;
             try {
               parsed = new URL(candidate);
@@ -96,6 +98,91 @@ class Hindsight < Formula
         s.gsub! "autoUpdate: raw.autoUpdate ?? true,", "autoUpdate: false,"
       end
 
+      inreplace "src/installer.ts" do |s|
+        s.gsub! 'import { readLegacyEndpoint } from "./core/legacy";',
+                "import { assertLoopbackUrl } from \"./core/config\";\n" \
+                'import { readLegacyEndpoint } from "./core/legacy";'
+        s.gsub! 'const SERVER_MODES: ServerMode[] = ["cloud", "self-hosted", "daemon"];',
+                'const SERVER_MODES: ServerMode[] = ["self-hosted", "daemon"];'
+        s.gsub! "  { mode: \"cloud\", label: \"Hindsight Cloud\", hint: \"hosted, needs an API token\" },\n",
+                ""
+        s.gsub! 'Choose [1-3] (default 1): ', 'Choose [1-2] (default 1): '
+        s.gsub! 'if (answer === "") return "cloud";', 'if (answer === "") return "self-hosted";'
+        s.gsub! <<~LEGACY_OLD.chomp, <<~LEGACY_NEW.chomp
+            const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
+            if (legacy) {
+              const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
+              if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
+              if (legacy.apiToken) carried.apiToken = legacy.apiToken;
+              if (legacy.apiPort) carried.apiPort = legacy.apiPort;
+        LEGACY_OLD
+            const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
+            if (legacy) {
+              if (legacy.serverMode === "cloud") {
+                c.log?.("❌ Legacy Hindsight Cloud config cannot be migrated in this loopback-only build; pass --server self-hosted --api-url http://127.0.0.1:8888 or --server daemon.");
+                return false;
+              }
+              if (legacy.apiUrl) {
+                try {
+                  assertLoopbackUrl(legacy.apiUrl);
+                } catch (err) {
+                  c.log?.(`❌ ${(err as Error).message}`);
+                  return false;
+                }
+              }
+              const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
+              if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
+              if (legacy.apiToken) carried.apiToken = legacy.apiToken;
+              if (legacy.apiPort) carried.apiPort = legacy.apiPort;
+        LEGACY_NEW
+        s.gsub! <<~NONTTY_OLD.chomp, <<~NONTTY_NEW.chomp
+            if (!c.interactive) {
+              c.log?.(
+                `\\nserver: defaulting to Hindsight Cloud. Re-run with --server self-hosted|daemon to change,\\n` +
+                  `        or edit ${configPath}.`
+              );
+              return true;
+            }
+        NONTTY_OLD
+            if (!c.interactive) {
+              writeJson(configPath, { ...existing, serverMode: "self-hosted", apiUrl: "http://127.0.0.1:8888" });
+              c.log?.(
+                `\\nserver: defaulting to loopback self-hosted (http://127.0.0.1:8888). Re-run with --server self-hosted|daemon to change,\\n` +
+                  `        or edit ${configPath}.`
+              );
+              return true;
+            }
+        NONTTY_NEW
+        s.gsub! <<~SELFHOST_OLD.chomp, <<~SELFHOST_NEW.chomp
+          } else if (mode === "self-hosted") {
+            const url =
+              flagValue(args, "api-url") ??
+              (c.interactive
+                ? readLineSync(c, "Server URL (e.g. http://localhost:8888): ").trim()
+                : undefined);
+            if (!url) {
+              c.log?.(
+                `❌ self-hosted mode needs a server URL — pass --api-url <url> (or set apiUrl in ${configPath}).`
+              );
+              return false;
+            }
+            next.apiUrl = url;
+        SELFHOST_OLD
+          } else if (mode === "self-hosted") {
+            const prompted = c.interactive
+              ? (readLineSync(c, "Server URL (default http://127.0.0.1:8888): ").trim() || "http://127.0.0.1:8888")
+              : undefined;
+            const url = flagValue(args, "api-url") ?? prompted ?? "http://127.0.0.1:8888";
+            try {
+              assertLoopbackUrl(url);
+            } catch (err) {
+              c.log?.(`❌ ${(err as Error).message}`);
+              return false;
+            }
+            next.apiUrl = url;
+        SELFHOST_NEW
+      end
+
       system "npm", "ci", "--ignore-scripts"
       system "npm", "run", "skill:build"
       system "npm", "run", "build"
@@ -112,40 +199,58 @@ class Hindsight < Formula
 
     (bin/"hindsight").write <<~SH
       #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
       set -euo pipefail
       exec "#{libexec}/cli/bin/hindsight" "$@"
     SH
 
     (bin/"hindsight-mcp").write <<~SH
       #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper; requires explicit agent harness.
       set -euo pipefail
-      export HINDSIGHT_MCP_HARNESS="${HINDSIGHT_MCP_HARNESS:-claude-code}"
+      if [[ -z "${HINDSIGHT_MCP_HARNESS:-}" ]]; then
+        printf '%s\\n' "Error: HINDSIGHT_MCP_HARNESS must be set to the invoking agent harness (e.g. claude-code, codex, antigravity-cli)." >&2
+        exit 2
+      fi
       exec "#{node_bin}" "#{libexec}/coding-agents/dist/mcp-server.js" "$@"
     SH
 
     (bin/"hindsight-coding-agents").write <<~SH
       #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper; loopback self-hosted or daemon only.
       set -euo pipefail
       prev=""
+      seen_subcmd=0
       for arg in "$@"; do
-        if [ "$prev" = "--server" ] && [ "$arg" = "cloud" ]; then
-          echo "Error: Hindsight cloud mode is disabled; pass '--server self-hosted' or '--server daemon'." >&2
-          exit 2
-        fi
-        case "$arg" in
-          update)
-            echo "Error: Homebrew manages hindsight upgrades. Run: brew upgrade artagon/aitools/hindsight" >&2
+        if [[ "${prev}" = "--server" ]]; then
+          if [[ "${arg}" = "cloud" ]]; then
+            printf '%s\\n' "Error: Hindsight cloud mode is disabled; pass '--server self-hosted' or '--server daemon'." >&2
             exit 2
+          fi
+          prev=""
+          continue
+        fi
+        case "${arg}" in
+          --)
+            break
             ;;
           --server)
             prev="--server"
             ;;
           --server=cloud)
-            echo "Error: Hindsight cloud mode is disabled; pass '--server=self-hosted' or '--server=daemon'." >&2
+            printf '%s\\n' "Error: Hindsight cloud mode is disabled; pass '--server=self-hosted' or '--server=daemon'." >&2
             exit 2
             ;;
+          -*)
+            ;;
           *)
-            prev=""
+            if [[ "${seen_subcmd}" -eq 0 ]]; then
+              seen_subcmd=1
+              if [[ "${arg}" = "update" ]]; then
+                printf '%s\\n' "Error: Homebrew manages hindsight upgrades. Run: brew upgrade artagon/aitools/hindsight" >&2
+                exit 2
+              fi
+            fi
             ;;
         esac
       done
@@ -163,7 +268,8 @@ class Hindsight < Formula
       This build restricts Hindsight to loopback HTTP (`127.0.0.1`, `::1`, `localhost`)
       and local stdio JSON-RPC; Hindsight Cloud endpoints are disabled.
 
-      Register the stdio MCP server (defaults to `http://127.0.0.1:8888`):
+      Register the stdio MCP server with an explicit `HINDSIGHT_MCP_HARNESS`
+      (defaults to `http://127.0.0.1:8888`):
         HINDSIGHT_MCP_HARNESS=claude-code #{opt_bin}/hindsight-mcp
 
       Bundled skills are installed under:
@@ -177,14 +283,24 @@ class Hindsight < Formula
     ENV["HOME"] = testpath.to_s
     assert_match version.to_s, shell_output("#{bin}/hindsight --version")
 
-    # Non-loopback / cloud URLs must fail closed in both CLI and stdio MCP server.
+    # Missing HINDSIGHT_MCP_HARNESS must fail closed rather than guessing a harness.
+    ENV.delete("HINDSIGHT_MCP_HARNESS")
+    assert_match "HINDSIGHT_MCP_HARNESS must be set", shell_output("#{bin}/hindsight-mcp 2>&1", 2)
+
+    # Non-loopback / cloud URLs must fail closed in CLI, MCP server, and installer.
+    ENV["HINDSIGHT_MCP_HARNESS"] = "claude-code"
     ENV["HINDSIGHT_API_URL"] = "https://api.hindsight.vectorize.io"
     assert_match "loopback", shell_output("#{bin}/hindsight bank list 2>&1", 1)
     assert_match "disabled", shell_output("#{bin}/hindsight-mcp 2>&1", 1)
+    assert_match "disabled",
+                 shell_output(
+                   "#{bin}/hindsight-coding-agents install claude-code --server self-hosted " \
+                   "--api-url https://api.hindsight.vectorize.io 2>&1",
+                   1,
+                 )
 
     # Loopback HTTP + stdio JSON-RPC initialize and tools/list must succeed.
     ENV["HINDSIGHT_API_URL"] = "http://127.0.0.1:8888"
-    ENV["HINDSIGHT_MCP_HARNESS"] = "claude-code"
     system "git", "init", "--quiet"
     requests = <<~JSON
       {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"brew","version":"1"}}}

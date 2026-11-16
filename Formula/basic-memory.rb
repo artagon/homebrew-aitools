@@ -11,8 +11,9 @@ class BasicMemory < Formula
     strategy :github_latest
   end
 
-  depends_on "rust" => :build
   depends_on "uv" => :build
+
+  preserve_rpath
 
   def install
     ENV["UV_PYTHON_PREFERENCE"] = "only-managed"
@@ -29,9 +30,9 @@ class BasicMemory < Formula
     %w[basic-memory bm].each do |cmd|
       (bin/cmd).write <<~SH
         #!/bin/bash
+        # Target contract: macOS /bin/bash 3.2+ wrapper; local stdio JSON-RPC only.
         set -euo pipefail
 
-        # Enforce local-only routing and disable auto-updates, promos, and telemetry.
         export BASIC_MEMORY_AUTO_UPDATE="false"
         export BASIC_MEMORY_NO_PROMOS="1"
         export BASIC_MEMORY_CLOUD_PROMO_OPT_OUT="true"
@@ -40,36 +41,59 @@ class BasicMemory < Formula
         export BASIC_MEMORY_LOGFIRE_ENABLED="false"
         export BASIC_MEMORY_LOGFIRE_SEND_TO_LOGFIRE="false"
 
-        prev=""
+        expect_val=""
+        seen_subcmd=0
         for arg in "$@"; do
-          if [ "$prev" = "--transport" ]; then
-            case "$arg" in
-              stdio) ;;
-              *)
-                echo "Error: basic-memory HTTP/SSE transports ('$arg') are disabled; only '--transport stdio' is permitted." >&2
-                exit 2
-                ;;
-            esac
-            prev=""
+          if [[ "${expect_val}" = "--transport" ]]; then
+            if [[ "${arg}" != "stdio" ]]; then
+              printf "Error: basic-memory HTTP/SSE transports ('%s') are disabled; only '--transport stdio' is permitted.\\n" "${arg}" >&2
+              exit 2
+            fi
+            expect_val=""
+            continue
+          elif [[ -n "${expect_val}" ]]; then
+            expect_val=""
             continue
           fi
-          case "$arg" in
-            cloud)
-              echo "Error: basic-memory cloud mode is disabled in this Homebrew build (local stdio only)." >&2
-              exit 2
+
+          case "${arg}" in
+            --)
+              break
               ;;
-            update)
-              echo "Error: Homebrew manages basic-memory upgrades. Run: brew upgrade artagon/aitools/basic-memory" >&2
+            --cloud | --cloud=*)
+              printf '%s\\n' "Error: basic-memory cloud routing ('--cloud') is disabled in this Homebrew build (local stdio only)." >&2
               exit 2
               ;;
             --transport)
-              prev="--transport"
+              expect_val="--transport"
               ;;
             --transport=stdio)
               ;;
             --transport=*)
-              echo "Error: basic-memory HTTP/SSE transports ('$arg') are disabled; only '--transport=stdio' is permitted." >&2
+              printf "Error: basic-memory HTTP/SSE transports ('%s') are disabled; only '--transport=stdio' is permitted.\\n" "${arg}" >&2
               exit 2
+              ;;
+            -p | --project | --config)
+              if [[ "${seen_subcmd}" -eq 0 ]]; then
+                expect_val="${arg}"
+              fi
+              ;;
+            -*)
+              ;;
+            *)
+              if [[ "${seen_subcmd}" -eq 0 ]]; then
+                seen_subcmd=1
+                case "${arg}" in
+                  cloud)
+                    printf '%s\\n' "Error: basic-memory cloud mode is disabled in this Homebrew build (local stdio only)." >&2
+                    exit 2
+                    ;;
+                  update)
+                    printf '%s\\n' "Error: Homebrew manages basic-memory upgrades. Run: brew upgrade artagon/aitools/basic-memory" >&2
+                    exit 2
+                    ;;
+                esac
+              fi
               ;;
           esac
         done
@@ -86,7 +110,7 @@ class BasicMemory < Formula
         brew upgrade artagon/aitools/basic-memory
 
       This build enforces local stdio JSON-RPC only:
-        - `cloud`, `streamable-http`, and `sse` transports are disabled
+        - `cloud`, `--cloud`, `streamable-http`, and `sse` transports are disabled
         - startup auto-updates, promos, and telemetry are disabled
 
       Register the stdio MCP server with:
@@ -108,9 +132,15 @@ class BasicMemory < Formula
     assert_match version.to_s, shell_output("#{bin}/bm --version")
 
     assert_match "cloud mode is disabled", shell_output("#{bin}/basic-memory cloud login 2>&1", 2)
+    assert_match "cloud routing ('--cloud') is disabled", shell_output("#{bin}/bm status --cloud 2>&1", 2)
     assert_match "HTTP/SSE transports", shell_output("#{bin}/basic-memory mcp --transport sse 2>&1", 2)
     assert_match "HTTP/SSE transports", shell_output("#{bin}/bm mcp --transport=streamable-http 2>&1", 2)
     assert_match "brew upgrade artagon/aitools/basic-memory", shell_output("#{bin}/bm update 2>&1", 2)
+
+    # Positional arguments named "cloud" or "update" on local commands must NOT be blocked by the wrapper.
+    (testpath/"notes").mkpath
+    (testpath/"notes/design.md").write("# Architecture\nLocal notes mentioning cloud and update terms.\n")
+    refute_match "disabled in this Homebrew build", shell_output("#{bin}/bm tool search-notes cloud 2>&1 || true")
 
     requests = <<~JSON
       {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"brew","version":"1"}}}

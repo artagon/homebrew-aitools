@@ -14,7 +14,8 @@ class Squeez < Formula
   depends_on "rust" => :build
 
   def install
-    # Enforce safe out-of-the-box defaults without mutating ~/.claude:
+    # Enforce conservative out-of-the-box and `squeez setup` defaults without mutating
+    # live user config during formula install:
     # persona=off, auto_compress_md=false, and wrap_bash=false.
     inreplace "src/commands/persona.rs", "Persona::Ultra\n    }", "Persona::Off\n    }"
     inreplace "src/config.rs" do |s|
@@ -22,15 +23,20 @@ class Squeez < Formula
       s.gsub! "auto_compress_md: true,", "auto_compress_md: false,"
       s.gsub! "wrap_bash: true,", "wrap_bash: false,"
     end
+    inreplace "src/commands/setup.rs" do |s|
+      s.gsub! 'persona = ultra\n\\', "persona = off\\n\\\nwrap_bash = false\\n\\"
+      s.gsub! 'auto_compress_md = true\n\\', 'auto_compress_md = false\n\\'
+    end
 
     system "cargo", "install", "--bin", "squeez", *std_cargo_args(root: libexec)
     prefix.install "NOTICE"
 
     (bin/"squeez").write <<~SH
       #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
       set -euo pipefail
-      if [ "${1:-}" = "update" ]; then
-        echo "Error: Homebrew manages squeez upgrades. Run: brew upgrade artagon/aitools/squeez" >&2
+      if [[ "${1:-}" = "update" ]]; then
+        printf '%s\\n' "Error: Homebrew manages squeez upgrades. Run: brew upgrade artagon/aitools/squeez" >&2
         exit 2
       fi
       exec "#{libexec}/bin/squeez" "$@"
@@ -43,7 +49,7 @@ class Squeez < Formula
       Homebrew manages upgrades; do not run `squeez update`. Use:
         brew upgrade artagon/aitools/squeez
 
-      This build defaults to conservative settings:
+      This build defaults to conservative settings (both unconfigured and after `squeez setup`):
         auto_compress_md = false
         persona          = off
         wrap_bash        = false
@@ -51,7 +57,7 @@ class Squeez < Formula
       Register the local stdio JSON-RPC MCP server with:
         #{opt_bin}/squeez mcp
 
-      This formula does not modify any agent configuration file.
+      This formula does not modify any agent configuration file during install.
     EOS
   end
 
@@ -60,6 +66,19 @@ class Squeez < Formula
     ENV["SQUEEZ_DIR"] = (testpath/".squeez").to_s
 
     assert_match "squeez #{version}", shell_output("#{bin}/squeez --version")
+    assert_equal "false", shell_output("#{bin}/squeez config get auto_compress_md").strip
+    assert_equal "off", shell_output("#{bin}/squeez config get persona").strip
+    assert_equal "false", shell_output("#{bin}/squeez config get wrap_bash").strip
+
+    # Verify `squeez setup` writes conservative defaults to config.ini in isolated HOME.
+    (testpath/".claude").mkpath
+    system bin/"squeez", "setup", "--host=claude-code"
+    ini = (testpath/".claude/squeez/config.ini")
+    if ini.exist?
+      assert_match "persona = off", ini.read
+      assert_match "auto_compress_md = false", ini.read
+      assert_match "wrap_bash = false", ini.read
+    end
     assert_equal "false", shell_output("#{bin}/squeez config get auto_compress_md").strip
     assert_equal "off", shell_output("#{bin}/squeez config get persona").strip
     assert_equal "false", shell_output("#{bin}/squeez config get wrap_bash").strip
