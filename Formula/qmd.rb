@@ -25,22 +25,36 @@ class Qmd < Formula
     system "npm", "run", "build"
     system "npm", "install", *std_npm_args(ignore_scripts: false)
 
-    # Prune prebuilt native Node addons targeting other OS/CPU architectures so the bottle stays pure.
+    # Prune prebuilt native Node addons: drop prebuilds/ completely when node-gyp
+    # already compiled build/Release/ from source, and drop foreign OS/CPU prebuilds otherwise.
     native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
-    (libexec/"lib/node_modules/@tobilu/qmd/node_modules").glob("**/prebuilds/*").each do |entry|
-      name = entry.basename.to_s
-      next if name == native_tag || name.start_with?("#{native_tag}.")
+    (libexec/"lib/node_modules/@tobilu/qmd/node_modules").glob("**/prebuilds").each do |prebuilds_dir|
+      next unless prebuilds_dir.directory?
 
-      entry.directory? ? rm_r(entry) : rm(entry)
+      if (prebuilds_dir.parent/"build/Release").directory?
+        rm_r(prebuilds_dir)
+        next
+      end
+
+      prebuilds_dir.children.each do |entry|
+        name = entry.basename.to_s
+        next if name == native_tag || name.start_with?("#{native_tag}.")
+
+        entry.directory? ? rm_r(entry) : rm(entry)
+      end
     end
 
-    # Prune optional CUDA/Vulkan GPU addon packages on Linux so CPU-portable bottles
-    # do not retain unfulfilled libcuda/libcudart/libvulkan dynamic library references.
-    if OS.linux?
-      (libexec/"lib/node_modules/@tobilu/qmd/node_modules/@node-llama-cpp")
-        .glob("*-{cuda,cuda-ext,vulkan}").each do |gpu_pkg|
-        rm_r(gpu_pkg) if gpu_pkg.exist?
-      end
+    # Retain only the host platform's CPU @node-llama-cpp addon (or Metal on Apple Silicon),
+    # removing foreign-architecture and optional CUDA/Vulkan GPU addon packages.
+    native_llama_pkg = if OS.mac?
+      Hardware::CPU.arm? ? "mac-arm64-metal" : "mac-x64"
+    else
+      Hardware::CPU.arm? ? "linux-arm64" : "linux-x64"
+    end
+    (libexec/"lib/node_modules/@tobilu/qmd/node_modules/@node-llama-cpp").glob("*").each do |pkg_dir|
+      next if !pkg_dir.directory? || pkg_dir.basename.to_s == native_llama_pkg
+
+      rm_r(pkg_dir)
     end
 
     (pkgshare/"skills").install "skills/qmd"

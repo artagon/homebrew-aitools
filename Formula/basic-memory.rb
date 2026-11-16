@@ -13,25 +13,53 @@ class BasicMemory < Formula
 
   depends_on "uv" => :build
 
+  on_linux do
+    depends_on "patchelf" => :build
+    depends_on "python@3.13"
+    depends_on "zlib-ng-compat"
+  end
+
   preserve_rpath
 
   def install
-    ENV["UV_PYTHON_PREFERENCE"] = "only-managed"
-    ENV["UV_PYTHON_INSTALL_DIR"] = libexec/"python"
+    python_arg = if OS.mac?
+      ENV["UV_PYTHON_PREFERENCE"] = "only-managed"
+      ENV["UV_PYTHON_INSTALL_DIR"] = libexec/"python"
+      "3.13"
+    else
+      ENV["UV_PYTHON_PREFERENCE"] = "only-system"
+      (formula_opt_bin("python@3.13")/"python3.13").to_s
+    end
     ENV["UV_TOOL_DIR"] = libexec/"tools"
     ENV["UV_TOOL_BIN_DIR"] = libexec/"bin"
     ENV["UV_DYNAMIC_VERSIONING_BYPASS"] = version.to_s
 
-    # Python 3.13 is required for macOS onnxruntime/fastembed wheels.
-    system "uv", "tool", "install", ".", "--python", "3.13", "--no-cache"
+    # Python 3.13 is required for onnxruntime/fastembed wheels.
+    system "uv", "tool", "install", ".", "--python", python_arg, "--no-cache"
 
-    # Set @rpath dylib IDs on bundled wheel dylibs (e.g. Pillow's PIL/.dylibs) so
-    # preserve_rpath prevents Mach-O header overflow during bottle relocation.
+    # Set @rpath dylib IDs on bundled wheel dylibs (e.g. Pillow's PIL/.dylibs) on macOS,
+    # and append HOMEBREW_PREFIX/lib to Linux wheel shared objects needing libz.so.1.
     if OS.mac?
       libexec.glob("**/*.dylib", File::FNM_DOTMATCH).each do |dylib|
         next if dylib.symlink? || !dylib.file?
 
         change_dylib_id dylib, "@rpath/#{dylib.basename}"
+      end
+    else
+      lib_dir = (HOMEBREW_PREFIX/"lib").to_s
+      libexec.glob("**/*.so*", File::FNM_DOTMATCH).each do |so|
+        next if so.symlink? || !so.file? || so.binread(4) != "\x7fELF"
+
+        needed = Utils.safe_popen_read("patchelf", "--print-needed", so).lines(chomp: true)
+        next if needed.exclude?("libz.so.1")
+
+        entries = Utils.safe_popen_read("patchelf", "--print-rpath", so).chomp.split(":").reject(&:empty?)
+        next if entries.include?(lib_dir)
+
+        entries << lib_dir
+        system "patchelf", "--set-rpath", entries.join(":"), so
+      rescue ErrorDuringExecution
+        next
       end
     end
 
