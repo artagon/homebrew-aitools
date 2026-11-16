@@ -11,6 +11,14 @@ class Skillopt < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillopt-0.2.0"
+    rebuild 2
+    sha256               arm64_tahoe:  "11efed20de6048f9469c141c6ceecea2847bdd67b41e113b37eafbc986f8f153"
+    sha256 cellar: :any, arm64_linux:  "c09040f4468b3d0bf420f77e2d90d65d3a2584e1fd8938a54c9bddc831af134b"
+    sha256 cellar: :any, x86_64_linux: "2f09aef2891bbfcad8dcd5773c7ff9fc3b6b06c94729aa932c35cb28f86101a5"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
