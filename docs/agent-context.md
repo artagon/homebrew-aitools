@@ -1,35 +1,37 @@
 # Maintenance context
 
-The tap maintains 21 formulae split between upstream release binaries and source
+The tap maintains 23 formulae split between upstream release binaries and source
 builds. Nine formulae package pinned upstream release binaries or archives:
 `tgrep`, `ck`, `fff-mcp`, `agent-mail` (`mcp-agent-mail` and `am`), `br`, `bd`,
 `bv`, `herdr`, and `agentsync` (`ck` and `fff-mcp` skills and agent installers are
 planned in the `artagon-scripts` change `add-artagon-ck-fff-search-plugins`).
-Twelve formulae build from source: `tree-sitter-java-valhalla` (a patched
+Fourteen formulae build from source: `tree-sitter-java-valhalla` (a patched
 `tree-sitter-java` 0.23.5 that parses JDK 28 Valhalla `javac` syntax),
 `ast-grep-valhalla` and `ripwire` (compiled against `tree-sitter-java-valhalla`),
 `hashline`, `skillfile`, `skillprism`, and `squeez` (Rust), `hindsight` (Rust CLI
-plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` (Go), `adrkit`
-(`bun` build targeting the `node` runtime), `qmd` (TypeScript/Node with native
-`better-sqlite3`, `sqlite-vec`, and `node-llama-cpp`), and `basic-memory` (`uv`
-Python 3.13 build from source). CI builds
-and publishes Apple Silicon `macos-26` bottles across the tap.
+plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` (Go), `waza` (Go CLI
+plus embedded Vite/React dashboard), `adrkit` (`bun` build targeting the `node`
+runtime), `qmd` (TypeScript/Node with native `better-sqlite3`, `sqlite-vec`, and
+`node-llama-cpp`), and `basic-memory` and `skillopt` (`uv` Python 3.13 builds from
+source). CI builds and publishes Apple Silicon `macos-26` bottles across the tap.
 
-`ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, and `qmd` bundle
-agent skills under `pkgshare`. Homebrew install, upgrade, and uninstall must not
-activate agent integrations or modify live agent configuration files. Ripwire
-activation is explicit through the formula-generated `ripwire-agent-install` or
-`scripts/install-agent-skills.sh`. Where upstream tools run startup update checks,
-telemetry, cloud routing, or unsafe defaults, Homebrew builds and wrappers harden
-them (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
-`SKILLFILE_NO_UPDATE_NOTIFIER=1`, `BASIC_MEMORY_AUTO_UPDATE=false`,
+`ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, `qmd`, `waza`, and
+`skillopt` bundle agent skills or plugins under `pkgshare`. Homebrew install,
+upgrade, and uninstall must not activate agent integrations or modify live agent
+configuration files. Ripwire activation is explicit through the formula-generated
+`ripwire-agent-install` or `scripts/install-agent-skills.sh`. Where upstream tools
+run startup update checks, telemetry, cloud routing, or unsafe defaults, Homebrew
+builds and wrappers harden them (`HASHLINE_NO_UPDATE_CHECK=1`,
+`AGENTSYNC_NO_UPDATE_CHECK=1`, `SKILLFILE_NO_UPDATE_NOTIFIER=1`,
+`WAZA_NO_UPDATE_CHECK=1`, `BASIC_MEMORY_AUTO_UPDATE=false`,
 `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_FORCE_LOCAL=true` with HTTP/SSE/`cloud`
 blocked; `hindsight` restricted to loopback `127.0.0.1`/`::1`/`localhost` with
 `cloud` and `autoUpdate` disabled; `squeez` defaulting to `auto_compress_md=false`,
-`persona=off`, and `wrap_bash=false`), and formula `caveats` warn against in-place
+`persona=off`, and `wrap_bash=false`; `skillopt-sleep` defaulting to `--backend mock`
+with human review before `adopt`), and formula `caveats` warn against in-place
 self-updaters (`hashline update`, `am self-update`, `br upgrade`, `bv --update`,
 `herdr update`, `basic-memory update`, `hindsight-coding-agents update`,
-`squeez update`).
+`squeez update`, `waza update`).
 
 `agent-mail`, `br`, and `bv` use the `MIT License with OpenAI/Anthropic Rider`.
 Because SPDX has no identifier for custom riders, those formulae declare
