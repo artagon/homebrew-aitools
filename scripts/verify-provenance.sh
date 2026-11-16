@@ -339,7 +339,7 @@ fetch_asset() {
     return 1
   fi
 
-  curl --fail --location --silent --show-error --retry 3 \
+  curl --disable --fail --location --silent --show-error --retry 3 \
     --output "${dest_path}" \
     "${base_url}/${asset_name}"
 }

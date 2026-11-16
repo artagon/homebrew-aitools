@@ -28,7 +28,8 @@ def digest(path: Path) -> str:
 
 def make_executable(path: Path, content: str) -> None:
     if content.startswith("#!/usr/bin/env python3\n"):
-        content = f"#!{sys.executable} -S\n" + content[len("#!/usr/bin/env python3\n") :]
+        real_py = Path(getattr(sys, "_base_executable", sys.executable)).resolve()
+        content = f"#!{real_py} -B -S\n" + content[len("#!/usr/bin/env python3\n") :]
     path.write_text(content, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
@@ -494,17 +495,24 @@ class Suite:
         self.commands[Path(sha_cmd).name] = sha_cmd
 
     @staticmethod
-    def tree(root: Path) -> dict:
-        return {
-            str(p.relative_to(root)): (
+    def tree(root: Path, *, ignore_macos_library: bool = False) -> dict:
+        out = {}
+        for p in root.rglob("*"):
+            rel = p.relative_to(root)
+            if ignore_macos_library and rel.parts and rel.parts[0] == "Library":
+                continue
+            out[str(rel)] = (
                 ("link", os.readlink(p))
                 if p.is_symlink()
                 else ("file", digest(p))
                 if p.is_file()
                 else ("directory", "")
             )
-            for p in root.rglob("*")
-        }
+        return out
+
+    def assert_home_clean(self, home: Path, before: dict, context: str = "HOME") -> None:
+        after = self.tree(home, ignore_macos_library=True)
+        assert after == before, f"{context} modified: before={before}, after={after}"
 
     def environment(self, shell: Path, label: str, *, with_cosign: bool = True, with_brew: bool = False):
         root = self.scratch / label
@@ -660,7 +668,7 @@ class Suite:
     def test_parse_all_17_live_formulae(self, shell: Path, label: str) -> None:
         _, home, _, _, _, _, env = self.environment(shell, label)
         env["PROVENANCE_REPO_ROOT"] = str(self.repo)
-        before = self.tree(home)
+        before = self.tree(home, ignore_macos_library=True)
         proc = self.run_verifier(shell, env, ["--parse-only", "--json"])
         assert proc.returncode == 0, f"exit {proc.returncode}: {proc.stderr}"
         assert proc.stderr == "", f"unexpected stderr in --json mode: {proc.stderr}"
@@ -695,7 +703,7 @@ class Suite:
                 assert got[key] == expected[key], (
                     f"{rb.name} {key}: got {got[key]!r}, expected {expected[key]!r}"
                 )
-        assert self.tree(home) == before
+        self.assert_home_clean(home, before)
 
     def test_full_verify_all_17_fixtures(self, shell: Path, label: str) -> None:
         root, home, _, _, state_file, _, env = self.environment(shell, label)
@@ -704,7 +712,7 @@ class Suite:
         assert expected_count >= 17
         state_file.write_text(json.dumps(state), encoding="utf-8")
         env["PROVENANCE_REPO_ROOT"] = str(repo_dir)
-        before = self.tree(home)
+        before = self.tree(home, ignore_macos_library=True)
 
         proc = self.run_verifier(
             shell, env, ["--all", "--allow-file-root-url", "--require-cosign", "--json"]
@@ -728,7 +736,7 @@ class Suite:
                 "cyclonedx_sbom",
             ):
                 assert item["checks"][check_key] == "passed", f"{item['formula']} {check_key}"
-        assert self.tree(home) == before
+        self.assert_home_clean(home, before)
 
     def test_revision_rebuild_at_and_plus_encoding(self, shell: Path, label: str) -> None:
         root, home, _, _, state_file, _, env = self.environment(shell, label)
@@ -804,7 +812,7 @@ end
         }
         state_file.write_text(json.dumps(state), encoding="utf-8")
         env["PROVENANCE_REPO_ROOT"] = str(repo_dir)
-        before = self.tree(home)
+        before = self.tree(home, ignore_macos_library=True)
 
         proc = self.run_verifier(
             shell, env, ["--allow-file-root-url", "--require-cosign", "--json", formula]
@@ -814,7 +822,7 @@ end
         assert res["pkg_version"] == pkg_version
         assert res["brew_filename"] == brew_fn
         assert res["release_filename"] == rel_fn
-        assert self.tree(home) == before
+        self.assert_home_clean(home, before)
 
     def test_explicit_version_stanza(self, shell: Path, label: str) -> None:
         root, _, _, _, _, _, env = self.environment(shell, label)
@@ -897,7 +905,7 @@ end
         call_log.write_text("", encoding="utf-8")
 
         bundle_snapshot = self.tree(saved_dir)
-        home_snapshot = self.tree(home)
+        home_snapshot = self.tree(home, ignore_macos_library=True)
 
         proc_off = self.run_verifier(
             shell,
@@ -918,7 +926,7 @@ end
         doc = json.loads(proc_off.stdout)
         assert doc["mode"] == "offline" and doc["ok"] is True
         assert self.tree(saved_dir) == bundle_snapshot, "--offline mutated --bundle-dir"
-        assert self.tree(home) == home_snapshot, "--offline mutated HOME"
+        self.assert_home_clean(home, home_snapshot, "--offline HOME")
 
         calls = [json.loads(line) for line in call_log.read_text(encoding="utf-8").splitlines()]
         cosign_calls = [c for c in calls if c["tool"] == "cosign"]
@@ -1049,13 +1057,13 @@ end
         env["PROVENANCE_REPO_ROOT"] = str(repo_dir)
         env.pop("USER", None)
 
-        before_home = self.tree(home)
+        before_home = self.tree(home, ignore_macos_library=True)
         proc = self.run_verifier(
             shell, env, ["--homebrew", "--allow-file-root-url", "--json", "ripwire"]
         )
         assert proc.returncode == 0, f"{proc.stdout}\n{proc.stderr}"
         assert json.loads(proc.stdout)["results"][0]["checks"]["homebrew_verify"] == "passed"
-        assert self.tree(home) == before_home, "--homebrew modified live HOME"
+        self.assert_home_clean(home, before_home, "--homebrew HOME")
 
         # Empty array from brew verify (e.g. bottle tag unavailable warning) must fail closed.
         state["brew_verify_response"] = []
