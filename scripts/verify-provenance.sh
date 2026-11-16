@@ -387,6 +387,7 @@ verify_one_formula() {
       --arg pkg_version "${parsed_pkg_version}" \
       --arg release_tag "${parsed_release_tag}" \
       --arg root_url "${parsed_root_url}" \
+      --argjson rebuild "${parsed_rebuild}" \
       --arg bottle_tag "${bottle_tag}" \
       --arg brew_filename "${parsed_brew_filename}" \
       --arg release_filename "${parsed_release_filename}" \
@@ -412,6 +413,7 @@ verify_one_formula() {
         pkg_version: $pkg_version,
         release_tag: $release_tag,
         root_url: $root_url,
+        rebuild: $rebuild,
         bottle_tag: $bottle_tag,
         brew_filename: $brew_filename,
         release_filename: $release_filename,
@@ -576,6 +578,7 @@ verify_one_formula() {
       emit_result false
       return 1
     fi
+    gh_slsa_args+=(--bundle "${slsa_bundle_path}")
   fi
 
   if [[ -n "${effective_trusted_root}" ]]
@@ -658,6 +661,7 @@ verify_one_formula() {
       emit_result false
       return 1
     fi
+    gh_lineage_args+=(--bundle "${lineage_bundle_path}")
   fi
 
   if [[ -n "${effective_trusted_root}" ]]

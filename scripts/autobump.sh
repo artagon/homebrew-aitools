@@ -176,27 +176,29 @@ outdated() {
 # Open one pull request for a bump. Runs in its own process, so a failure stops
 # only this bump: `pr` restores the base branch and moves on.
 open_pull_request() {
-  local name="$1" old="$2" new="$3" base="$4" branch formula formulae="" existing
+  local name="$1" old="$2" new="$3" base="$4" branch formula formulae="" existing pr_num head_sha run_count
   local -a paths=()
   branch="bump/${name}-${new}"
-  existing="$(git ls-remote --heads origin "${branch}")"
-  if [[ -n "${existing}" ]]
-  then
-    printf '%s: branch %s already exists\n' "${name}" "${branch}"
-    return 0
-  fi
-  git switch --create "${branch}" "origin/${base}"
-  apply_bump "${name}" "${old}" "${new}"
   for formula in $(affected "${name}")
   do
     paths+=("Formula/${formula}.rb")
     formulae="${formulae:+${formulae} }${tap}/${formula}"
   done
-  brew style "${paths[@]}"
-  git add -- "${paths[@]}"
-  git commit --message "${name} ${new}"
-  git push origin "${branch}"
-  gh pr create --base "${base}" --head "${branch}" --title "${name} ${new}" --body-file - <<EOF
+  existing="$(git ls-remote --heads origin "${branch}")"
+  if [[ -z "${existing}" ]]
+  then
+    git switch --create "${branch}" "origin/${base}"
+    apply_bump "${name}" "${old}" "${new}"
+    brew style "${paths[@]}"
+    git add -- "${paths[@]}"
+    git commit --message "${name} ${new}"
+    git push origin "${branch}"
+    git switch "${base}"
+  fi
+  pr_num="$(gh pr list --base "${base}" --head "${branch}" --state open --json number --jq '.[0].number // empty')"
+  if [[ -z "${pr_num}" ]]
+  then
+    gh pr create --base "${base}" --head "${branch}" --title "${name} ${new}" --body-file - <<EOF
 Upstream released ${name} ${new}; the formula had ${old}.
 
 Opened by \`scripts/autobump.sh\`, which dispatched the \`brew test-bot\` workflow
@@ -208,10 +210,18 @@ A Ripwire bump fails the installer integration suite on purpose when the
 bundled installer or skill set changes: review the payload, then update the
 pins in \`tests/integration_agent_install.py\`.
 EOF
+    pr_num="$(gh pr list --base "${base}" --head "${branch}" --state open --json number --jq '.[0].number // empty')"
+  fi
   # Events from GITHUB_TOKEN start no pull_request run; a dispatch is allowed, and
   # brew pr-pull finds its bottles through the check suite on the branch head.
-  gh workflow run tests.yml --ref "${branch}" -f "formulae=${formulae}"
-  git switch "${base}"
+  head_sha="$(git ls-remote --heads origin "${branch}" | awk '{ print $1 }')"
+  run_count="$(gh run list --workflow tests.yml --branch "${branch}" --commit "${head_sha}" --json databaseId --jq 'length')"
+  if [[ "${run_count:-0}" -eq 0 ]]
+  then
+    gh workflow run tests.yml --ref "${branch}" -f "formulae=${formulae}"
+  else
+    printf '%s: branch %s already has PR #%s and %s tests.yml run(s)\n' "${name}" "${branch}" "${pr_num}" "${run_count}"
+  fi
 }
 
 main() {
