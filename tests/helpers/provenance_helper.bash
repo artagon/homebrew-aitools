@@ -74,8 +74,8 @@ prov_reference_parse_formula_json() {
           tmp = $0
           sub(/^[[:space:]]*rebuild /, "", tmp)
           rebuild = tmp + 0
-        } else if (match($0, /^[[:space:]]*sha256 /) && index($0, tag ":") > 0) {
-          tmp = substr($0, index($0, tag ":"))
+        } else if (match($0, /^[[:space:]]*sha256 /) && match($0, "(^|[[:space:]])" tag ":[[:space:]]+\"[0-9a-f]{64}\"")) {
+          tmp = substr($0, RSTART, RLENGTH)
           sub(/^[^"]*"/, "", tmp)
           sub(/".*$/, "", tmp)
           if (length(tmp) == 64) bottle_sha = tmp
@@ -429,7 +429,7 @@ case "\${1:-}" in
     has_quiet=0; has_tag=0; has_force=0; has_json=0
     for a in "\$@"; do
       [[ "\${a}" = "--quiet" ]] && has_quiet=1
-      [[ "\${a}" = "--bottle-tag=arm64_tahoe" ]] && has_tag=1
+      [[ "\${a}" =~ ^--bottle-tag=[a-z0-9_]+$ ]] && has_tag=1
       [[ "\${a}" = "--force" ]] && has_force=1
       [[ "\${a}" = "--json" ]] && has_json=1
     done
@@ -637,29 +637,37 @@ prov_snapshot_tree() {
 
 prov_setup_file_shared() {
   export PROV_BASH32="${BATS_BASH32:-/bin/bash}"
-  export PROV_MODERN_BASH="${BATS_MODERN_BASH:-/opt/homebrew/bin/bash}"
+  export PROV_MODERN_BASH="${BATS_MODERN_BASH:-$(command -v bash)}"
   export PROV_REPO_ROOT="${BATS_REPO_ROOT:-$(cd "$BATS_TEST_DIRNAME/.." && pwd -P)}"
+  export PROV_HAS_BASH32=0
 
-  [[ -x "$PROV_BASH32" ]] || {
-    printf 'Missing Bash 3.2 interpreter: %s\n' "$PROV_BASH32" >&2
-    return 1
-  }
   [[ -x "$PROV_MODERN_BASH" ]] || {
     printf 'Missing Bash 5+ interpreter: %s\n' "$PROV_MODERN_BASH" >&2
     return 1
   }
 
-  local b32_ver="" mod_ver=""
-  b32_ver="$("$PROV_BASH32" --version | awk 'NR == 1 { print; exit }')"
+  local mod_ver=""
   mod_ver="$("$PROV_MODERN_BASH" --version | awk 'NR == 1 { print; exit }')"
-  [[ "$b32_ver" =~ version\ 3\.2\. ]] || {
-    printf 'BATS_BASH32 must identify Bash 3.2 (got: %s)\n' "$b32_ver" >&2
-    return 1
-  }
   [[ "$mod_ver" =~ version\ [5-9]\. ]] || {
     printf 'BATS_MODERN_BASH must identify Bash 5+ (got: %s)\n' "$mod_ver" >&2
     return 1
   }
+
+  local b32_ver=""
+  if [[ -x "$PROV_BASH32" ]]; then
+    b32_ver="$("$PROV_BASH32" --version | awk 'NR == 1 { print; exit }')"
+  fi
+  if [[ "$b32_ver" =~ version\ 3\.2\. ]]; then
+    PROV_HAS_BASH32=1
+  elif [[ "$(uname -s)" = "Darwin" ]]; then
+    printf 'BATS_BASH32 must identify Bash 3.2 on Darwin (got: %s)\n' "${b32_ver:-missing}" >&2
+    return 1
+  fi
+
+  local shim_bash="$PROV_MODERN_BASH"
+  if [[ "$PROV_HAS_BASH32" -eq 1 ]]; then
+    shim_bash="$PROV_BASH32"
+  fi
 
   export PROV_ENV_BIN PROV_GIT_BIN
   PROV_ENV_BIN="$(command -v env)"
@@ -681,9 +689,9 @@ prov_setup_file_shared() {
   sha_bin="$(command -v shasum || command -v sha256sum)"
   ln -s "$sha_bin" "$PROV_SHARED_ROOT/cmd-bin/$(basename "$sha_bin")"
 
-  prov_write_gh_shim "$PROV_SHARED_ROOT/shims/gh" "$PROV_BASH32"
-  prov_write_cosign_shim "$PROV_SHARED_ROOT/shims/cosign" "$PROV_BASH32"
-  prov_write_brew_shim "$PROV_SHARED_ROOT/shims/brew" "$PROV_BASH32"
+  prov_write_gh_shim "$PROV_SHARED_ROOT/shims/gh" "$shim_bash"
+  prov_write_cosign_shim "$PROV_SHARED_ROOT/shims/cosign" "$shim_bash"
+  prov_write_brew_shim "$PROV_SHARED_ROOT/shims/brew" "$shim_bash"
 
   export PROV_ALL_FIXTURES="$PROV_SHARED_ROOT/all-fixtures"
   prov_build_fixture_repo "$PROV_ALL_FIXTURES"
@@ -1399,4 +1407,232 @@ EOF
         "$shell_bin" "$pub_script" verify-patch-policy
   ) >"$root/interp-policy.out" 2>"$root/interp-policy.err" || interp_rc=$?
   [[ "$interp_rc" -eq 1 ]]
+}
+
+case_multi_tag_linux_and_macos() {
+  local shell_bin="$1"
+  local root=""
+  root="$(prov_setup_case_root "$shell_bin" 1 1)"
+
+  local mrepo="$root/mrepo"
+  local rel_dir="$root/releases/multitag-1.2.3"
+  mkdir -p "$mrepo/Formula" "$rel_dir"
+
+  local entries_jsonl="$root/mt-entries.jsonl"
+  : >"$entries_jsonl"
+
+  local t="" bsha="" ssha="" csha="" bfn="" rfn=""
+  local sha_mac="" sha_arm_linux="" sha_x64_linux=""
+  for t in arm64_tahoe arm64_linux x86_64_linux; do
+    bfn="multitag--1.2.3.${t}.bottle.1.tar.gz"
+    rfn="multitag-1.2.3.${t}.bottle.1.tar.gz"
+    printf 'bottle-payload-multitag-%s\n' "$t" >"$rel_dir/$rfn"
+    bsha="$(prov_sha256_file "$rel_dir/$rfn")"
+    printf '%s  %s\n' "$bsha" "$rfn" >"$rel_dir/${rfn}.sha256"
+
+    prov_make_spdx_json "multitag" "1.2.3" "pkg-${t}" >"$rel_dir/${rfn}.spdx.json"
+    prov_make_cdx_json "multitag" "1.2.3" >"$rel_dir/${rfn}.cdx.json"
+    ssha="$(prov_sha256_file "$rel_dir/${rfn}.spdx.json")"
+    csha="$(prov_sha256_file "$rel_dir/${rfn}.cdx.json")"
+
+    jq -cn --arg sha "$bsha" '{bundle: "slsa", sha256: $sha}' >"$rel_dir/${rfn}.intoto.jsonl"
+    jq -cn --arg sha "$bsha" '{bundle: "lineage", sha256: $sha}' >"$rel_dir/${rfn}.lineage.intoto.jsonl"
+    printf '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","messageSignature":{}}\n' \
+      >"$rel_dir/${rfn}.sigstore.json"
+    prov_make_spdx_sigstore_bundle "$rel_dir/${rfn}.spdx.json" >"$rel_dir/${rfn}.spdx.sigstore.json"
+
+    case "$t" in
+      arm64_tahoe) sha_mac="$bsha" ;;
+      arm64_linux) sha_arm_linux="$bsha" ;;
+      x86_64_linux) sha_x64_linux="$bsha" ;;
+    esac
+
+    jq -cn \
+      --arg formula "multitag" \
+      --arg pkg_version "1.2.3" \
+      --arg release_tag "multitag-1.2.3" \
+      --arg brew_filename "$bfn" \
+      --arg release_filename "$rfn" \
+      --arg bottle_sha256 "$bsha" \
+      --arg spdx_sha256 "$ssha" \
+      --arg cdx_sha256 "$csha" \
+      '{
+        formula: $formula,
+        pkg_version: $pkg_version,
+        release_tag: $release_tag,
+        brew_filename: $brew_filename,
+        release_filename: $release_filename,
+        bottle_sha256: $bottle_sha256,
+        spdx_sha256: $spdx_sha256,
+        cdx_sha256: $cdx_sha256
+      }' >>"$entries_jsonl"
+  done
+
+  cat >"$mrepo/Formula/multitag.rb" <<EOF
+class Multitag < Formula
+  desc "Multi-platform Linux and macOS bottle fixture"
+  homepage "https://example.com"
+  url "https://github.com/example/multitag/archive/refs/tags/v1.2.3.tar.gz"
+  sha256 "${sha_mac}"
+
+  bottle do
+    root_url "file://${rel_dir}"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "${sha_mac}"
+    sha256               arm64_linux:  "${sha_arm_linux}"
+    sha256               x86_64_linux: "${sha_x64_linux}"
+  end
+
+  def install
+    bin.install "multitag"
+  end
+end
+EOF
+
+  jq -s \
+    --arg cert "$CERT_IDENTITY" \
+    --arg ltype "$LINEAGE_TYPE" \
+    --arg tr "$TRUSTED_ROOT_JSONL" \
+    --arg tap "$mrepo" \
+    '{
+      expected_cert_identity: $cert,
+      lineage_type: $ltype,
+      trusted_root_jsonl: $tr,
+      mock_tap_repo: $tap,
+      by_sha: (map({key: .bottle_sha256, value: .}) | from_entries)
+    }' "$entries_jsonl" >"$root/mock-state.json"
+
+  # 1. --parse-only --all-tags discovers all 3 column-aligned tags in declaration order.
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" --parse-only --all-tags --allow-file-root-url --json
+  [[ "$PROV_RC" -eq 0 && ! -s "$PROV_ERR" ]]
+  jq -e '
+    .ok == true
+    and .checked == 3
+    and .passed == 3
+    and .failed == 0
+    and ([.results[].bottle_tag] == ["arm64_tahoe", "arm64_linux", "x86_64_linux"])
+  ' "$PROV_OUT" >/dev/null
+
+  # 2. Full online verification across all 3 tags + isolated brew verify for each tag.
+  : >"$root/call-log.jsonl"
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" \
+    --all --all-tags --allow-file-root-url --require-cosign --homebrew --json
+  [[ "$PROV_RC" -eq 0 && ! -s "$PROV_ERR" ]]
+  jq -e '.ok == true and .checked == 3 and .passed == 3' "$PROV_OUT" >/dev/null
+  jq -s -e '
+    [ .[] | select(.tool == "brew" and .args[0] == "verify") | .args[] | select(startswith("--bottle-tag=")) ]
+    == ["--bottle-tag=arm64_tahoe", "--bottle-tag=arm64_linux", "--bottle-tag=x86_64_linux"]
+  ' "$root/call-log.jsonl" >/dev/null
+
+  # 3. Single Linux tag (--bottle-tag x86_64_linux) and --bottle-tag all alias; conflicting options fail with exit 2.
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" \
+    --bottle-tag x86_64_linux --allow-file-root-url --require-cosign --json multitag
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e --arg s "$sha_x64_linux" '.checked == 1 and .results[0].bottle_tag == "x86_64_linux" and .results[0].actual_sha256 == $s' "$PROV_OUT" >/dev/null
+
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" \
+    --bottle-tag all --parse-only --allow-file-root-url --json multitag
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e '.checked == 3' "$PROV_OUT" >/dev/null
+
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" --all-tags --bottle-tag x86_64_linux --parse-only multitag
+  [[ "$PROV_RC" -eq 2 ]]
+
+  prov_run_verifier "$root" "$shell_bin" "$mrepo" --all-tags --file "$rel_dir/multitag-1.2.3.x86_64_linux.bottle.1.tar.gz" multitag
+  [[ "$PROV_RC" -eq 2 ]]
+
+  # 4. README multi-platform rendering + CI patch-policy on column-aligned 3-tag bottle block + common.sh rank order.
+  local common_lib="$PROV_REPO_ROOT/scripts/ci/common.sh"
+  # shellcheck disable=SC2016
+  "$shell_bin" -c '
+    source "$1"
+    r_mac="$(ci::bottle_tag_sort_rank arm64_tahoe)"
+    r_intel_mac="$(ci::bottle_tag_sort_rank tahoe)"
+    r_arm_lin="$(ci::bottle_tag_sort_rank arm64_linux)"
+    r_x64_lin="$(ci::bottle_tag_sort_rank x86_64_linux)"
+    [[ "${r_mac}" -lt "${r_intel_mac}" && "${r_intel_mac}" -lt "${r_arm_lin}" && "${r_arm_lin}" -lt "${r_x64_lin}" ]]
+    [[ "$(ci::matrix_os_bottle_tag ubuntu-24.04)" = "x86_64_linux" ]]
+    [[ "$(ci::matrix_os_bottle_tag ubuntu-24.04-arm)" = "arm64_linux" ]]
+    [[ "$(ci::matrix_os_bottle_tag macos-26)" = "arm64_tahoe" ]]
+  ' _ "$common_lib"
+
+  local git_repo="$root/mt-git"
+  mkdir -p "$git_repo/Formula"
+  export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+  export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+  "$PROV_GIT_BIN" -C "$git_repo" init -q -b main
+  cat >"$git_repo/Formula/multitag.rb" <<EOF
+class Multitag < Formula
+  desc "Multi-platform Linux and macOS bottle fixture"
+  homepage "https://example.com"
+  url "https://github.com/example/multitag/archive/refs/tags/v1.2.2.tar.gz"
+  sha256 "${sha_mac}"
+
+  def install
+    bin.install "multitag"
+  end
+end
+EOF
+  printf '# Demo\n\n<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->\n<!-- END BOTTLE_PROVENANCE_TABLE -->\n' >"$git_repo/README.md"
+  "$PROV_GIT_BIN" -C "$git_repo" add .
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -m "base"
+  local base_sha=""
+  base_sha="$("$PROV_GIT_BIN" -C "$git_repo" rev-parse HEAD)"
+
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q -b pr
+  awk '{ sub(/v1\.2\.2\.tar\.gz/, "v1.2.3.tar.gz"); print }' "$git_repo/Formula/multitag.rb" >"$git_repo/Formula/multitag.rb.tmp"
+  mv "$git_repo/Formula/multitag.rb.tmp" "$git_repo/Formula/multitag.rb"
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "multitag 1.2.3"
+  local head_sha=""
+  head_sha="$("$PROV_GIT_BIN" -C "$git_repo" rev-parse HEAD)"
+
+  cat >"$git_repo/Formula/multitag.rb" <<EOF
+class Multitag < Formula
+  desc "Multi-platform Linux and macOS bottle fixture"
+  homepage "https://example.com"
+  url "https://github.com/example/multitag/archive/refs/tags/v1.2.3.tar.gz"
+  sha256 "${sha_mac}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/multitag-1.2.3"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "${sha_mac}"
+    sha256               arm64_linux:  "${sha_arm_linux}"
+    sha256               x86_64_linux: "${sha_x64_linux}"
+  end
+
+  def install
+    bin.install "multitag"
+  end
+end
+EOF
+  local readme_script="$PROV_REPO_ROOT/scripts/update-readme-bottles.sh"
+  local pub_script="$PROV_REPO_ROOT/scripts/ci/publish-bottles.sh"
+  PROVENANCE_REPO_ROOT="$git_repo" README_BOTTLES_FILE="$git_repo/README.md" \
+    "$shell_bin" "$readme_script"
+  grep -Fq "\`arm64_tahoe\` · \`1.2.3\` (rebuild 1)" "$git_repo/README.md"
+  grep -Fq "\`arm64_linux\` · \`1.2.3\` (rebuild 1)" "$git_repo/README.md"
+  grep -Fq "\`x86_64_linux\` · \`1.2.3\` (rebuild 1)" "$git_repo/README.md"
+
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "multitag: add 1.2.3 bottle"
+  local rtemp="$root/mt-rtemp"
+  mkdir -p "$rtemp/publish-stage"
+  "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
+
+  printf '{"schema":"artagon-bottle-release-map/v1","bottles":[{"formula":"multitag","tag":"arm64_tahoe"},{"formula":"multitag","tag":"arm64_linux"},{"formula":"multitag","tag":"x86_64_linux"}]}\n' \
+    >"$rtemp/publish-stage/release-map.json"
+  local map_sha=""
+  map_sha="$(prov_sha256_file "$rtemp/publish-stage/release-map.json")"
+
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$head_sha" \
+        RELEASE_MAP_SHA256="$map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/mt-policy.out" 2>"$root/mt-policy.err"
 }

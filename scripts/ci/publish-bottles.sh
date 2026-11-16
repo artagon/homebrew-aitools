@@ -71,36 +71,95 @@ case "${subcmd}" in
     ci::require_uint "${test_run_id}" "test_run_id"
     printf 'test_run_id=%s\n' "${test_run_id}" >>"${GITHUB_OUTPUT}"
 
+    raw_oses="$(ci::matrix_oses)"
+    read -r -a matrix_oses <<<"${raw_oses}"
+    [[ "${#matrix_oses[@]}" -gt 0 ]] || ci::fail "CI_MATRIX_OSES must not be empty"
+
     arts_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${test_run_id}/artifacts?per_page=100")"
-    bottles_art="$(printf '%s\n' "${arts_json}" | jq -c '[.artifacts[] | select(.name == "bottles_macos-26" and .expired == false)] | first // empty')"
-    [[ -n "${bottles_art}" ]] || ci::fail "Run ${test_run_id} has no active bottles_macos-26 artifact"
-
-    bottles_id="$(printf '%s\n' "${bottles_art}" | jq -r '.id | tostring')"
-    ci::require_uint "${bottles_id}" "bottles artifact id"
-    bottles_digest="$(printf '%s\n' "${bottles_art}" | jq -r '.digest // empty')"
-    [[ "${bottles_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || ci::fail "bottles_macos-26 missing sha256 digest"
-
     rm -rf -- "${RUNNER_TEMP}/verified-bottles" "${RUNNER_TEMP}/verified-provenance"
-    mkdir -p -- "${RUNNER_TEMP}/verified-bottles" "${RUNNER_TEMP}/verified-provenance"
-    gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${bottles_id}/zip" >"${RUNNER_TEMP}/bottles.zip"
-    [[ "sha256:$(ci::sha256_hex "${RUNNER_TEMP}/bottles.zip")" = "${bottles_digest}" ]] ||
-      ci::fail "bottles_macos-26 ZIP digest mismatch"
-    unzip -q "${RUNNER_TEMP}/bottles.zip" -d "${RUNNER_TEMP}/verified-bottles"
+    mkdir -p -- "${RUNNER_TEMP}/verified-bottles" "${RUNNER_TEMP}/verified-provenance/sboms"
 
-    prov_art="$(printf '%s\n' "${arts_json}" | jq -c '[.artifacts[] | select(.name == "provenance_macos-26" and .expired == false)] | first // empty')"
-    if [[ -n "${prov_art}" ]]
+    manifest_files=()
+    for matrix_os in ${matrix_oses[@]+"${matrix_oses[@]}"}
+    do
+      ci::require_matrix_os "${matrix_os}" "matrix_os"
+      bottles_art_name="bottles_${matrix_os}"
+      bottles_art="$(
+        printf '%s\n' "${arts_json}" |
+          jq -c --arg n "${bottles_art_name}" '[.artifacts[] | select(.name == $n and .expired == false)] | first // empty'
+      )"
+      [[ -n "${bottles_art}" ]] ||
+        ci::fail "Run ${test_run_id} has no active ${bottles_art_name} artifact"
+
+      bottles_id="$(printf '%s\n' "${bottles_art}" | jq -r '.id | tostring')"
+      ci::require_uint "${bottles_id}" "${bottles_art_name} artifact id"
+      bottles_digest="$(printf '%s\n' "${bottles_art}" | jq -r '.digest // empty')"
+      [[ "${bottles_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+        ci::fail "${bottles_art_name} missing sha256 digest"
+
+      bottles_zip="${RUNNER_TEMP}/bottles-${matrix_os}.zip"
+      gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${bottles_id}/zip" >"${bottles_zip}"
+      [[ "sha256:$(ci::sha256_hex "${bottles_zip}")" = "${bottles_digest}" ]] ||
+        ci::fail "${bottles_art_name} ZIP digest mismatch"
+      unzip -n -q "${bottles_zip}" -d "${RUNNER_TEMP}/verified-bottles"
+
+      prov_art_name="provenance_${matrix_os}"
+      prov_art="$(
+        printf '%s\n' "${arts_json}" |
+          jq -c --arg n "${prov_art_name}" '[.artifacts[] | select(.name == $n and .expired == false)] | first // empty'
+      )"
+      if [[ -n "${prov_art}" ]]
+      then
+        prov_id="$(printf '%s\n' "${prov_art}" | jq -r '.id | tostring')"
+        ci::require_uint "${prov_id}" "${prov_art_name} artifact id"
+        prov_digest="$(printf '%s\n' "${prov_art}" | jq -r '.digest // empty')"
+        [[ "${prov_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+          ci::fail "${prov_art_name} missing sha256 digest"
+        prov_zip="${RUNNER_TEMP}/provenance-${matrix_os}.zip"
+        prov_os_dir="${RUNNER_TEMP}/verified-provenance/${matrix_os}"
+        mkdir -p -- "${prov_os_dir}"
+        gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${prov_id}/zip" >"${prov_zip}"
+        [[ "sha256:$(ci::sha256_hex "${prov_zip}")" = "${prov_digest}" ]] ||
+          ci::fail "${prov_art_name} ZIP digest mismatch"
+        unzip -n -q "${prov_zip}" -d "${prov_os_dir}"
+
+        manifest_path="${prov_os_dir}/build-manifest.json"
+        [[ -f "${manifest_path}" ]] ||
+          ci::fail "Missing build-manifest.json in ${prov_art_name}"
+        jq -e \
+          --arg head "${HEAD_SHA}" \
+          --arg run_id "${test_run_id}" \
+          --arg mos "${matrix_os}" \
+          '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and .matrix_os == $mos' \
+          "${manifest_path}" >/dev/null ||
+          ci::fail "${prov_art_name} build-manifest.json failed head_sha/run_id/matrix_os check"
+        manifest_files+=("${manifest_path}")
+
+        shopt -s nullglob
+        sbom_files=("${prov_os_dir}"/*.spdx.json "${prov_os_dir}"/*.cdx.json)
+        shopt -u nullglob
+        for sbom_file in ${sbom_files[@]+"${sbom_files[@]}"}
+        do
+          sbom_base="$(basename "${sbom_file}")"
+          ci::require_safe_filename "${sbom_base}" "SBOM filename"
+          [[ ! -e "${RUNNER_TEMP}/verified-provenance/sboms/${sbom_base}" ]] ||
+            ci::fail "Duplicate SBOM filename across provenance artifacts: ${sbom_base}"
+          cp -- "${sbom_file}" "${RUNNER_TEMP}/verified-provenance/sboms/${sbom_base}"
+        done
+      elif [[ "${allow_missing}" != "true" ]]
+      then
+        ci::fail "Run ${test_run_id} has no active ${prov_art_name} artifact (set allow_missing_manifest=true only for pre-provenance PRs)"
+      fi
+    done
+
+    if [[ "${#manifest_files[@]}" -gt 0 ]]
     then
-      prov_id="$(printf '%s\n' "${prov_art}" | jq -r '.id | tostring')"
-      ci::require_uint "${prov_id}" "provenance artifact id"
-      prov_digest="$(printf '%s\n' "${prov_art}" | jq -r '.digest // empty')"
-      [[ "${prov_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || ci::fail "provenance_macos-26 missing sha256 digest"
-      gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${prov_id}/zip" >"${RUNNER_TEMP}/provenance.zip"
-      [[ "sha256:$(ci::sha256_hex "${RUNNER_TEMP}/provenance.zip")" = "${prov_digest}" ]] ||
-        ci::fail "provenance_macos-26 ZIP digest mismatch"
-      unzip -q "${RUNNER_TEMP}/provenance.zip" -d "${RUNNER_TEMP}/verified-provenance"
-    elif [[ "${allow_missing}" != "true" ]]
-    then
-      ci::fail "Run ${test_run_id} has no active provenance_macos-26 artifact (set allow_missing_manifest=true only for pre-provenance PRs)"
+      if [[ "${#manifest_files[@]}" -ne "${#matrix_oses[@]}" && "${allow_missing}" != "true" ]]
+      then
+        ci::fail "Incomplete provenance_* artifacts on run ${test_run_id}"
+      fi
+      jq -s '[.[].bottles[]]' "${manifest_files[@]}" \
+        >"${RUNNER_TEMP}/verified-provenance/combined-bottles.json"
     fi
     ;;
 
@@ -113,6 +172,16 @@ case "${subcmd}" in
     ci::require_sha40 "${HEAD_SHA:-}" "head_sha"
     ci::require_uint "${TEST_RUN_ID:-}" "test_run_id"
 
+    raw_oses="$(ci::matrix_oses)"
+    read -r -a matrix_oses <<<"${raw_oses}"
+    [[ "${#matrix_oses[@]}" -gt 0 ]] || ci::fail "CI_MATRIX_OSES must not be empty"
+    expected_tags=()
+    for matrix_os in ${matrix_oses[@]+"${matrix_oses[@]}"}
+    do
+      ci::require_matrix_os "${matrix_os}" "matrix_os"
+      expected_tags+=("$(ci::matrix_os_bottle_tag "${matrix_os}")")
+    done
+
     export USER="${USER:-$(id -un)}"
     base_main_sha="$(git rev-parse HEAD)"
     ci::require_sha40 "${base_main_sha}" "base_main_sha"
@@ -121,13 +190,37 @@ case "${subcmd}" in
     brew pr-pull --debug --no-upload --tap="${GITHUB_REPOSITORY}" --head-sha="${HEAD_SHA}" \
       "${PULL_REQUEST}"
 
+    sorted_json_list="${RUNNER_TEMP}/sorted-bottle-jsons.txt"
     (
       cd "${RUNNER_TEMP}/verified-bottles"
       shopt -s nullglob
-      json_files=(./*.bottle.json)
+      raw_json_files=(./*.bottle.json)
       shopt -u nullglob
-      [[ "${#json_files[@]}" -gt 0 ]] || ci::fail "No *.bottle.json files in verified bottles_macos-26 artifact"
-      brew bottle --merge --write "${json_files[@]}"
+      [[ "${#raw_json_files[@]}" -gt 0 ]] || ci::fail "No *.bottle.json files in verified bottles_* artifacts"
+
+      rank_tsv="${RUNNER_TEMP}/bottle-json-ranks.tsv"
+      : >"${rank_tsv}"
+      for jf in "${raw_json_files[@]}"
+      do
+        jf_base="$(basename "${jf}")"
+        ci::require_safe_filename "${jf_base}" "bottle JSON filename"
+        jf_formula="$(jq -r 'to_entries[0].value.formula.name' "${jf}")"
+        jf_tag="$(jq -r 'to_entries[0].value.bottle.tags | keys[0]' "${jf}")"
+        ci::require_formula_name "${jf_formula}" "formula.name"
+        ci::require_bottle_tag "${jf_tag}" "bottle.tag"
+        jf_rank="$(ci::bottle_tag_sort_rank "${jf_tag}")"
+        printf '%s\t%s\t%s\t%s\n' "${jf_formula}" "${jf_rank}" "${jf_tag}" "${jf_base}" >>"${rank_tsv}"
+      done
+      sort -t $'\t' -k1,1 -k2,2n -k3,3 "${rank_tsv}" | awk -F '\t' '{ print "./" $4 }' >"${sorted_json_list}"
+
+      ordered_json_files=()
+      while IFS= read -r ordered_jf
+      do
+        [[ -n "${ordered_jf}" ]] && ordered_json_files+=("${ordered_jf}")
+      done <"${sorted_json_list}"
+      [[ "${#ordered_json_files[@]}" -gt 0 ]] || ci::fail "Ordered bottle JSON list is empty"
+
+      brew bottle --merge --write --no-all-checks "${ordered_json_files[@]}"
     )
 
     stage_dir="${RUNNER_TEMP}/publish-stage"
@@ -136,10 +229,13 @@ case "${subcmd}" in
     entries_jsonl="${RUNNER_TEMP}/map-entries.jsonl"
     : >"${entries_jsonl}"
     expected_formula_paths=()
+    audited_formulae=" "
 
-    shopt -s nullglob
-    json_files=("${RUNNER_TEMP}/verified-bottles"/*.bottle.json)
-    shopt -u nullglob
+    json_files=()
+    while IFS= read -r rel_jf
+    do
+      [[ -n "${rel_jf}" ]] && json_files+=("${RUNNER_TEMP}/verified-bottles/${rel_jf#./}")
+    done <"${sorted_json_list}"
 
     for json_file in ${json_files[@]+"${json_files[@]}"}
     do
@@ -156,11 +252,16 @@ case "${subcmd}" in
       [[ "${root_url}" = "${expected_root_url}" ]] ||
         ci::fail "Unexpected root_url ${root_url} (expected ${expected_root_url})"
 
-      expected_formula_paths+=("Formula/${formula_name}.rb")
-      brew audit --skip-style "artagon/aitools/${formula_name}"
+      if [[ "${audited_formulae}" != *" ${formula_name} "* ]]
+      then
+        audited_formulae="${audited_formulae}${formula_name} "
+        expected_formula_paths+=("Formula/${formula_name}.rb")
+        brew audit --skip-style "artagon/aitools/${formula_name}"
+      fi
 
       while IFS=$'\t' read -r tag rel_fn brew_fn expected_sha
       do
+        ci::require_bottle_tag "${tag}" "tag"
         ci::require_safe_filename "${rel_fn}" "release_filename"
         ci::require_safe_filename "${brew_fn}" "brew_filename"
         ci::require_sha256 "${expected_sha}" "expected_sha"
@@ -174,31 +275,31 @@ case "${subcmd}" in
         grep -Fq "${expected_sha}" "Formula/${formula_name}.rb" ||
           ci::fail "Formula/${formula_name}.rb does not contain merged bottle sha256 ${expected_sha}"
 
-        spdx_src="${RUNNER_TEMP}/verified-provenance/${rel_fn}.spdx.json"
-        cdx_src="${RUNNER_TEMP}/verified-provenance/${rel_fn}.cdx.json"
-        if [[ -f "${RUNNER_TEMP}/verified-provenance/build-manifest.json" ]]
+        spdx_src="${RUNNER_TEMP}/verified-provenance/sboms/${rel_fn}.spdx.json"
+        cdx_src="${RUNNER_TEMP}/verified-provenance/sboms/${rel_fn}.cdx.json"
+        if [[ -f "${RUNNER_TEMP}/verified-provenance/combined-bottles.json" ]]
         then
           [[ -f "${spdx_src}" && -f "${cdx_src}" ]] ||
-            ci::fail "Missing SBOM files for ${rel_fn} in provenance_macos-26"
+            ci::fail "Missing SBOM files for ${rel_fn} in provenance_* artifacts"
           spdx_sha="$(ci::sha256_hex "${spdx_src}")"
           cdx_sha="$(ci::sha256_hex "${cdx_src}")"
           jq -e \
-            --arg head "${HEAD_SHA}" \
-            --arg run_id "${TEST_RUN_ID}" \
             --arg formula "${formula_name}" \
+            --arg tag "${tag}" \
             --arg brew_fn "${brew_fn}" \
             --arg rel_fn "${rel_fn}" \
             --arg bottle_sha "${actual_sha}" \
             --arg spdx_sha "${spdx_sha}" \
             --arg cdx_sha "${cdx_sha}" \
-            '.head_sha == $head and .run_id == $run_id and any(.bottles[];
+            'any(.[];
               .formula == $formula
+              and .tag == $tag
               and .brew_filename == $brew_fn
               and .release_filename == $rel_fn
               and .bottle_sha256 == $bottle_sha
               and .spdx_sha256 == $spdx_sha
               and .cdx_sha256 == $cdx_sha
-            )' "${RUNNER_TEMP}/verified-provenance/build-manifest.json" >/dev/null ||
+            )' "${RUNNER_TEMP}/verified-provenance/combined-bottles.json" >/dev/null ||
             ci::fail "build-manifest.json cross-check failed for ${rel_fn}"
         else
           spdx_src="${RUNNER_TEMP}/generated-${rel_fn}.spdx.json"
@@ -257,6 +358,7 @@ case "${subcmd}" in
     while IFS= read -r pr_formula_path
     do
       [[ -z "${pr_formula_path}" ]] && continue
+      pr_formula_name="$(basename "${pr_formula_path}" .rb)"
       covered=0
       for bottled in "${expected_formula_paths[@]}"
       do
@@ -267,7 +369,14 @@ case "${subcmd}" in
         fi
       done
       [[ "${covered}" -eq 1 ]] ||
-        ci::fail "Changed formula ${pr_formula_path} is not covered by bottles_macos-26 from run ${TEST_RUN_ID}"
+        ci::fail "Changed formula ${pr_formula_path} is not covered by bottles_* from run ${TEST_RUN_ID}"
+
+      for req_tag in "${expected_tags[@]}"
+      do
+        jq -s -e --arg f "${pr_formula_name}" --arg t "${req_tag}" \
+          'any(.[]; .formula == $f and .tag == $t)' "${entries_jsonl}" >/dev/null ||
+          ci::fail "Changed formula ${pr_formula_path} is missing required ${req_tag} bottle from run ${TEST_RUN_ID}"
+      done
     done < <(git diff --name-only --diff-filter=ACMR "${base_main_sha}" "${HEAD_SHA}" -- 'Formula/*.rb')
 
     if [[ -f README.md ]] && grep -Fq "<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->" README.md
@@ -410,19 +519,20 @@ case "${subcmd}" in
     brew trust --tap artagon/aitools
 
     stage_dir="${RUNNER_TEMP}/publish-stage"
-    while IFS= read -r formula
+    while IFS=$'\t' read -r formula tag
     do
       [[ -z "${formula}" ]] && continue
       ci::require_formula_name "${formula}" "formula"
-      verify_out="${RUNNER_TEMP}/brew-verify-${formula}.json"
+      ci::require_bottle_tag "${tag}" "bottle_tag"
+      verify_out="${RUNNER_TEMP}/brew-verify-${formula}-${tag}.json"
       brew verify \
         --quiet \
-        --bottle-tag=arm64_tahoe \
+        "--bottle-tag=${tag}" \
         --force \
         --json \
         "artagon/aitools/${formula}" >"${verify_out}"
       jq -e 'type == "array" and length == 1' "${verify_out}" >/dev/null
-    done < <(jq -r '.bottles[].formula' "${stage_dir}/release-map.json" | sort -u)
+    done < <(jq -r '.bottles[] | [.formula, .tag] | @tsv' "${stage_dir}/release-map.json" | sort -u)
     ;;
 
   close-pr)

@@ -17,7 +17,7 @@ on:
         required: true
         type: string
       allow_missing_manifest:
-        description: Allow legacy PRs built before provenance_macos-26 existed
+        description: Allow legacy PRs built before provenance_* artifacts existed
         required: false
         default: false
         type: boolean
@@ -115,7 +115,7 @@ jobs:
     name: Sign and attest bottles
     needs: stage-bottles
     permissions:
-      actions: read # download publish-stage and verify provenance_macos-26 digest
+      actions: read # download publish-stage and verify provenance_* digests
       attestations: write # store SLSA v1 and bottle-lineage/v1 attestations
       contents: write # create draft releases and upload bottles and provenance sidecars
       id-token: write # mint OIDC tokens for GitHub Attestations and Sigstore Fulcio

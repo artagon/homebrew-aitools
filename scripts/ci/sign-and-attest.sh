@@ -45,12 +45,17 @@ case "${subcmd}" in
     builder_run_id=""
     builder_run_attempt=""
     prov_artifact_digest=""
+    prov_digests_json="{}"
     lineage_status="backfill-unverified"
 
     if [[ "${MODE}" = "publish" ]]
     then
       ci::require_sha40 "${HEAD_SHA:-}" "HEAD_SHA"
       ci::require_uint "${TEST_RUN_ID:-}" "TEST_RUN_ID"
+
+      raw_oses="$(ci::matrix_oses)"
+      read -r -a matrix_oses <<<"${raw_oses}"
+      [[ "${#matrix_oses[@]}" -gt 0 ]] || ci::fail "CI_MATRIX_OSES must not be empty"
 
       run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TEST_RUN_ID}")"
       [[ "$(printf '%s\n' "${run_json}" | jq -r .path)" = ".github/workflows/tests.yml" ]] ||
@@ -72,41 +77,74 @@ case "${subcmd}" in
       builder_run_attempt="$(printf '%s\n' "${run_json}" | jq -r '.run_attempt | tostring')"
 
       arts_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TEST_RUN_ID}/artifacts?per_page=100")"
-      prov_art="$(printf '%s\n' "${arts_json}" | jq -c '[.artifacts[] | select(.name == "provenance_macos-26" and .expired == false)] | first // empty')"
+      manifest_files=()
+      digests_jsonl="${RUNNER_TEMP}/prov-digests.jsonl"
+      : >"${digests_jsonl}"
 
-      if [[ -z "${prov_art}" ]]
-      then
-        if [[ "${allow_missing}" = "true" ]]
+      for matrix_os in ${matrix_oses[@]+"${matrix_oses[@]}"}
+      do
+        ci::require_matrix_os "${matrix_os}" "matrix_os"
+        prov_art_name="provenance_${matrix_os}"
+        prov_art="$(
+          printf '%s\n' "${arts_json}" |
+            jq -c --arg n "${prov_art_name}" '[.artifacts[] | select(.name == $n and .expired == false)] | first // empty'
+        )"
+
+        if [[ -z "${prov_art}" ]]
         then
-          lineage_status="publish-legacy-no-manifest"
-          printf '::warning::Allowing missing provenance_macos-26 on run %s via explicit override\n' "${TEST_RUN_ID}"
-          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]
+          if [[ "${allow_missing}" = "true" ]]
           then
-            printf '### Provenance override: missing provenance_macos-26 allowed on run %s\n' "${TEST_RUN_ID}" >>"${GITHUB_STEP_SUMMARY}"
+            printf '::warning::Allowing missing %s on run %s via explicit override\n' "${prov_art_name}" "${TEST_RUN_ID}"
+            if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]
+            then
+              printf '### Provenance override: missing %s allowed on run %s\n' "${prov_art_name}" "${TEST_RUN_ID}" >>"${GITHUB_STEP_SUMMARY}"
+            fi
+          else
+            ci::fail "Run ${TEST_RUN_ID} has no active ${prov_art_name} artifact (set allow_missing_manifest=true only for pre-provenance PRs)"
           fi
         else
-          ci::fail "Run ${TEST_RUN_ID} has no active provenance_macos-26 artifact (set allow_missing_manifest=true only for pre-provenance PRs)"
+          prov_id="$(printf '%s\n' "${prov_art}" | jq -r '.id | tostring')"
+          ci::require_uint "${prov_id}" "${prov_art_name} artifact id"
+          this_digest="$(printf '%s\n' "${prov_art}" | jq -r '.digest // empty')"
+          [[ "${this_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+            ci::fail "Artifact ${prov_id} (${prov_art_name}) missing valid sha256 digest: ${this_digest}"
+
+          prov_zip="${RUNNER_TEMP}/verified-prov-${matrix_os}.zip"
+          manifest_file="${RUNNER_TEMP}/verified-manifest-${matrix_os}.json"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${prov_id}/zip" >"${prov_zip}"
+          zip_sha="sha256:$(ci::sha256_hex "${prov_zip}")"
+          [[ "${zip_sha}" = "${this_digest}" ]] ||
+            ci::fail "Artifact ${prov_id} (${prov_art_name}) digest mismatch: expected ${this_digest}, got ${zip_sha}"
+
+          unzip -p "${prov_zip}" build-manifest.json >"${manifest_file}"
+          jq -e \
+            --arg head "${HEAD_SHA}" \
+            --arg run_id "${TEST_RUN_ID}" \
+            --arg mos "${matrix_os}" \
+            '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and .matrix_os == $mos' \
+            "${manifest_file}" >/dev/null ||
+            ci::fail "${prov_art_name} build-manifest.json head_sha/run_id/matrix_os mismatch"
+
+          if [[ -z "${prov_artifact_digest}" ]]
+          then
+            prov_artifact_digest="${this_digest}"
+          fi
+          jq -c -n --arg key "${matrix_os}" --arg value "${this_digest}" '{key: $key, value: $value}' >>"${digests_jsonl}"
+          manifest_files+=("${manifest_file}")
         fi
+      done
+
+      if [[ "${#manifest_files[@]}" -eq 0 ]]
+      then
+        lineage_status="publish-legacy-no-manifest"
       else
+        if [[ "${#manifest_files[@]}" -ne "${#matrix_oses[@]}" && "${allow_missing}" != "true" ]]
+        then
+          ci::fail "Incomplete provenance_* artifacts on run ${TEST_RUN_ID}"
+        fi
         lineage_status="verified-builder-manifest"
-        prov_id="$(printf '%s\n' "${prov_art}" | jq -r '.id | tostring')"
-        ci::require_uint "${prov_id}" "provenance artifact id"
-        prov_artifact_digest="$(printf '%s\n' "${prov_art}" | jq -r '.digest // empty')"
-        [[ "${prov_artifact_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-          ci::fail "Artifact ${prov_id} missing valid sha256 digest: ${prov_artifact_digest}"
-
-        gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${prov_id}/zip" >"${RUNNER_TEMP}/verified-prov.zip"
-        zip_sha="sha256:$(ci::sha256_hex "${RUNNER_TEMP}/verified-prov.zip")"
-        [[ "${zip_sha}" = "${prov_artifact_digest}" ]] ||
-          ci::fail "Artifact ${prov_id} digest mismatch: expected ${prov_artifact_digest}, got ${zip_sha}"
-
-        unzip -p "${RUNNER_TEMP}/verified-prov.zip" build-manifest.json >"${RUNNER_TEMP}/verified-build-manifest.json"
-        jq -e \
-          --arg head "${HEAD_SHA}" \
-          --arg run_id "${TEST_RUN_ID}" \
-          '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id' \
-          "${RUNNER_TEMP}/verified-build-manifest.json" >/dev/null ||
-          ci::fail "build-manifest.json head_sha or run_id does not match ${HEAD_SHA} / ${TEST_RUN_ID}"
+        jq -s '[.[].bottles[]]' "${manifest_files[@]}" >"${RUNNER_TEMP}/verified-build-bottles.json"
+        prov_digests_json="$(jq -c -s 'from_entries' "${digests_jsonl}")"
       fi
     fi
 
@@ -122,6 +160,7 @@ case "${subcmd}" in
       formula="$(printf '%s\n' "${entry}" | jq -r .formula)"
       pkg_version="$(printf '%s\n' "${entry}" | jq -r .pkg_version)"
       release_tag="$(printf '%s\n' "${entry}" | jq -r .release_tag)"
+      tag="$(printf '%s\n' "${entry}" | jq -r .tag)"
       brew_fn="$(printf '%s\n' "${entry}" | jq -r .brew_filename)"
       rel_fn="$(printf '%s\n' "${entry}" | jq -r .release_filename)"
       bottle_sha="$(printf '%s\n' "${entry}" | jq -r .bottle_sha256)"
@@ -131,6 +170,7 @@ case "${subcmd}" in
       ci::require_formula_name "${formula}" "formula"
       [[ "${pkg_version}" =~ ^[0-9A-Za-z._+-]+$ ]] || ci::fail "Invalid pkg_version: ${pkg_version}"
       [[ "${release_tag}" = "${formula}-${pkg_version}" ]] || ci::fail "Unexpected release_tag ${release_tag}"
+      ci::require_bottle_tag "${tag}" "tag"
       ci::require_safe_filename "${brew_fn}" "brew_filename"
       ci::require_safe_filename "${rel_fn}" "release_filename"
       ci::require_sha256 "${bottle_sha}" "bottle_sha256"
@@ -153,20 +193,22 @@ case "${subcmd}" in
         jq -e \
           --arg formula "${formula}" \
           --arg pkg_version "${pkg_version}" \
+          --arg tag "${tag}" \
           --arg brew_fn "${brew_fn}" \
           --arg rel_fn "${rel_fn}" \
           --arg bottle_sha "${bottle_sha}" \
           --arg spdx_sha "${spdx_sha}" \
           --arg cdx_sha "${cdx_sha}" \
-          'any(.bottles[];
+          'any(.[];
             .formula == $formula
             and .pkg_version == $pkg_version
+            and .tag == $tag
             and .brew_filename == $brew_fn
             and .release_filename == $rel_fn
             and .bottle_sha256 == $bottle_sha
             and .spdx_sha256 == $spdx_sha
             and .cdx_sha256 == $cdx_sha
-          )' "${RUNNER_TEMP}/verified-build-manifest.json" >/dev/null ||
+          )' "${RUNNER_TEMP}/verified-build-bottles.json" >/dev/null ||
           ci::fail "Entry ${rel_fn} does not match verified build-manifest.json from run ${TEST_RUN_ID}"
       fi
 
@@ -204,6 +246,7 @@ case "${subcmd}" in
       --arg builder_run "${builder_run_id}" \
       --arg builder_attempt "${builder_run_attempt}" \
       --arg prov_digest "${prov_artifact_digest}" \
+      --argjson prov_digests "${prov_digests_json}" \
       --arg attested_at "${attested_at}" \
       '{
         schema: "https://github.com/artagon/homebrew-aitools/bottle-lineage/v1",
@@ -217,6 +260,7 @@ case "${subcmd}" in
         builder_run_id: (if $builder_run == "" then null else $builder_run end),
         builder_run_attempt: (if $builder_attempt == "" then null else $builder_attempt end),
         provenance_artifact_digest: (if $prov_digest == "" then null else $prov_digest end),
+        provenance_artifact_digests: (if ($prov_digests | length) == 0 then null else $prov_digests end),
         attested_at: $attested_at,
         bottles: $map[0].bottles
       }' >work/lineage.json

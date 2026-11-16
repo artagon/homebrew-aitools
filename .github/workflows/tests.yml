@@ -29,9 +29,14 @@ jobs:
   test-bot:
     name: Build, test, and bottle (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
-        # The macOS 26 runner is Apple Silicon. Its bottles also pour on newer macOS.
-        os: [macos-26]
+        # macos-26: arm64_tahoe; ubuntu-24.04: x86_64_linux; ubuntu-24.04-arm: arm64_linux.
+        # Ubuntu 24.04 LTS supplies glibc 2.39 (required by ck) without --privileged containers.
+        os:
+          - macos-26
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     # Read-only token: pull requests from forks run here with no secrets.
@@ -78,6 +83,7 @@ jobs:
         run: ./scripts/update-readme-bottles.sh --check
 
       - name: Build, test, and bottle formulae
+        id: formulae
         if: github.event_name != 'push'
         env:
           FORMULAE: ${{ inputs.formulae }}
@@ -91,6 +97,17 @@ jobs:
           done
           brew test-bot --only-formulae ${formulae[@]+"${formulae[@]}"}
 
+      - name: Fail if brew test-bot skipped or failed any formula
+        if: github.event_name != 'push'
+        env:
+          MATRIX_OS: ${{ matrix.os }}
+          SKIPPED_OR_FAILED: ${{ steps.formulae.outputs.skipped_or_failed_formulae }}
+        run: |
+          if [[ -n "${SKIPPED_OR_FAILED}" ]]; then
+            echo "::error::brew test-bot skipped or failed formulae on ${MATRIX_OS}: ${SKIPPED_OR_FAILED}"
+            exit 1
+          fi
+
       # test-bot leaves each tested formula installed from its new bottle.
       # If installer/test files changed without rebuilding ripwire, pour the published
       # ripwire bottle so both installer entrypoints are still exercised.
@@ -101,7 +118,16 @@ jobs:
             git fetch --no-tags --depth=50 origin main || true
             if git diff --name-only origin/main...HEAD -- \
               scripts/install-agent-skills.sh tests/integration_agent_install.bats tests/helpers/agent_install_helper.bash | grep -q .; then
-              brew install artagon/aitools/ripwire
+              host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"
+              if brew info --json=v2 artagon/aitools/ripwire | jq -e --arg t "${host_tag}" '.formulae[0].bottle.stable.files | (has($t) or has("all"))' >/dev/null; then
+                brew install --force-bottle artagon/aitools/ripwire
+              elif [[ "${RUNNER_OS:-}" == "macOS" ]]; then
+                echo "::error::Missing published ${host_tag} bottle for artagon/aitools/ripwire"
+                exit 1
+              else
+                echo "::notice::No published ${host_tag} bottle for artagon/aitools/ripwire yet; installer suite ran on bottled platforms"
+                exit 0
+              fi
             else
               echo "ripwire and installer files were not modified in this run"
               exit 0

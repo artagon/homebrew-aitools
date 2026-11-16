@@ -51,7 +51,8 @@ Options:
   --trusted-root PATH     Path to trusted_root.jsonl from 'gh attestation trusted-root'
   --require-cosign        Fail instead of skipping when cosign is not installed
   --homebrew              Also run isolated 'brew verify' for each formula
-  --bottle-tag TAG        Bottle tag to verify (default: arm64_tahoe)
+  --bottle-tag TAG        Bottle tag to verify (default: arm64_tahoe; 'all' = all tags)
+  --all-tags              Verify every bottle tag declared in each Formula/*.rb
   --allow-file-root-url   Allow file:/// bottle root_url for local test fixtures
   --parse-only            Parse and validate Formula/*.rb bottle metadata only
   --json                  Emit machine-readable JSON summary on stdout
@@ -172,7 +173,7 @@ parse_formula_metadata() {
   local url_line_re='^[[:space:]]*url "([^"]+)"$'
   local root_url_re='^[[:space:]]*root_url "([^"]+)"$'
   local rebuild_re='^[[:space:]]*rebuild ([0-9]+)$'
-  local tag_sha_re="${tag}: \"([0-9a-f]{64})\""
+  local tag_sha_re="(^|[[:space:]])${tag}:[[:space:]]+\"([0-9a-f]{64})\""
 
   while IFS= read -r line || [[ -n "${line}" ]]
   do
@@ -217,7 +218,7 @@ parse_formula_metadata() {
         parsed_rebuild="${BASH_REMATCH[1]}"
       elif [[ "${line}" =~ ^[[:space:]]*sha256[[:space:]] ]] && [[ "${line}" =~ ${tag_sha_re} ]]
       then
-        parsed_bottle_sha256="${BASH_REMATCH[1]}"
+        parsed_bottle_sha256="${BASH_REMATCH[2]}"
       fi
       continue
     fi
@@ -319,6 +320,42 @@ parse_formula_metadata() {
   return 1
 }
 
+list_formula_bottle_tags() {
+  local formula="$1"
+  local rb_file="${formula_dir}/${formula}.rb"
+  [[ -f "${rb_file}" ]] || return 1
+
+  local in_bottle=0 bottle_indent="" line=""
+  local stop_re='^  (def (install|caveats|post_install)|test do)$|^__END__$'
+  local bottle_start_re='^([[:space:]]*)bottle do$'
+  local sha_tag_re='^[[:space:]]*sha256[[:space:]]+(cellar:[[:space:]]+(:[a-z_]+|"[^"]+"),[[:space:]]+)?([a-z0-9_]+):[[:space:]]+"[0-9a-f]{64}"$'
+
+  while IFS= read -r line || [[ -n "${line}" ]]
+  do
+    if [[ "${line}" =~ ${stop_re} ]]
+    then
+      break
+    fi
+    if [[ "${in_bottle}" -eq 1 ]]
+    then
+      if [[ "${line}" == "${bottle_indent}end" ]]
+      then
+        break
+      fi
+      if [[ "${line}" =~ ${sha_tag_re} ]]
+      then
+        printf '%s\n' "${BASH_REMATCH[3]}"
+      fi
+      continue
+    fi
+    if [[ "${line}" =~ ${bottle_start_re} ]]
+    then
+      in_bottle=1
+      bottle_indent="${BASH_REMATCH[1]}"
+    fi
+  done <"${rb_file}"
+}
+
 fetch_asset() {
   local base_url="$1"
   local asset_name="$2"
@@ -356,11 +393,12 @@ prepare_cosign_trusted_root() {
   [[ -s "${out_path}" ]]
 }
 
-# Verify one formula and append a structured JSON result line to $2.
+# Verify one (formula, tag) pair and append a structured JSON result line to $3.
 verify_one_formula() {
   local formula="$1"
-  local results_file="$2"
-  local f_work="${scratch_dir}/formula-${formula}"
+  local cur_tag="$2"
+  local results_file="$3"
+  local f_work="${scratch_dir}/formula-${formula}-${cur_tag}"
   mkdir -p "${f_work}/sidecars"
 
   local st_metadata="pending"
@@ -388,7 +426,7 @@ verify_one_formula() {
       --arg release_tag "${parsed_release_tag}" \
       --arg root_url "${parsed_root_url}" \
       --argjson rebuild "${parsed_rebuild}" \
-      --arg bottle_tag "${bottle_tag}" \
+      --arg bottle_tag "${cur_tag}" \
       --arg brew_filename "${parsed_brew_filename}" \
       --arg release_filename "${parsed_release_filename}" \
       --arg expected_sha256 "${parsed_bottle_sha256}" \
@@ -437,9 +475,9 @@ verify_one_formula() {
       }' >>"${results_file}"
   }
 
-  log_info "==> Checking ${TAP_NAME}/${formula} (${bottle_tag})..."
+  log_info "==> Checking ${TAP_NAME}/${formula} (${cur_tag})..."
 
-  if ! parse_formula_metadata "${formula}" "${bottle_tag}"
+  if ! parse_formula_metadata "${formula}" "${cur_tag}"
   then
     st_metadata="failed"
     err_msg="${parsed_error}"
@@ -882,13 +920,13 @@ verify_one_formula() {
       brew trust --tap "${TAP_NAME}" >/dev/null 2>&1
       brew verify \
         --quiet \
-        "--bottle-tag=${bottle_tag}" \
+        "--bottle-tag=${cur_tag}" \
         --force \
         --json \
         "${TAP_NAME}/${formula}" >"${brew_out}"
     ) 2>"${f_work}/brew-verify.err"; then
       st_homebrew="failed"
-      err_msg="brew verify failed for ${TAP_NAME}/${formula}"
+      err_msg="brew verify failed for ${TAP_NAME}/${formula} (${cur_tag})"
       log_info "  [FAIL] ${err_msg}"
       emit_result false
       return 1
@@ -897,7 +935,7 @@ verify_one_formula() {
     if ! jq -e 'type == "array" and length == 1' "${brew_out}" >/dev/null 2>&1
     then
       st_homebrew="failed"
-      err_msg="brew verify did not return 1 verified bottle result for ${TAP_NAME}/${formula}"
+      err_msg="brew verify did not return 1 verified bottle result for ${TAP_NAME}/${formula} (${cur_tag})"
       log_info "  [FAIL] ${err_msg}"
       emit_result false
       return 1
@@ -935,6 +973,8 @@ trusted_root_arg=""
 require_cosign=0
 homebrew_mode=0
 bottle_tag="arm64_tahoe"
+all_tags=0
+explicit_bottle_tag=0
 allow_file_root_url=0
 parse_only=0
 json_output=0
@@ -978,8 +1018,17 @@ do
       ;;
     --bottle-tag)
       [[ $# -ge 2 ]] || usage_error "--bottle-tag requires a TAG argument"
-      bottle_tag="$2"
+      if [[ "$2" = "all" ]]
+      then
+        all_tags=1
+      else
+        bottle_tag="$2"
+        explicit_bottle_tag=1
+      fi
       shift
+      ;;
+    --all-tags)
+      all_tags=1
       ;;
     --allow-file-root-url)
       allow_file_root_url=1
@@ -1011,6 +1060,16 @@ do
 done
 
 # Validate option combinations before creating scratch state.
+if [[ "${all_tags}" -eq 1 ]] && [[ "${explicit_bottle_tag}" -eq 1 ]]
+then
+  usage_error "Cannot combine --all-tags with --bottle-tag ${bottle_tag}"
+fi
+
+if [[ "${all_tags}" -eq 1 ]] && [[ -n "${local_bottle_file}" ]]
+then
+  usage_error "--file PATH cannot be combined with --all-tags"
+fi
+
 if [[ ! "${bottle_tag}" =~ ^[a-z0-9_]+$ ]]
 then
   usage_error "Invalid --bottle-tag: ${bottle_tag}"
@@ -1142,16 +1201,58 @@ fi
 results_jsonl="${scratch_dir}/results.jsonl"
 : >"${results_jsonl}"
 
+checked_count=0
 passed_count=0
 failed_count=0
 
 for target_formula in "${targets[@]}"
 do
-  if verify_one_formula "${target_formula}" "${results_jsonl}"
+  if [[ "${all_tags}" -eq 1 ]]
   then
-    passed_count=$((passed_count + 1))
+    formula_tags=("__placeholder__")
+    formula_tag_count=0
+    while IFS= read -r discovered_tag
+    do
+      [[ -n "${discovered_tag}" ]] || continue
+      if [[ "${formula_tag_count}" -eq 0 ]]
+      then
+        formula_tags=("${discovered_tag}")
+      else
+        formula_tags+=("${discovered_tag}")
+      fi
+      formula_tag_count=$((formula_tag_count + 1))
+    done < <(list_formula_bottle_tags "${target_formula}" || true)
+
+    if [[ "${formula_tag_count}" -eq 0 ]]
+    then
+      checked_count=$((checked_count + 1))
+      if verify_one_formula "${target_formula}" "arm64_tahoe" "${results_jsonl}"
+      then
+        passed_count=$((passed_count + 1))
+      else
+        failed_count=$((failed_count + 1))
+      fi
+      continue
+    fi
+
+    for cur_tag in "${formula_tags[@]}"
+    do
+      checked_count=$((checked_count + 1))
+      if verify_one_formula "${target_formula}" "${cur_tag}" "${results_jsonl}"
+      then
+        passed_count=$((passed_count + 1))
+      else
+        failed_count=$((failed_count + 1))
+      fi
+    done
   else
-    failed_count=$((failed_count + 1))
+    checked_count=$((checked_count + 1))
+    if verify_one_formula "${target_formula}" "${bottle_tag}" "${results_jsonl}"
+    then
+      passed_count=$((passed_count + 1))
+    else
+      failed_count=$((failed_count + 1))
+    fi
   fi
 done
 
@@ -1175,7 +1276,7 @@ then
   jq -s \
     --arg mode "${run_mode}" \
     --argjson ok "${overall_ok}" \
-    --argjson checked "${target_count}" \
+    --argjson checked "${checked_count}" \
     --argjson passed "${passed_count}" \
     --argjson failed "${failed_count}" \
     '{
@@ -1189,7 +1290,7 @@ then
     }' "${results_jsonl}"
 else
   log_info ""
-  log_info "Summary (${run_mode}): ${passed_count}/${target_count} passed, ${failed_count} failed."
+  log_info "Summary (${run_mode}): ${passed_count}/${checked_count} passed, ${failed_count} failed."
 fi
 
 if [[ "${failed_count}" -gt 0 ]]

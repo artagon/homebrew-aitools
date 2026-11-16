@@ -12,6 +12,12 @@ setup_file() {
   prov_setup_file_shared
 }
 
+setup() {
+  if [[ "$BATS_TEST_DESCRIPTION" == "bash 3.2:"* ]] && [[ "${PROV_HAS_BASH32:-0}" -ne 1 ]]; then
+    skip "macOS Bash 3.2 interpreter is not installed on $(uname -s)"
+  fi
+}
+
 @test "bash 3.2: parse metadata across all bottled live Formula/*.rb files" {
   run case_parse_all_live_formulae "$PROV_BASH32"
   [ "$status" -eq 0 ]
@@ -72,6 +78,11 @@ setup_file() {
   [ "$status" -eq 0 ]
 }
 
+@test "bash 3.2: verify multi-platform Linux and macOS bottles, --all-tags, and aligned bottle blocks" {
+  run case_multi_tag_linux_and_macos "$PROV_BASH32"
+  [ "$status" -eq 0 ]
+}
+
 @test "bash 5+: parse metadata across all bottled live Formula/*.rb files" {
   run case_parse_all_live_formulae "$PROV_MODERN_BASH"
   [ "$status" -eq 0 ]
@@ -129,5 +140,10 @@ setup_file() {
 
 @test "bash 5+: enforce README bottle table sync, common.sh state, and CI patch policy" {
   run case_readme_table_and_ci_patch_policy "$PROV_MODERN_BASH"
+  [ "$status" -eq 0 ]
+}
+
+@test "bash 5+: verify multi-platform Linux and macOS bottles, --all-tags, and aligned bottle blocks" {
+  run case_multi_tag_linux_and_macos "$PROV_MODERN_BASH"
   [ "$status" -eq 0 ]
 }

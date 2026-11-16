@@ -74,7 +74,7 @@ jobs:
       stage_artifact: attest-stage
 
   verify-homebrew:
-    name: Verify Homebrew and CLI provenance on macOS
+    name: Verify Homebrew and CLI provenance across all bottle tags
     needs:
       - stage-releases
       - sign-bottles

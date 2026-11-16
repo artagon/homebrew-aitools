@@ -79,7 +79,7 @@ fi
 [[ -f "${POLICY_HELPER}" ]] || die "Missing helper script: ${POLICY_HELPER}"
 
 parsed_json=""
-parsed_json="$(PROVENANCE_REPO_ROOT="${repo_root}" bash "${VERIFIER}" --parse-only --json)"
+parsed_json="$(PROVENANCE_REPO_ROOT="${repo_root}" bash "${VERIFIER}" --parse-only --all-tags --json)"
 
 render_block() {
   printf '%s\n' "${BEGIN_MARKER}"
@@ -88,14 +88,16 @@ render_block() {
 
 All published bottles are attested on `refs/heads/main` and indexed in the [GitHub Attestations transparency log](https://github.com/artagon/homebrew-aitools/attestations).
 
-| Formula | Bottle (`arm64_tahoe`) | Bottle & SHA-256 | Provenance Certificates & Proofs | Signed SBOMs |
+| Formula | Platform & Version | Bottle & SHA-256 | Provenance Certificates & Proofs | Signed SBOMs |
 | :--- | :--- | :--- | :--- | :--- |
 EOF
   printf '%s\n' "${parsed_json}" |
     jq -r '
       .results
-      | sort_by(.formula)[]
-      | (if .rebuild > 0 then "`\(.pkg_version)` (rebuild \(.rebuild))" else "`\(.pkg_version)`" end) as $ver
+      | group_by(.formula)
+      | sort_by(.[0].formula)
+      | map(.[])[]
+      | (if .rebuild > 0 then "`\(.bottle_tag)` · `\(.pkg_version)` (rebuild \(.rebuild))" else "`\(.bottle_tag)` · `\(.pkg_version)`" end) as $ver
       | (.expected_sha256[0:12]) as $short_sha
       | "\(.root_url)/\(.release_filename)" as $base
       | "https://github.com/artagon/homebrew-aitools/releases/tag/\(.release_tag)" as $rel_page

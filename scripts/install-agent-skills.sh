@@ -36,7 +36,7 @@ find_pkgshare() {
     return 0
   fi
 
-  for candidate in /opt/homebrew/share/ripwire /usr/local/share/ripwire
+  for candidate in /opt/homebrew/share/ripwire /usr/local/share/ripwire /home/linuxbrew/.linuxbrew/share/ripwire
   do
     if [[ -d "${candidate}" ]]
     then

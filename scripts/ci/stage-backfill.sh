@@ -54,7 +54,7 @@ case "${subcmd}" in
 
     parsed_json="${RUNNER_TEMP}/parsed-bottles.json"
     tsv_path="${RUNNER_TEMP}/bottles.tsv"
-    bash "${REPO_ROOT}/scripts/verify-provenance.sh" --parse-only --json "${target_list[@]}" >"${parsed_json}"
+    bash "${REPO_ROOT}/scripts/verify-provenance.sh" --parse-only --all-tags --json "${target_list[@]}" >"${parsed_json}"
     jq -r '
       .results[]
       | [.formula, .pkg_version, .root_url, (.rebuild | tostring), .bottle_tag, .brew_filename, .release_filename, .expected_sha256]
@@ -155,10 +155,10 @@ case "${subcmd}" in
         ci::require_formula_name "${formula}" "formula"
         formulae+=("${formula}")
       fi
-    done < <(jq -r '.bottles[].formula' "${stage_dir}/release-map.json")
+    done < <(jq -r '.bottles[].formula' "${stage_dir}/release-map.json" | sort -u)
     [[ "${#formulae[@]}" -gt 0 ]] || ci::fail "Empty bottle list in release-map.json"
 
-    bash "${REPO_ROOT}/scripts/verify-provenance.sh" --require-cosign --homebrew "${formulae[@]}"
+    bash "${REPO_ROOT}/scripts/verify-provenance.sh" --all-tags --require-cosign --homebrew "${formulae[@]}"
     ;;
 
   *)

@@ -5,8 +5,8 @@
 #   ref-bound SAN:
 #     https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main
 # - Evaluates zero untrusted code: checks out `refs/heads/main`, verifies the caller's
-#   `release-map.json` SHA-256, and in `publish` mode independently verifies the
-#   builder run's `provenance_macos-26` ZIP digest and `head_sha` via the GitHub API.
+#   `release-map.json` SHA-256, and in `publish` mode independently verifies each
+#   builder job's `provenance_*` ZIP digest and `head_sha` via the GitHub API.
 # - Mints a single SLSA v1 statement and a single `bottle-lineage/v1` statement binding
 #   BOTH `--` (`Bottle::Filename#to_s`, verified by Homebrew) and `-`
 #   (`Bottle::Filename#url_encode`, uploaded to GitHub Releases) filenames per bottle.
@@ -38,7 +38,7 @@ on:
         default: ""
         type: string
       allow_missing_manifest:
-        description: Allow legacy PRs built before provenance_macos-26 existed
+        description: Allow legacy PRs built before provenance_* artifacts existed
         required: false
         default: false
         type: boolean

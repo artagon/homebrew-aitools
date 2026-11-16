@@ -67,34 +67,44 @@ agent_snapshot_tree() {
 
 agent_setup_file_shared() {
   export AGENT_BASH32="${BATS_BASH32:-/bin/bash}"
-  export AGENT_MODERN_BASH="${BATS_MODERN_BASH:-/opt/homebrew/bin/bash}"
+  export AGENT_MODERN_BASH="${BATS_MODERN_BASH:-$(command -v bash)}"
   export AGENT_REPO_ROOT="${BATS_REPO_ROOT:-$(cd "$BATS_TEST_DIRNAME/.." && pwd -P)}"
   export AGENT_PKGSHARE_SRC="${BATS_RIPWIRE_PKGSHARE:-/opt/homebrew/opt/ripwire/share/ripwire}"
+  export AGENT_HAS_BASH32=0
 
-  [[ -x "$AGENT_BASH32" ]] || {
-    printf 'Missing Bash 3.2 interpreter: %s\n' "$AGENT_BASH32" >&2
-    return 1
-  }
   [[ -x "$AGENT_MODERN_BASH" ]] || {
     printf 'Missing Bash 5+ interpreter: %s\n' "$AGENT_MODERN_BASH" >&2
     return 1
   }
 
-  local b32_ver="" mod_ver=""
-  b32_ver="$("$AGENT_BASH32" --version | awk 'NR == 1 { print; exit }')"
+  local mod_ver=""
   mod_ver="$("$AGENT_MODERN_BASH" --version | awk 'NR == 1 { print; exit }')"
-  [[ "$b32_ver" =~ version\ 3\.2\. ]] || {
-    printf 'BATS_BASH32 must identify Bash 3.2 (got: %s)\n' "$b32_ver" >&2
-    return 1
-  }
   [[ "$mod_ver" =~ version\ [5-9]\. ]] || {
     printf 'BATS_MODERN_BASH must identify Bash 5+ (got: %s)\n' "$mod_ver" >&2
     return 1
   }
 
+  local b32_ver=""
+  if [[ -x "$AGENT_BASH32" ]]; then
+    b32_ver="$("$AGENT_BASH32" --version | awk 'NR == 1 { print; exit }')"
+  fi
+  if [[ "$b32_ver" =~ version\ 3\.2\. ]]; then
+    AGENT_HAS_BASH32=1
+  elif [[ "$(uname -s)" = "Darwin" ]]; then
+    printf 'BATS_BASH32 must identify Bash 3.2 on Darwin (got: %s)\n' "${b32_ver:-missing}" >&2
+    return 1
+  fi
+
   export AGENT_ENV_BIN AGENT_RUBY_BIN
   AGENT_ENV_BIN="$(command -v env)"
-  AGENT_RUBY_BIN="$(command -v ruby)"
+  AGENT_RUBY_BIN="$(command -v ruby || true)"
+  if [[ -z "$AGENT_RUBY_BIN" ]] && command -v brew >/dev/null 2>&1; then
+    AGENT_RUBY_BIN="$(brew --repo)/Library/Homebrew/vendor/portable-ruby/current/bin/ruby"
+  fi
+  [[ -x "$AGENT_RUBY_BIN" ]] || {
+    printf 'Missing ruby interpreter for formula wrapper extraction\n' >&2
+    return 1
+  }
 
   [[ -d "$AGENT_PKGSHARE_SRC" ]] || {
     printf 'Requires the unmodified Ripwire 0.6.10 bundled installer at %s\n' "$AGENT_PKGSHARE_SRC" >&2

@@ -20,7 +20,7 @@ readonly END_MARKER="<!-- END BOTTLE_PROVENANCE_TABLE -->"
 readonly FORMULA_REL_RE='^Formula/[a-z0-9][a-z0-9@._+-]*\.rb$'
 readonly ROOT_URL_STMT_RE='^    root_url "https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/releases/download/[A-Za-z0-9@.%_+-]+"$'
 readonly REBUILD_STMT_RE='^    rebuild [0-9]+$'
-readonly SHA256_STMT_RE='^    sha256 (cellar: (:any|:any_skip_relocation|"/[A-Za-z0-9_./+-]+"), )?[a-z0-9_]+: "[0-9a-f]{64}"$'
+readonly SHA256_STMT_RE='^    sha256 +(cellar: (:any|:any_skip_relocation|"/[A-Za-z0-9_./+-]+"), +)?[a-z0-9_]+: +"[0-9a-f]{64}"$'
 
 work_dir=""
 # Invoked indirectly via `trap cleanup EXIT`.
