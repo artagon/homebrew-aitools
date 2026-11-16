@@ -1,10 +1,13 @@
-# Agent installer integration tests
+# Integration and provenance tests
 
-Run from the repository root:
+Run both test suites from the repository root:
 
 ```sh
 rtk python3 tests/integration_agent_install.py --receipt /tmp/ripwire-integration.json
+rtk python3 tests/test_verify_provenance.py --receipt /tmp/verify-provenance-receipt.json
 ```
+
+## 1. Agent installer integration suite (`tests/integration_agent_install.py`)
 
 The suite requires Python 3.9+, Ruby, jq, macOS Bash 3.2, a modern Bash 5+, and the
 installed Ripwire 0.6.9 payload. Paths can be supplied with `--pkgshare`,
@@ -31,3 +34,30 @@ preservation of unrelated settings, and nonmutating help/list/invalid options.
 Both shells run every case. Failures return nonzero and the JSON receipt records
 the tested source hashes and per-case results. Temporary evidence is retained at
 the receipt's `scratch` path for inspection; it contains no live user state.
+
+## 2. Provenance verifier suite (`tests/test_verify_provenance.py`)
+
+Requires Python 3.9+, `jq`, `curl`, `shasum` or `sha256sum`, macOS `/bin/bash` 3.2,
+and a modern Bash 5+ (`--bash32` and `--modern-bash`). Every case runs in an
+isolated `HOME`, `TMPDIR`, and allowlisted `PATH` with deterministic `gh`,
+`cosign`, and `brew` shims, so no network calls, `~/.sigstore` caches, or
+`~/.homebrew/trust.json` writes occur.
+
+Coverage under both shells includes:
+
+- deterministic metadata parsing across all 17 live `Formula/*.rb` files
+  (`on_macos`/`on_arm` blocks, `resource "license"` stanzas, `v`-less tags,
+  `cellar: :any`, and hyphenated formula names), plus full `file:///` fixture
+  verification for all 17 formulae;
+- `revision`, `rebuild`, `@` (`%40`), `+` (`%2B`), and explicit `version` stanzas;
+- fail-closed rejection of stale `bottle do` blocks after `autobump.sh` version bumps;
+- `--save-bundles` export followed by air-gapped `--offline --bundle-dir ... --trusted-root ...`
+  verification (without `curl` on `PATH`, without passing deprecated `--offline`
+  to `cosign` v3, and without mutating `--bundle-dir`);
+- corrupted bottle digests, `.sha256` sidecar mismatches, missing `--` Homebrew
+  subjects, two-bundle split-subject substitution attacks, wrong X.509 SANs, and
+  detached `.spdx.json` tampering against both `bottle-lineage/v1` and `cosign`
+  DSSE predicates;
+- `cosign` optional skip vs `--require-cosign`, isolated `--homebrew` (`USER`
+  fallback, `XDG_CONFIG_HOME`, `GH_CONFIG_DIR` preservation, tap drift, and empty
+  `brew verify` results), and `set -u` early-exit `TMPDIR` cleanup.
