@@ -69,6 +69,10 @@ jobs:
             --bash32 /bin/bash \
             --modern-bash "$(brew --prefix)/bin/bash"
 
+      - name: Verify README bottle provenance table on main
+        if: github.event_name == 'push'
+        run: ./scripts/update-readme-bottles.sh --check
+
       - name: Build, test, and bottle formulae
         if: github.event_name != 'push'
         env:
@@ -84,12 +88,20 @@ jobs:
           brew test-bot --only-formulae ${formulae[@]+"${formulae[@]}"}
 
       # test-bot leaves each tested formula installed from its new bottle.
+      # If installer/test files changed without rebuilding ripwire, pour the published
+      # ripwire bottle so both installer entrypoints are still exercised.
       - name: Run installer integration tests
         if: github.event_name != 'push'
         run: |
           if ! brew list --formula ripwire >/dev/null 2>&1; then
-            echo "ripwire was not built in this run"
-            exit 0
+            git fetch --no-tags --depth=50 origin main || true
+            if git diff --name-only origin/main...HEAD -- \
+              scripts/install-agent-skills.sh tests/integration_agent_install.py | grep -q .; then
+              brew install artagon/aitools/ripwire
+            else
+              echo "ripwire and installer files were not modified in this run"
+              exit 0
+            fi
           fi
           python3 tests/integration_agent_install.py \
             --receipt "${RUNNER_TEMP}/ripwire-integration.json" \
@@ -107,115 +119,7 @@ jobs:
         env:
           MATRIX_OS: ${{ matrix.os }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          prov_dir="${RUNNER_TEMP}/provenance"
-          rm -rf "${prov_dir}"
-          mkdir -p "${prov_dir}"
-          entries_jsonl="${prov_dir}/entries.jsonl"
-          : > "${entries_jsonl}"
-          : > "${prov_dir}/SHA256SUMS"
-
-          shopt -s nullglob
-          json_files=( *.bottle.json )
-          shopt -u nullglob
-
-          for json_file in ${json_files[@]+"${json_files[@]}"}; do
-            formula_name="$(jq -r 'to_entries[0].value.formula.name' "${json_file}")"
-            pkg_version="$(jq -r 'to_entries[0].value.formula.pkg_version' "${json_file}")"
-            root_url="$(jq -r 'to_entries[0].value.bottle.root_url' "${json_file}")"
-            rebuild="$(jq -r 'to_entries[0].value.bottle.rebuild' "${json_file}")"
-            bottle_json_sha256="$(shasum -a 256 "${json_file}" | awk '{print $1}')"
-
-            while IFS=$'\t' read -r tag release_filename brew_filename expected_sha256; do
-              [[ -f "${brew_filename}" ]] || {
-                echo "::error::Missing bottle tarball ${brew_filename} referenced by ${json_file}"
-                exit 1
-              }
-              actual_sha256="$(shasum -a 256 "${brew_filename}" | awk '{print $1}')"
-              if [[ "${actual_sha256}" != "${expected_sha256}" ]]; then
-                echo "::error::Digest mismatch for ${brew_filename}: expected ${expected_sha256}, got ${actual_sha256}"
-                exit 1
-              fi
-
-              spdx_path="${prov_dir}/${release_filename}.spdx.json"
-              cdx_path="${prov_dir}/${release_filename}.cdx.json"
-              syft scan "file:${brew_filename}" \
-                --source-name "${formula_name}" \
-                --source-version "${pkg_version}" \
-                --select-catalogers "+javascript-package-cataloger" \
-                -o "spdx-json=${spdx_path}" \
-                -o "cyclonedx-json=${cdx_path}"
-
-              spdx_sha256="$(shasum -a 256 "${spdx_path}" | awk '{print $1}')"
-              cdx_sha256="$(shasum -a 256 "${cdx_path}" | awk '{print $1}')"
-
-              printf '%s  %s\n' "${actual_sha256}" "${brew_filename}" >> "${prov_dir}/SHA256SUMS"
-              printf '%s  %s\n' "${actual_sha256}" "${release_filename}" >> "${prov_dir}/SHA256SUMS"
-
-              jq -c -n \
-                --arg formula "${formula_name}" \
-                --arg pkg_version "${pkg_version}" \
-                --arg root_url "${root_url}" \
-                --argjson rebuild "${rebuild}" \
-                --arg tag "${tag}" \
-                --arg brew_filename "${brew_filename}" \
-                --arg release_filename "${release_filename}" \
-                --arg bottle_sha256 "${actual_sha256}" \
-                --arg bottle_json_filename "${json_file}" \
-                --arg bottle_json_sha256 "${bottle_json_sha256}" \
-                --arg spdx_sha256 "${spdx_sha256}" \
-                --arg cdx_sha256 "${cdx_sha256}" \
-                '{
-                  formula: $formula,
-                  pkg_version: $pkg_version,
-                  root_url: $root_url,
-                  rebuild: $rebuild,
-                  tag: $tag,
-                  brew_filename: $brew_filename,
-                  release_filename: $release_filename,
-                  bottle_sha256: $bottle_sha256,
-                  bottle_json_filename: $bottle_json_filename,
-                  bottle_json_sha256: $bottle_json_sha256,
-                  spdx_sha256: $spdx_sha256,
-                  cdx_sha256: $cdx_sha256
-                }' >> "${entries_jsonl}"
-            done < <(
-              jq -r '
-                to_entries[0].value.bottle.tags
-                | to_entries[]
-                | [.key, .value.filename, .value.local_filename, .value.sha256]
-                | @tsv
-              ' "${json_file}"
-            )
-          done
-
-          brew_ver="$(brew --version | head -n 1)"
-          jq -s \
-            --arg head_sha "${PR_HEAD_SHA}" \
-            --arg checkout_sha "${GITHUB_SHA}" \
-            --arg event_name "${GITHUB_EVENT_NAME}" \
-            --arg ref "${GITHUB_REF}" \
-            --arg run_id "${GITHUB_RUN_ID}" \
-            --arg run_attempt "${GITHUB_RUN_ATTEMPT}" \
-            --arg matrix_os "${MATRIX_OS}" \
-            --arg runner_os "${RUNNER_OS}" \
-            --arg runner_arch "${RUNNER_ARCH}" \
-            --arg homebrew_version "${brew_ver}" \
-            '{
-              schema: "artagon-bottle-build-manifest/v1",
-              head_sha: $head_sha,
-              checkout_sha: $checkout_sha,
-              event_name: $event_name,
-              ref: $ref,
-              run_id: $run_id,
-              run_attempt: $run_attempt,
-              matrix_os: $matrix_os,
-              runner_os: $runner_os,
-              runner_arch: $runner_arch,
-              homebrew_version: $homebrew_version,
-              bottles: .
-            }' "${entries_jsonl}" > "${prov_dir}/build-manifest.json"
-          rm -f "${entries_jsonl}"
+        run: ./scripts/ci/build-provenance-manifest.sh
 
       # Only a passing run uploads bottles: brew pr-pull checks that the run
       # completed, not that it passed.

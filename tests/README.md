@@ -60,4 +60,7 @@ Coverage under both shells includes:
   DSSE predicates;
 - `cosign` optional skip vs `--require-cosign`, isolated `--homebrew` (`USER`
   fallback, `XDG_CONFIG_HOME`, `GH_CONFIG_DIR` preservation, tap drift, and empty
-  `brew verify` results), and `set -u` early-exit `TMPDIR` cleanup.
+  `brew verify` results), `scripts/update-readme-bottles.sh` (`--check` / atomic write),
+  `scripts/ci/common.sh` caller-state preservation, `scripts/ci/publish-bottles.sh`
+  block-aware `bottle do ... end` + `README.md` marker validation, and `set -u`
+  early-exit `TMPDIR` cleanup.

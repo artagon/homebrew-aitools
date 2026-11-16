@@ -153,13 +153,22 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
 - Keep `permissions: {}` at the workflow level and grant each job only what it
   uses. `tests.yml` and `publish.yml`'s `stage-bottles` job run with read-only
   tokens and no `id-token` or `attestations` permissions.
-- Before staging or signing, `publish.yml` requires: a run from `main`; an open
-  same-repository pull request targeting `main`; `headRefOid == head_sha` with
-  `behind_by == 0`; no `.github/workflows/` changes unless `allow_workflow_changes=true`
-  is explicitly passed after workflow review; and a single passing `tests.yml` run
-  whose `bottles_macos-26` and `provenance_macos-26` ZIP digests match GitHub's
-  artifact metadata (`allow_missing_manifest=true` is an audited break-glass flag
-  only for pre-provenance PRs).
+- Before staging or signing, `publish.yml` snapshots `scripts/` from `main` into
+  `${RUNNER_TEMP}/trusted-scripts` before applying any PR commits, and requires: a run from
+  `main`; an open same-repository pull request targeting `main`; `headRefOid == head_sha` with
+  `behind_by == 0`; no `.github/workflows/` or `scripts/ci/` changes unless
+  `allow_workflow_changes=true` is explicitly passed after workflow review; every modified
+  `Formula/*.rb` covered by `bottles_macos-26`; and a single passing `tests.yml` run whose
+  `bottles_macos-26` and `provenance_macos-26` ZIP digests match GitHub's artifact metadata
+  (`allow_missing_manifest=true` is an audited break-glass flag only for pre-provenance PRs).
+- `publish.yml` runs `scripts/update-readme-bottles.sh` after merging `bottle do` blocks so the
+  fenced `BOTTLE_PROVENANCE_TABLE` section in `README.md` stays synchronized with `Formula/*.rb`
+  without creating merge conflicts on parallel bump pull requests; `push-main` validates with
+  `scripts/ci/verify_patch_policy.py` that only `bottle do ... end` DSL statements and the fenced
+  `README.md` provenance table changed relative to `head_sha`.
+- Multi-step CI logic lives in `scripts/ci/` (`common.sh` non-executable sourced `ci::*` library,
+  `build-provenance-manifest.sh`, `stage-backfill.sh`, `sign-and-attest.sh`, `publish-bottles.sh`,
+  and `verify_patch_policy.py`) with environment-only workflow inputs and regex allowlists.
 - `tests.yml` uploads bottles and provenance manifests only from a passing run
   and restores no cache, because its artifacts become release assets.
 - Do not pass `token:` to setup-homebrew: it writes the token into the global
