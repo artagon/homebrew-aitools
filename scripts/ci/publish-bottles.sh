@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage, validate, publish, and verify bottle pull requests for `.github/workflows/publish.yml`.
 #
-# Target contract: Bash 3.2+ executable; Linux GNU + macOS BSD userland; requires brew, git, gh, jq, python3, unzip.
+# Target contract: Bash 3.2+ executable; Linux GNU + macOS BSD userland; requires awk, brew, cmp, git, gh, jq, unzip.
 # Security boundary:
 # - Workflow steps copy `scripts/` from `refs/heads/main` into `${RUNNER_TEMP}/trusted-scripts`
 #   before applying any PR commits (`brew pr-pull` or `git am`), and invoke this script from
@@ -344,7 +344,7 @@ case "${subcmd}" in
       [[ -z "${changed_path}" ]] && continue
       if [[ "${changed_path}" = "README.md" ]]
       then
-        python3 "${CI_DIR}/verify_patch_policy.py" verify-readme-git "${HEAD_SHA}" ||
+        bash "${CI_DIR}/verify-patch-policy.sh" verify-readme-git "${HEAD_SHA}" ||
           ci::fail "README.md modified outside BOTTLE_PROVENANCE_TABLE markers"
         PROVENANCE_REPO_ROOT="${repo_cwd}" README_BOTTLES_FILE="${repo_cwd}/README.md" \
           bash "${SCRIPTS_DIR}/update-readme-bottles.sh" --check ||
@@ -357,7 +357,7 @@ case "${subcmd}" in
         "${stage_dir}/release-map.json" >/dev/null ||
         ci::fail "Refusing to push unexpected file modification relative to reviewed HEAD_SHA: ${changed_path}"
 
-      python3 "${CI_DIR}/verify_patch_policy.py" verify-formula-git "${HEAD_SHA}" "${changed_path}" ||
+      bash "${CI_DIR}/verify-patch-policy.sh" verify-formula-git "${HEAD_SHA}" "${changed_path}" ||
         ci::fail "Patch diff relative to HEAD_SHA modifies lines outside bottle do ... end in ${changed_path}"
     done < <(git diff --name-only "${HEAD_SHA}" HEAD)
     ;;
@@ -405,7 +405,8 @@ case "${subcmd}" in
     [[ -n "${RUNNER_TEMP:-}" && -d "${RUNNER_TEMP}" ]] || ci::fail "RUNNER_TEMP is not a directory"
     export USER="${USER:-$(id -un)}"
     export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${RUNNER_TEMP}/brew-verify-xdg}"
-    mkdir -p -- "${XDG_CONFIG_HOME}"
+    export HOMEBREW_USER_CONFIG_HOME="${HOMEBREW_USER_CONFIG_HOME:-${XDG_CONFIG_HOME}/homebrew}"
+    mkdir -p -- "${XDG_CONFIG_HOME}" "${HOMEBREW_USER_CONFIG_HOME}"
     brew trust --tap artagon/aitools
 
     stage_dir="${RUNNER_TEMP}/publish-stage"
@@ -415,6 +416,7 @@ case "${subcmd}" in
       ci::require_formula_name "${formula}" "formula"
       verify_out="${RUNNER_TEMP}/brew-verify-${formula}.json"
       brew verify \
+        --quiet \
         --bottle-tag=arm64_tahoe \
         --force \
         --json \

@@ -2,7 +2,7 @@
 # Deterministically render or verify the published bottle versions, SHA-256 digests,
 # Sigstore/SLSA provenance bundles, and SBOM links table in README.md from Formula/*.rb.
 #
-# Target contract: Bash 3.2+ executable; macOS BSD + Linux GNU userland; requires jq and python3.
+# Target contract: Bash 3.2+ executable; macOS BSD + Linux GNU userland; requires awk, cmp, jq.
 # Usage:
 #   ./scripts/update-readme-bottles.sh            # update README.md atomically in place
 #   ./scripts/update-readme-bottles.sh --check    # exit 0 if up to date, 1 if stale
@@ -16,7 +16,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="${PROVENANCE_REPO_ROOT:-$(cd "${script_dir}/.." && pwd -P)}"
 readme_path="${README_BOTTLES_FILE:-${repo_root}/README.md}"
 readonly VERIFIER="${script_dir}/verify-provenance.sh"
-readonly POLICY_HELPER="${script_dir}/ci/verify_patch_policy.py"
+readonly POLICY_HELPER="${script_dir}/ci/verify-patch-policy.sh"
 readonly BEGIN_MARKER="<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->"
 readonly END_MARKER="<!-- END BOTTLE_PROVENANCE_TABLE -->"
 
@@ -119,7 +119,7 @@ tmp_block="$(mktemp "${readme_dir}/.${readme_base}.block.XXXXXX")"
 tmp_readme="$(mktemp "${readme_dir}/.${readme_base}.tmp.XXXXXX")"
 render_block >"${tmp_block}"
 
-python3 "${POLICY_HELPER}" replace-readme "${readme_path}" "${tmp_readme}" "${tmp_block}" ||
+bash "${POLICY_HELPER}" replace-readme "${readme_path}" "${tmp_readme}" "${tmp_block}" ||
   die "Failed to update ${readme_path}"
 
 if [[ "${mode}" = "check" ]]

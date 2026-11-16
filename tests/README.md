@@ -3,13 +3,13 @@
 Run both test suites from the repository root:
 
 ```sh
-rtk python3 tests/integration_agent_install.py --receipt /tmp/ripwire-integration.json
-rtk python3 tests/test_verify_provenance.py --receipt /tmp/verify-provenance-receipt.json
+rtk ./tests/integration-agent-install.sh --receipt /tmp/ripwire-integration.json
+rtk ./tests/test-verify-provenance.sh --receipt /tmp/verify-provenance-receipt.json
 ```
 
-## 1. Agent installer integration suite (`tests/integration_agent_install.py`)
+## 1. Agent installer integration suite (`tests/integration-agent-install.sh`)
 
-The suite requires Python 3.9+, Ruby, jq, macOS Bash 3.2, a modern Bash 5+, and the
+The suite requires Ruby, `jq`, macOS `/bin/bash` 3.2, a modern Bash 5+, and the
 installed Ripwire 0.6.9 payload. Paths can be supplied with `--pkgshare`,
 `--bash32`, and `--modern-bash`. Missing prerequisites fail the run; no cases skip.
 `--regressions-only` runs the twelve cases covering the original installer defects.
@@ -35,9 +35,9 @@ Both shells run every case. Failures return nonzero and the JSON receipt records
 the tested source hashes and per-case results. Temporary evidence is retained at
 the receipt's `scratch` path for inspection; it contains no live user state.
 
-## 2. Provenance verifier suite (`tests/test_verify_provenance.py`)
+## 2. Provenance verifier suite (`tests/test-verify-provenance.sh`)
 
-Requires Python 3.9+, `jq`, `curl`, `shasum` or `sha256sum`, macOS `/bin/bash` 3.2,
+Requires `jq`, `curl`, `git`, `shasum` or `sha256sum`, macOS `/bin/bash` 3.2,
 and a modern Bash 5+ (`--bash32` and `--modern-bash`). Every case runs in an
 isolated `HOME`, `TMPDIR`, and allowlisted `PATH` with deterministic `gh`,
 `cosign`, and `brew` shims, so no network calls, `~/.sigstore` caches, or

@@ -208,7 +208,7 @@ Do not merge this pull request directly: the formula would ship without bottles.
 
 A Ripwire bump fails the installer integration suite on purpose when the
 bundled installer or skill set changes: review the payload, then update the
-pins in \`tests/integration_agent_install.py\`.
+pins in \`tests/integration-agent-install.sh\`.
 EOF
     pr_num="$(gh pr list --base "${base}" --head "${branch}" --state open --json number --jq '.[0].number // empty')"
   fi

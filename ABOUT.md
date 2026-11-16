@@ -25,7 +25,7 @@ AI coding-agent CLIs and MCP servers scatter across language-specific package ma
 ## Status
 
 - 21 formulae maintained: 12 built from source (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `adrkit`, `nats`, `skillfile`, `skillprism`, `basic-memory`, `hindsight`, `qmd`, `squeez`) and 9 packaging pinned upstream release binaries (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`)
-- Pull requests build, test, bottle, and generate SBOMs on `macos-26` Apple Silicon via [`.github/workflows/tests.yml`](.github/workflows/tests.yml) and run isolated Bash 3.2 and Bash 5+ suites ([`tests/integration_agent_install.py`](tests/integration_agent_install.py) and [`tests/test_verify_provenance.py`](tests/test_verify_provenance.py))
+- Pull requests build, test, bottle, and generate SBOMs on `macos-26` Apple Silicon via [`.github/workflows/tests.yml`](.github/workflows/tests.yml) and run isolated Bash 3.2 and Bash 5+ suites ([`tests/integration-agent-install.sh`](tests/integration-agent-install.sh) and [`tests/test-verify-provenance.sh`](tests/test-verify-provenance.sh))
 - Bottles are signed and attested via [`.github/workflows/sign-bottles.yml`](.github/workflows/sign-bottles.yml), published through [`.github/workflows/publish.yml`](.github/workflows/publish.yml) (or backfilled via [`.github/workflows/attest.yml`](.github/workflows/attest.yml)), and checked daily for upstream updates via [`.github/workflows/autobump.yml`](.github/workflows/autobump.yml)
 
 ## Topics for repo discovery

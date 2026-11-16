@@ -64,7 +64,7 @@ jobs:
 
       - name: Run provenance verifier unit and Bash 3.2/5+ tests
         run: |
-          python3 tests/test_verify_provenance.py \
+          ./tests/test-verify-provenance.sh \
             --receipt "${RUNNER_TEMP}/verify-provenance-receipt.json" \
             --bash32 /bin/bash \
             --modern-bash "$(brew --prefix)/bin/bash"
@@ -96,14 +96,14 @@ jobs:
           if ! brew list --formula ripwire >/dev/null 2>&1; then
             git fetch --no-tags --depth=50 origin main || true
             if git diff --name-only origin/main...HEAD -- \
-              scripts/install-agent-skills.sh tests/integration_agent_install.py | grep -q .; then
+              scripts/install-agent-skills.sh tests/integration-agent-install.sh | grep -q .; then
               brew install artagon/aitools/ripwire
             else
               echo "ripwire and installer files were not modified in this run"
               exit 0
             fi
           fi
-          python3 tests/integration_agent_install.py \
+          ./tests/integration-agent-install.sh \
             --receipt "${RUNNER_TEMP}/ripwire-integration.json" \
             --bash32 /bin/bash \
             --modern-bash "$(brew --prefix)/bin/bash"
