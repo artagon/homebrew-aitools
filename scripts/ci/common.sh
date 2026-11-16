@@ -10,6 +10,9 @@ readonly CI_SHA256_RE='^[0-9a-f]{64}$'
 readonly CI_UINT_RE='^[0-9]+$'
 readonly CI_FORMULA_NAME_RE='^[a-z0-9][a-z0-9@._+-]*$'
 readonly CI_SAFE_FILENAME_RE='^[A-Za-z0-9@.%_+-]+$'
+readonly CI_BOTTLE_TAG_RE='^[a-z0-9_]+$'
+readonly CI_MATRIX_OS_RE='^[A-Za-z0-9._-]+$'
+readonly CI_DEFAULT_MATRIX_OSES="macos-26 ubuntu-24.04 ubuntu-24.04-arm"
 
 ci::fail() {
   printf '::error::%s\n' "$*" >&2
@@ -75,4 +78,56 @@ ci::require_safe_filename() {
   local val="$1" label="${2:-filename}"
   [[ "${val}" =~ ${CI_SAFE_FILENAME_RE} && "${val}" != *".."* && "${val}" != -* ]] ||
     ci::fail "Unsafe ${label}: ${val}"
+}
+
+ci::require_bottle_tag() {
+  local val="$1" label="${2:-bottle tag}"
+  [[ "${val}" =~ ${CI_BOTTLE_TAG_RE} ]] || ci::fail "Invalid ${label}: ${val}"
+}
+
+ci::require_matrix_os() {
+  local val="$1" label="${2:-matrix OS}"
+  [[ "${val}" =~ ${CI_MATRIX_OS_RE} && "${val}" != *".."* && "${val}" != -* ]] ||
+    ci::fail "Invalid ${label}: ${val}"
+}
+
+ci::matrix_oses() {
+  printf '%s\n' "${CI_MATRIX_OSES:-${CI_DEFAULT_MATRIX_OSES}}"
+}
+
+ci::matrix_os_bottle_tag() {
+  case "$1" in
+    macos-26)
+      printf '%s\n' "arm64_tahoe"
+      ;;
+    ubuntu-24.04)
+      printf '%s\n' "x86_64_linux"
+      ;;
+    ubuntu-24.04-arm)
+      printf '%s\n' "arm64_linux"
+      ;;
+    *)
+      ci::fail "No bottle tag mapping configured for matrix OS: $1"
+      ;;
+  esac
+}
+
+ci::bottle_tag_sort_rank() {
+  case "$1" in
+    all)
+      printf '0\n'
+      ;;
+    arm64_linux)
+      printf '3\n'
+      ;;
+    arm64_*)
+      printf '1\n'
+      ;;
+    *_linux)
+      printf '4\n'
+      ;;
+    *)
+      printf '2\n'
+      ;;
+  esac
 }

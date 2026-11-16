@@ -13,6 +13,12 @@ setup_file() {
   agent_setup_file_shared
 }
 
+setup() {
+  if [[ "$BATS_TEST_DESCRIPTION" == *"(bash 3.2):"* ]] && [[ "${AGENT_HAS_BASH32:-0}" -ne 1 ]]; then
+    skip "macOS Bash 3.2 interpreter is not installed on $(uname -s)"
+  fi
+}
+
 # ── Formula wrapper under Bash 3.2 ───────────────────────────────────────────
 
 @test "formula wrapper (bash 3.2): regression default fallback to shared root" {

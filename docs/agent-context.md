@@ -13,7 +13,8 @@ plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` (Go), `waza` (Go 
 plus embedded Vite/React dashboard), `adrkit` (`bun` build targeting the `node`
 runtime), `qmd` (TypeScript/Node with native `better-sqlite3`, `sqlite-vec`, and
 `node-llama-cpp`), and `basic-memory` and `skillopt` (`uv` Python 3.13 builds from
-source). CI builds and publishes Apple Silicon `macos-26` bottles across the tap.
+source). CI builds and publishes Apple Silicon (`arm64_tahoe`) and Linux
+(`arm64_linux`, `x86_64_linux`) bottles across the tap.
 
 `ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, `qmd`, `waza`, and
 `skillopt` bundle agent skills or plugins under `pkgshare`. Homebrew install,
@@ -91,33 +92,41 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
 
 ## Bottles
 
-- `tests.yml` runs `brew test-bot` on `macos-26` only; add a Linux entry once
-  Ripwire's C++23 build is proven there, because a failed job blocks publishing.
+- `tests.yml` runs `brew test-bot` across `macos-26` (`arm64_tahoe`),
+  `ubuntu-24.04` (`x86_64_linux`), and `ubuntu-24.04-arm` (`arm64_linux`), failing
+  the job immediately if `skipped_or_failed_formulae` is non-empty. Ubuntu 24.04 LTS
+  supplies `glibc 2.39` (required by `ck`) and runs directly on hosted runners
+  without `--privileged` containers.
 - `tests.yml` sets each bottle's `root_url` to
   `<tap remote>/releases/download/<formula>-<pkg_version>` (`<pkg_version>` is
   `<version>` or `<version>_<revision>`). Do not pass `--root-url` or enable
-  GitHub Packages. Alongside `bottles_macos-26`, `tests.yml` scans each built
+  GitHub Packages. Alongside `bottles_<os>`, `tests.yml` scans each built
   bottle tarball via `syft` (`file:<tarball>`, `+javascript-package-cataloger`)
-  and uploads `provenance_macos-26` containing `.spdx.json`, `.cdx.json`, and
+  and uploads `provenance_<os>` containing `.spdx.json`, `.cdx.json`, and
   `build-manifest.json` pinned to the pull request head SHA (`PR_HEAD_SHA`).
 - `publish.yml` splits bottle publishing into three privilege-separated jobs
   under concurrency group `bottle-releases`:
-  1. `stage-bottles` (`contents: read`, no OIDC): fetches `bottles_macos-26` and
-     `provenance_macos-26` from the single passing `tests.yml` run by immutable
-     artifact ID and GitHub-verified SHA-256 digest, runs
-     `brew pr-pull --no-upload` and `brew bottle --merge --write`, enforces that
-     only bottled `Formula/<name>.rb` files changed relative to `head_sha`, and
-     uploads `publish-stage` (`commits.mbox`, `release-map.json`, bottles, SBOMs).
+  1. `stage-bottles` (`contents: read`, no OIDC): fetches `bottles_macos-26`,
+     `bottles_ubuntu-24.04`, and `bottles_ubuntu-24.04-arm` plus matching
+     `provenance_<os>` artifacts from the single passing `tests.yml` run by
+     immutable artifact ID and GitHub-verified SHA-256 digest, runs
+     `brew pr-pull --no-upload` and `brew bottle --merge --write --no-all-checks`
+     in `FormulaAudit::BottleOrder` (`arm64_tahoe`, `arm64_linux`, `x86_64_linux`),
+     enforces that every changed `Formula/<name>.rb` produced all three bottle tags,
+     and uploads `publish-stage` (`commits.mbox`, `release-map.json`, bottles, SBOMs).
   2. `sign-bottles` (`.github/workflows/sign-bottles.yml`): runs with zero
-     Homebrew, zero `syft`, and no repository checkout, verifies the builder
-     manifest digest against the GitHub Actions API, attests SLSA v1 and
-     `bottle-lineage/v1`, signs blobs and SPDX SBOMs with `cosign` v3, self-verifies
-     online and air-gapped bundles, and uploads assets to **draft** GitHub Releases.
+     Homebrew, zero `syft`, and checks out only trusted `refs/heads/main`, verifies
+     each builder `provenance_<os>` digest against the GitHub Actions API, attests
+     SLSA v1 and `bottle-lineage/v1`, signs blobs and SPDX SBOMs with `cosign` v3,
+     self-verifies online and air-gapped bundles, and uploads assets to **draft**
+     GitHub Releases.
   3. `push-main`: verifies `commits.mbox` modifies only `bottle do ... end` DSL
-     lines relative to `head_sha`, fast-forwards `main` (`tries: 1`), flips draft
-     releases to published (or deletes unshipped drafts if the push fails), runs
-     `brew verify --quiet --bottle-tag=arm64_tahoe --force --json`, and closes the pull
-     request only if its `headRefOid` still equals `head_sha`.
+     lines (and the fenced `README.md` `BOTTLE_PROVENANCE_TABLE`) relative to `head_sha`,
+     fast-forwards `main` (`tries: 1`), flips draft releases to published (or deletes
+     unshipped drafts if the push fails), runs
+     `brew verify --quiet --bottle-tag=<tag> --force --json` for every published
+     `(formula, tag)` pair, and closes the pull request only if its `headRefOid` still
+     equals `head_sha`.
 - Publish with `gh workflow run publish.yml -f pull_request=<number> -f head_sha=<sha>`;
   GitHub dispatches only workflows that exist on `main`. A formula pull request
   merged directly ships without bottles or attestations.
@@ -169,8 +178,9 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
   `main`; an open same-repository pull request targeting `main`; `headRefOid == head_sha` with
   `behind_by == 0`; no `.github/workflows/` or `scripts/ci/` changes unless
   `allow_workflow_changes=true` is explicitly passed after workflow review; every modified
-  `Formula/*.rb` covered by `bottles_macos-26`; and a single passing `tests.yml` run whose
-  `bottles_macos-26` and `provenance_macos-26` ZIP digests match GitHub's artifact metadata
+  `Formula/*.rb` covered by `bottles_macos-26`, `bottles_ubuntu-24.04`, and
+  `bottles_ubuntu-24.04-arm`; and a single passing `tests.yml` run whose
+  `bottles_<os>` and `provenance_<os>` ZIP digests match GitHub's artifact metadata
   (`allow_missing_manifest=true` is an audited break-glass flag only for pre-provenance PRs).
 - `publish.yml` runs `scripts/update-readme-bottles.sh` after merging `bottle do` blocks so the
   fenced `BOTTLE_PROVENANCE_TABLE` section in `README.md` stays synchronized with `Formula/*.rb`
