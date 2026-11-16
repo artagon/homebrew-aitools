@@ -10,12 +10,6 @@ class AstGrepValhalla < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ast-grep-valhalla-0.51.3"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "9f23f1e1896ba819d763544bb0a6dd8d23c58785e77d96cb9cc926e0bf776786"
-  end
-
   depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
   depends_on "rust" => :build
 
