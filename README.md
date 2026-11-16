@@ -141,7 +141,7 @@ ripwire-agent-install --codex --hook
 ## tgrep
 
 - **Tap formula**: [`Formula/tgrep.rb`](Formula/tgrep.rb) (`brew install artagon/aitools/tgrep`)
-- **Upstream project**: [microsoft/tgrep](https://github.com/microsoft/tgrep) (`v1.2.6`, `MIT`) — trigram-indexed grep with a client/server watcher architecture for sub-second regex sweeps in large repositories.
+- **Upstream project**: [microsoft/tgrep](https://github.com/microsoft/tgrep) (`v1.2.7`, `MIT`) — trigram-indexed grep with a client/server watcher architecture for sub-second regex sweeps in large repositories.
 - **Tap build defaults**: Installs SHA-256-pinned upstream prebuilt release binaries (`aarch64`/`x86_64` macOS and static `musl` Linux) plus `README.md`. Use `artagon/aitools/tgrep` to disambiguate from Homebrew core's `tgrep`.
 - **Tap config defaults**: Stores repository indexes locally in `./.tgrep`; no background watcher runs until `tgrep serve .` is started explicitly.
 
@@ -360,7 +360,7 @@ gh workflow run publish.yml -f pull_request=<number> \
 
 1. `stage-bottles` (`contents: read`) validates PR ancestry and workflow/CI-script guards (`scripts/ci/publish-bottles.sh`), verifies `bottles_macos-26` and `provenance_macos-26` ZIP digests, runs `brew pr-pull --no-upload`, merges `bottle do` blocks, and refreshes the `README.md` bottle provenance table (`scripts/update-readme-bottles.sh`).
 2. [`sign-bottles.yml`](.github/workflows/sign-bottles.yml) (`@refs/heads/main`) verifies the builder run's `head_sha` via the GitHub API (`scripts/ci/sign-and-attest.sh`), mints SLSA v1 and `bottle-lineage/v1` attestations, signs Sigstore `cosign` v3 bundles, self-verifies online and air-gapped offline, and uploads assets to draft GitHub Releases (`<formula>-<pkg_version>`).
-3. `push-main` enforces block-aware `bottle do ... end` and fenced `README.md` diff policy (`scripts/ci/verify_patch_policy.py`), pushes `main`, publishes the draft releases, and verifies every bottle with `brew verify`.
+3. `push-main` enforces block-aware `bottle do ... end` and fenced `README.md` diff policy (`scripts/ci/verify-patch-policy.sh`), pushes `main`, publishes the draft releases, and verifies every bottle with `brew verify`.
 
 Do not merge formula pull requests directly; formulae would ship without bottles or attestations. To backfill or refresh provenance sidecars on already-published releases from `main`:
 
