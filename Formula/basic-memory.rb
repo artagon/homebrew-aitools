@@ -11,6 +11,14 @@ class BasicMemory < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/basic-memory-1.0.0"
+    rebuild 2
+    sha256 cellar: :any, arm64_tahoe:  "47807f25102ce5891408bd94ccbfa893ff2175caffef7c900e4ec951f86678f7"
+    sha256 cellar: :any, arm64_linux:  "f0fc4b61e71d22219e1efd77967530341fbd695c6d40f1959f640637b4b787e7"
+    sha256 cellar: :any, x86_64_linux: "54f864b976a3d3f03ed0d99d53d3b5f19e13c51d43a3633488991d5202dde778"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
