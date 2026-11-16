@@ -81,6 +81,7 @@ class Waza < Formula
 
     proj = testpath/"eval-demo"
     proj.mkpath
+    # Pipe empty stdin so waza init runs non-interactively under Homebrew's test PTY.
     pipe_output("#{bin}/waza init --no-skill #{proj}", "", 0)
     assert_path_exists proj/".waza.yaml"
     assert_path_exists proj/"skills"

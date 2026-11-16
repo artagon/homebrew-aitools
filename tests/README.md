@@ -1,66 +1,38 @@
-# Integration and provenance tests
+# Integration and provenance tests (`bats-core`)
 
-Run both test suites from the repository root:
+Run both `bats-core` 1.14+ suites (`artagon-shell/shell-testing/v1`) from the repository root:
 
 ```sh
-rtk ./tests/integration-agent-install.sh --receipt /tmp/ripwire-integration.json
-rtk ./tests/test-verify-provenance.sh --receipt /tmp/verify-provenance-receipt.json
+rtk bats --tap tests/integration_agent_install.bats
+rtk bats --tap tests/verify_provenance.bats
 ```
 
-## 1. Agent installer integration suite (`tests/integration-agent-install.sh`)
+Override target interpreters or the Ripwire payload root with environment variables:
 
-The suite requires Ruby, `jq`, macOS `/bin/bash` 3.2, a modern Bash 5+, and the
-installed Ripwire 0.6.10 payload. Paths can be supplied with `--pkgshare`,
-`--bash32`, and `--modern-bash`. Missing prerequisites fail the run; no cases skip.
-`--regressions-only` runs the twelve cases covering the original installer defects.
+```sh
+BATS_BASH32=/bin/bash \
+BATS_MODERN_BASH=/opt/homebrew/bin/bash \
+BATS_RIPWIRE_PKGSHARE=/opt/homebrew/opt/ripwire/share/ripwire \
+  rtk bats --tap tests/*.bats
+```
 
-Both entrypoints run: the standalone script and the exact formula wrapper heredoc
-evaluated by Ruby, preserving Ruby interpolation and shell escaping. Every run
-checks the bundled installer's SHA-256 against the pinned 0.6.10 installer. Tests
-copy the real payload into temporary storage, so upstream hook chmod calls cannot
-touch the installed files. The installer is not mocked. This validates wrapper
-behavior, not Homebrew's complete installation or upgrade transaction.
+## 1. Agent installer integration suite (`tests/integration_agent_install.bats` + `tests/helpers/agent_install_helper.bash`)
 
-Each case has its own temporary HOME, an environment built from scratch, and a
-PATH containing only required utilities plus the selected Bash. No installed
-agent executable or live agent configuration participates. Explicit hook cases
-register real Claude/Codex hooks in temporary JSON files; they never execute hooks.
+Requires `bats-core`, Ruby, `jq`, stock macOS `/bin/bash` 3.2 (`BATS_BASH32`), a modern Bash 5+ (`BATS_MODERN_BASH`), and the installed Ripwire `0.6.10` payload (`BATS_RIPWIRE_PKGSHARE`). Missing prerequisites fail `setup_file`; no cases skip.
 
-Coverage includes default detection/fallback, all detected clients, all seven
-explicit destinations, contributor inclusion/removal, manifest and symlink
-contents, repeat installation, custom Antigravity detection and listing, shared
-roots without Codex, explicit Claude/Codex hook registration and idempotence,
-preservation of unrelated settings, and nonmutating help/list/invalid options.
-Both shells run every case. Failures return nonzero and the JSON receipt records
-the tested source hashes and per-case results. Temporary evidence is retained at
-the receipt's `scratch` path for inspection; it contains no live user state.
+Both entrypoints run across all 104 `@test` cases (`26` scenarios × `2` entrypoints × `2` target shells): the standalone `scripts/install-agent-skills.sh` script and the exact `Formula/ripwire.rb` wrapper heredoc evaluated by Ruby, preserving Ruby interpolation and shell escaping. `setup_file` verifies the bundled installer's SHA-256 against the pinned `0.6.10` digest and copies the real payload into `$BATS_FILE_TMPDIR`, so upstream hook `chmod` calls cannot touch installed Homebrew files.
 
-## 2. Provenance verifier suite (`tests/test-verify-provenance.sh`)
+Each `@test` gets an isolated `$BATS_TEST_TMPDIR` containing its own temporary `HOME`, `TMPDIR`, and allowlisted `PATH` plus the selected Bash interpreter. No installed agent executable or live agent configuration participates. Explicit hook cases register real Claude/Codex hooks in temporary JSON files and verify idempotence without executing hooks.
 
-Requires `jq`, `curl`, `git`, `shasum` or `sha256sum`, macOS `/bin/bash` 3.2,
-and a modern Bash 5+ (`--bash32` and `--modern-bash`). Every case runs in an
-isolated `HOME`, `TMPDIR`, and allowlisted `PATH` with deterministic `gh`,
-`cosign`, and `brew` shims, so no network calls, `~/.sigstore` caches, or
-`~/.homebrew/trust.json` writes occur.
+## 2. Provenance verifier suite (`tests/verify_provenance.bats` + `tests/helpers/provenance_helper.bash`)
 
-Coverage under both shells includes:
+Requires `bats-core`, `jq`, `curl`, `git`, `shasum` or `sha256sum`, stock macOS `/bin/bash` 3.2 (`BATS_BASH32`), and a modern Bash 5+ (`BATS_MODERN_BASH`). Every `@test` runs in an isolated `$BATS_TEST_TMPDIR` `HOME`, `TMPDIR`, and allowlisted `PATH` with deterministic `gh`, `cosign`, and `brew` shims, so no network calls, `~/.sigstore` caches, or `~/.homebrew/trust.json` writes occur.
 
-- deterministic metadata parsing across all bottled `Formula/*.rb` files
-  (`on_macos`/`on_arm` blocks, `resource "license"` stanzas, `v`-less tags,
-  `cellar: :any`, and hyphenated formula names), plus full `file:///` fixture
-  verification across every bottled formula;
+Coverage across all 24 `@test` cases (`12` contracts × `2` target shells) includes:
+
+- deterministic metadata parsing across all bottled `Formula/*.rb` files (`on_macos`/`on_arm` blocks, `resource "license"` stanzas, `v`-less tags, `cellar: :any`, and hyphenated formula names), plus full `file:///` fixture verification across every bottled formula;
 - `revision`, `rebuild`, `@` (`%40`), `+` (`%2B`), and explicit `version` stanzas;
 - fail-closed rejection of stale `bottle do` blocks after `autobump.sh` version bumps;
-- `--save-bundles` export followed by air-gapped `--offline --bundle-dir ... --trusted-root ...`
-  verification (without `curl` on `PATH`, without passing deprecated `--offline`
-  to `cosign` v3, and without mutating `--bundle-dir`);
-- corrupted bottle digests, `.sha256` sidecar mismatches, missing `--` Homebrew
-  subjects, two-bundle split-subject substitution attacks, wrong X.509 SANs, and
-  detached `.spdx.json` tampering against both `bottle-lineage/v1` and `cosign`
-  DSSE predicates;
-- `cosign` optional skip vs `--require-cosign`, isolated `--homebrew` (`USER`
-  fallback, `XDG_CONFIG_HOME`, `GH_CONFIG_DIR` preservation, tap drift, and empty
-  `brew verify` results), `scripts/update-readme-bottles.sh` (`--check` / atomic write),
-  `scripts/ci/common.sh` caller-state preservation, `scripts/ci/publish-bottles.sh`
-  block-aware `bottle do ... end` + `README.md` marker validation, and `set -u`
-  early-exit `TMPDIR` cleanup.
+- `--save-bundles` export followed by air-gapped `--offline --bundle-dir ... --trusted-root ...` verification (without `curl` on `PATH`, without passing deprecated `--offline` to `cosign` v3, and without mutating `--bundle-dir`);
+- corrupted bottle digests, `.sha256` sidecar mismatches, missing `--` Homebrew subjects, two-bundle split-subject substitution attacks, wrong X.509 SANs, and detached `.spdx.json` tampering against both `bottle-lineage/v1` and `cosign` DSSE predicates;
+- `cosign` optional skip vs `--require-cosign`, isolated `--homebrew` (`USER` fallback, `XDG_CONFIG_HOME`, `HOMEBREW_USER_CONFIG_HOME`, `GH_CONFIG_DIR` preservation, tap drift, and empty `brew verify` results), `scripts/update-readme-bottles.sh` (`--check` / atomic write), `scripts/ci/common.sh` caller-state preservation, `scripts/ci/publish-bottles.sh` block-aware `bottle do ... end` + `README.md` marker validation, and `set -u` early-exit `TMPDIR` cleanup.

@@ -87,7 +87,7 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
   `scripts/autobump.sh rewrite FILE OLD NEW`.
 - The script never updates the integration test pins. A Ripwire bump that changes
   the bundled installer or skill set fails `tests.yml` until a reviewer checks the
-  payload and updates `tests/integration-agent-install.sh`.
+  payload and updates `tests/helpers/agent_install_helper.bash`.
 
 ## Bottles
 
@@ -206,8 +206,8 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
      `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest that this tap's
      CI fetched the SHA-256-pinned upstream binary and packaged the bottle, not
      that upstream compiled the binary reproducibly from source.
-  3. `tests/integration-agent-install.sh` pins Ripwire's installer SHA-256 but not
-     its hook scripts.
+  3. `tests/helpers/agent_install_helper.bash` pins Ripwire's installer SHA-256 but
+     not its hook scripts.
 
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
 real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew

@@ -29,8 +29,8 @@ class Skillopt < Formula
 
     system "uv", "tool", "install", ".", "--python", "3.13", "--no-cache"
 
-    # Normalize bundled wheel dylib IDs (e.g. numpy/.dylibs) to @rpath so
-    # preserve_rpath prevents Mach-O header overflow during bottle relocation.
+    # Normalize bundled wheel dylib IDs (including hidden .dylibs directories) to @rpath
+    # so preserve_rpath prevents Mach-O header overflow during bottle relocation.
     if OS.mac?
       libexec.glob("**/*.dylib", File::FNM_DOTMATCH).each do |dylib|
         next if dylib.symlink? || !dylib.file?
