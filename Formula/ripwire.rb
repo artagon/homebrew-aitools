@@ -11,8 +11,8 @@ class Ripwire < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ripwire-0.6.9"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "14aac113c56d132059a574d74c5f170f9f737edddfe7e1431c53dff1246caf77"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ripwire-0.6.10"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "159e3433d7b71bf36efb30bf9bad05f7a3eb8ac62cc6ebc5275c95e13d348498"
   end
 
   depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
