@@ -16,7 +16,7 @@ class Hindsight < Formula
 
   on_linux do
     depends_on "pkgconf" => :build
-    depends_on "openssl@3"
+    depends_on "openssl@4"
   end
 
   def install
