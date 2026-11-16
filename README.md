@@ -104,7 +104,7 @@ brew install artagon/aitools/ast-grep-valhalla
 ## ripwire
 
 - **Tap formula**: [`Formula/ripwire.rb`](Formula/ripwire.rb) (`brew install artagon/aitools/ripwire`)
-- **Upstream project**: [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`v0.6.9`, `Apache-2.0`) — codebase symbol maps, call graphs, blast-radius analysis, and MCP server (`ripwire --mcp`) for AI coding agents.
+- **Upstream project**: [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`v0.6.10`, `Apache-2.0`) — codebase symbol maps, call graphs, blast-radius analysis, and MCP server (`ripwire --mcp`) for AI coding agents.
 - **Tap build defaults**: Built from C++23 source via CMake on macOS 14+ (or Linux with a C++23 toolchain), replacing vendored `tree-sitter-java` `parser.c` with `artagon/aitools/tree-sitter-java-valhalla` and applying an additive `queries/java/tags.scm` patch so records, JEP 401 value records, compact constructors, and `@interface` declarations are indexed as definitions. Installs `ripwire`, `ripwire-agent-install`, and bundled skills/hooks under `$(brew --prefix ripwire)/share/ripwire/`.
 - **Tap config defaults**: Installing or upgrading the formula never modifies agent configs or shell profiles. Skill linking and hook registration are strictly opt-in via `ripwire-agent-install` (supporting stock macOS `/bin/bash` 3.2).
 
@@ -462,7 +462,7 @@ brew verify --bottle-tag=arm64_tahoe artagon/aitools/ripwire
 
 ```sh
 # GitHub CLI (SLSA v1 provenance, ref-bound to sign-bottles.yml@refs/heads/main):
-gh attestation verify ripwire-0.6.9.arm64_tahoe.bottle.tar.gz \
+gh attestation verify ripwire-0.6.10.arm64_tahoe.bottle.tar.gz \
   --repo artagon/homebrew-aitools \
   --cert-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
   --source-ref "refs/heads/main" \
@@ -470,10 +470,10 @@ gh attestation verify ripwire-0.6.9.arm64_tahoe.bottle.tar.gz \
 
 # Sigstore cosign v3 (blob signature + SPDX attestation):
 cosign verify-blob \
-  --bundle ripwire-0.6.9.arm64_tahoe.bottle.tar.gz.sigstore.json \
+  --bundle ripwire-0.6.10.arm64_tahoe.bottle.tar.gz.sigstore.json \
   --certificate-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  ripwire-0.6.9.arm64_tahoe.bottle.tar.gz
+  ripwire-0.6.10.arm64_tahoe.bottle.tar.gz
 ```
 
 **Scope & SBOM coverage notes**:

@@ -9,9 +9,9 @@
 set -euo pipefail
 export LC_ALL=C
 
-readonly INSTALLER_SHA256="f1bebd22a59539d92f061bbc3609e5a408f193209f905f60781eb2c533bf9e96"
+readonly INSTALLER_SHA256="9f509a349565a35d1d1b38740906fad8f225fbba8a5822699df41e5ec75efe85"
 readonly TARGET_NAMES=(claude codex agy kimi grok copilot shared)
-readonly ISOLATED_COMMANDS=(basename dirname mkdir grep rm ln mktemp mv chmod cat jq)
+readonly ISOLATED_COMMANDS=(basename dirname mkdir grep rm ln mktemp mv chmod cat jq cp readlink find diff cmp)
 
 pkgshare="/opt/homebrew/opt/ripwire/share/ripwire"
 bash32="/bin/bash"
@@ -150,13 +150,13 @@ fi
 
 if [[ ! -d "${pkgshare}" ]]
 then
-  write_prereq_error "Requires the unmodified Ripwire 0.6.9 bundled installer"
+  write_prereq_error "Requires the unmodified Ripwire 0.6.10 bundled installer"
 fi
 orig_pkgshare="$(cd "${pkgshare}" && pwd -P)"
 installer_file="${orig_pkgshare}/skills/install.sh"
 if [[ ! -f "${installer_file}" ]] || [[ "$(sha256_file "${installer_file}")" != "${INSTALLER_SHA256}" ]]
 then
-  write_prereq_error "Requires the unmodified Ripwire 0.6.9 bundled installer"
+  write_prereq_error "Requires the unmodified Ripwire 0.6.10 bundled installer"
 fi
 
 payload_dir="${scratch}/payload"
