@@ -45,10 +45,10 @@ isolated `HOME`, `TMPDIR`, and allowlisted `PATH` with deterministic `gh`,
 
 Coverage under both shells includes:
 
-- deterministic metadata parsing across all 17 live `Formula/*.rb` files
+- deterministic metadata parsing across all bottled `Formula/*.rb` files
   (`on_macos`/`on_arm` blocks, `resource "license"` stanzas, `v`-less tags,
   `cellar: :any`, and hyphenated formula names), plus full `file:///` fixture
-  verification for all 17 formulae;
+  verification across every bottled formula;
 - `revision`, `rebuild`, `@` (`%40`), `+` (`%2B`), and explicit `version` stanzas;
 - fail-closed rejection of stale `bottle do` blocks after `autobump.sh` version bumps;
 - `--save-bundles` export followed by air-gapped `--offline --bundle-dir ... --trusted-root ...`

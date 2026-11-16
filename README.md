@@ -29,11 +29,13 @@ brew install artagon/aitools/bv
 brew install artagon/aitools/nats
 brew install artagon/aitools/herdr
 
-# Architecture decisions and agent skill/config management:
+# Architecture decisions, skill evaluation/optimization, and agent config management:
 brew install artagon/aitools/adrkit
 brew install artagon/aitools/agentsync
 brew install artagon/aitools/skillfile
 brew install artagon/aitools/skillprism
+brew install artagon/aitools/waza
+brew install artagon/aitools/skillopt
 ```
 
 Use the fully qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships same-named `tgrep`, `nats`, and `herdr` formulae, plus differently named formulae that install overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, and `adr-tools`; run `brew unlink <formula>` first when one of those is already linked). Installing, upgrading, or uninstalling any formula in this tap **never** modifies live user agent configuration files (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.config`, etc.).
@@ -67,6 +69,8 @@ Every formula in `artagon/aitools` is listed below with links to its tap formula
 | [`agentsync`](Formula/agentsync.rb) | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | Symlink-based synchronizer for AI agent rules, skills, and MCP server definitions | SHA-256-pinned upstream release archive into `libexec` with env wrapper in `bin/agentsync`; installs `README.md` and `LICENSE` | Wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; modifies `.agents/agentsync.toml` only when explicitly invoked |
 | [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | Declarative `Skillfile` manifest validator and installer for AI agent skills | Source build (`cargo install --locked`, `crates/cli` into `libexec`); generates shell completions; installs `skillfile` wrapper | Wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1`; upgrades managed via Homebrew |
 | [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | Jinja2-style multi-harness skill template compiler (`SKILL.md.j2` -> per-agent `dist/`) | Source build (`cargo install --locked`); generates shell completions and `man1/skillprism.1` man page | Pure local compiler reading `skillprism.yaml` into `./dist/`; no network calls or live agent config edits |
+| [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | CLI and embedded web dashboard for evaluating and benchmarking AI agent workflows, custom agents, and skills | Source build: Vite/React `web/` SPA (`npm ci --ignore-scripts && npm run build`, `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`) + Go `cmd/waza` into `libexec`; generates shell completions; installs `pkgshare/skills/{waza,waza-interactive}` | Wrapper exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (exit `2`); zero agent config mutation |
+| [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | Reflective text-space skill optimizer (`skillopt-train`, `skillopt-eval`) and offline sleep consolidation CLI & MCP (`skillopt-sleep`, `skillopt-sleep-mcp`) | Source build via `uv` (managed Python `3.13`, `--no-cache`, `preserve_rpath`); patches `mcp_server.py` default `REPO_ROOT` to caller `os.getcwd()`; installs `pkgshare/{plugins,configs}` | `skillopt-sleep` defaults to `--backend mock` (zero API spend) and stages proposals for review before `adopt`; local stdio MCP (`skillopt-sleep-mcp`); zero agent config or cron mutation |
 
 ---
 
@@ -343,6 +347,35 @@ brew install artagon/aitools/adrkit
 
 ---
 
+## waza
+
+- **Tap formula**: [`Formula/waza.rb`](Formula/waza.rb) (`brew install artagon/aitools/waza`)
+- **Upstream project**: [microsoft/waza](https://github.com/microsoft/waza) (`v0.41.0`, `MIT`) — CLI and embedded React dashboard for evaluating, grading, and benchmarking AI agent workflows, custom agents, and skills.
+- **Tap build defaults**: Builds the `web/` Vite/React dashboard from source (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm ci --ignore-scripts && npm run build`), embeds it into the Go `cmd/waza` binary (`*std_go_args(output: libexec/"waza", ldflags: "-s -w -X main.version=...")`), generates `bash`/`zsh`/`fish` shell completions, and installs bundled skills under `$(brew --prefix waza)/share/waza/skills/{waza,waza-interactive}`.
+- **Tap config defaults**: Wrapper exports `WAZA_NO_UPDATE_CHECK=1` by default and rejects the in-place `waza update` self-updater (exit status `2`; upgrade via `brew upgrade artagon/aitools/waza`). Modifies no agent configuration files.
+
+```sh
+waza init --no-skill ./my-evals
+waza check
+waza run
+```
+
+---
+
+## skillopt
+
+- **Tap formula**: [`Formula/skillopt.rb`](Formula/skillopt.rb) (`brew install artagon/aitools/skillopt`)
+- **Upstream project**: [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`v0.2.0`, `MIT`) — reflective text-space skill optimizer (`skillopt-train`, `skillopt-eval`), offline session sleep consolidation CLI (`skillopt-sleep`), and stdlib-only local stdio JSON-RPC MCP server (`skillopt-sleep-mcp`).
+- **Tap build defaults**: Installed from source into an isolated `libexec` `uv` tool environment using managed Python `3.13` (`preserve_rpath` + `@rpath` dylib normalization on macOS), patches `plugins/copilot/mcp_server.py` so `REPO_ROOT` defaults to `os.getcwd()` when `SKILLOPT_SLEEP_REPO` is unset, and installs agent plugins (`claude-code`, `codex`, `copilot`, `devin`, `openclaw`) and experiment `configs` under `$(brew --prefix skillopt)/share/skillopt/`.
+- **Tap config defaults**: `skillopt-sleep` defaults to `--backend mock` (zero API spend) and stages proposals for human review (`nothing live changes until skillopt-sleep adopt`). Register the stdio MCP server with `$(brew --prefix)/opt/skillopt/bin/skillopt-sleep-mcp`. Modifies no agent configuration files or cron schedules on install.
+
+```sh
+skillopt-sleep status --project . --json
+skillopt-sleep dry-run --project .
+```
+
+---
+
 ## Automatic version updates
 
 [`autobump.yml`](.github/workflows/autobump.yml) runs daily and on demand. Each formula's `livecheck` block finds the latest upstream release, and [`scripts/autobump.sh`](scripts/autobump.sh) opens one pull request per new version. The script moves every literal-versioned URL to the new release and recomputes its SHA-256, so multi-platform binary formulae bump the same way as single-archive source formulae. A `tree-sitter-java-valhalla` bump also increments the `revision` of `ast-grep-valhalla` and `ripwire`.
@@ -477,8 +510,8 @@ cosign verify-blob \
 ```
 
 **Scope & SBOM coverage notes**:
-- Source-built formulae (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `basic-memory`, `hindsight`, `qmd`, `squeez`, `adrkit`, `nats`, `skillfile`, `skillprism`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` runners; upstream-binary formulae (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest bottle packaging of the SHA-256-pinned upstream release asset.
-- Go binaries (`bd`, `bv`, `nats`, `tgrep`), Python wheel metadata (`basic-memory`), Node `package.json` inventories (`hindsight`, `qmd`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit metadata and `adrkit` (`bun` single-file JS bundle) expose bottle archive and manifest files only.
+- Source-built formulae (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `basic-memory`, `hindsight`, `qmd`, `squeez`, `adrkit`, `nats`, `skillfile`, `skillprism`, `waza`, `skillopt`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` runners; upstream-binary formulae (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest bottle packaging of the SHA-256-pinned upstream release asset.
+- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `waza`), Python wheel metadata (`basic-memory`, `skillopt`), Node `package.json` inventories (`hindsight`, `qmd`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit metadata and `adrkit` (`bun` single-file JS bundle) expose bottle archive and manifest files only.
 
 ## Validation
 
