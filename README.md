@@ -28,6 +28,12 @@ brew install artagon/aitools/adrkit
 brew install artagon/aitools/agentsync
 brew install artagon/aitools/skillfile
 brew install artagon/aitools/skillprism
+
+# Local agent memory, hybrid markdown search, and token compression:
+brew install artagon/aitools/basic-memory
+brew install artagon/aitools/hindsight
+brew install artagon/aitools/qmd
+brew install artagon/aitools/squeez
 ```
 
 Use the qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships
@@ -43,10 +49,11 @@ brew install artagon/aitools/hashline
 
 On Apple Silicon with macOS 26 or later, the formulae install from bottles that the tap's CI
 builds and publishes. Elsewhere, `tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`,
-`hashline`, `adrkit`, `nats`, `skillfile`, and `skillprism` build from source (`ast-grep-valhalla`
-and `ripwire` compile against `artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs
-that grammar first). `tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, and
-`agentsync` install upstream release binaries.
+`hashline`, `adrkit`, `nats`, `skillfile`, `skillprism`, `basic-memory`, `hindsight`, `qmd`, and
+`squeez` build from source (`ast-grep-valhalla` and `ripwire` compile against
+`artagon/aitools/tree-sitter-java-valhalla`, so Homebrew installs that grammar first). `tgrep`,
+`ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, and `agentsync` install upstream release
+binaries.
 
 ---
 
@@ -403,6 +410,59 @@ Builds [skillprism](https://github.com/Tuvren/skillprism) `0.5.0` (`Apache-2.0`)
 ```sh
 brew install artagon/aitools/skillprism
 ```
+
+---
+
+## basic-memory
+
+Builds [basic-memory](https://github.com/basicmachines-co/basic-memory) `1.0.0` (`AGPL-3.0-or-later`) from source via `uv` (Python 3.13) — local-first Zettelkasten knowledge graph and stdio JSON-RPC MCP server (`basic-memory` and `bm`) with bundled `memory-*` agent skills:
+
+```sh
+brew install artagon/aitools/basic-memory
+```
+
+Hardened local-only defaults enforced by the installed wrappers:
+- **Local stdio JSON-RPC only**: `cloud`, `--transport streamable-http`, and `--transport sse` are disabled (`BASIC_MEMORY_FORCE_LOCAL=true`, `BASIC_MEMORY_EXPLICIT_ROUTING=true`).
+- **No background self-updates or telemetry**: sets `BASIC_MEMORY_AUTO_UPDATE=false`, `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_CLOUD_PROMO_OPT_OUT=true`, and `BASIC_MEMORY_LOGFIRE_ENABLED=false`; blocks `basic-memory update` / `bm update` (use `brew upgrade artagon/aitools/basic-memory`).
+- Register the stdio MCP server with `$(brew --prefix)/opt/basic-memory/bin/basic-memory mcp`; bundled skills are installed under `$(brew --prefix basic-memory)/share/basic-memory/skills`.
+
+## hindsight
+
+Builds [hindsight](https://github.com/vectorize-io/hindsight) `1.2.1` (`MIT`) from source — installing the `hindsight` Rust CLI (`1.2.1`), the `hindsight-mcp` stdio JSON-RPC MCP server and `hindsight-coding-agents` bundle (`0.8.7`), and bundled skills under `$(brew --prefix hindsight)/share/hindsight/skills`:
+
+```sh
+brew install artagon/aitools/hindsight
+```
+
+Hardened loopback-only defaults enforced at compile time and in wrappers:
+- **Loopback HTTP + stdio JSON-RPC only**: defaults to `http://127.0.0.1:8888` (`serverMode: "self-hosted"`) and rejects Hindsight Cloud (`--server cloud`) and any `HINDSIGHT_API_URL` / `apiUrl` outside `127.0.0.1`, `::1`, or `localhost`.
+- **No self-updates**: `autoUpdate` is compiled to `false` and `hindsight-coding-agents update` is disabled (use `brew upgrade artagon/aitools/hindsight`).
+- Register the stdio MCP server with `HINDSIGHT_MCP_HARNESS=claude-code $(brew --prefix)/opt/hindsight/bin/hindsight-mcp`.
+
+## qmd
+
+Builds Tobi Lütke's [qmd](https://github.com/tobi/qmd) `2.8.3` (`MIT`) from source — on-device hybrid BM25 full-text search, `sqlite-vec` vector search, and local GGUF LLM reranking for Markdown knowledge bases, with CLI (`qmd`), stdio/loopback MCP server (`qmd mcp`), and bundled skill (`$(brew --prefix qmd)/share/qmd/skills/qmd`):
+
+```sh
+brew install artagon/aitools/qmd
+```
+
+First `qmd embed` or `qmd query` run downloads local GGUF models into `~/.cache/qmd`. Register `$(brew --prefix)/opt/qmd/bin/qmd mcp` as a local stdio MCP server.
+
+## squeez
+
+Builds [squeez](https://github.com/claudioemmanuel/squeez) `1.49.3` (`Apache-2.0`) from Rust source — token compressor CLI and read-only stdio JSON-RPC MCP server (`squeez mcp`):
+
+```sh
+brew install artagon/aitools/squeez
+```
+
+Hardened conservative defaults compiled into this build (without modifying `~/.claude`):
+- `auto_compress_md = false`
+- `persona = off`
+- `wrap_bash = false`
+- `squeez update` is disabled; upgrade via `brew upgrade artagon/aitools/squeez`.
+- Register the stdio MCP server with `$(brew --prefix)/opt/squeez/bin/squeez mcp`.
 
 ---
 

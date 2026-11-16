@@ -11,9 +11,11 @@
 - Keep every `url "..."` literal-versioned (never `#{version}`) with `sha256 "<64-hex>"` on the
   immediately following line and no trailing comment so `scripts/autobump.sh` updates single-URL,
   multi-platform, and `resource` blocks uniformly.
-- Disable upstream startup update checks in Homebrew wrappers where supported
-  (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
-  `SKILLFILE_NO_UPDATE_NOTIFIER=1`) and warn against in-place self-updaters in `caveats`.
+- Disable upstream startup update checks, telemetry, and remote cloud routing where required in
+  Homebrew wrappers and builds (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
+  `SKILLFILE_NO_UPDATE_NOTIFIER=1`, `BASIC_MEMORY_AUTO_UPDATE=false`, `BASIC_MEMORY_NO_PROMOS=1`,
+  `BASIC_MEMORY_FORCE_LOCAL=true`; loopback-only `hindsight`; conservative `squeez` defaults) and
+  warn against in-place self-updaters in `caveats`.
 - Use `license :cannot_represent` and install the full upstream `LICENSE` into `prefix` when an
   upstream license includes a non-SPDX custom rider.
 - Declare `conflicts_with` only when a differently named formula installs conflicting binaries
