@@ -6,7 +6,7 @@
 
 A Homebrew tap (`artagon/aitools`) shipping:
 
-1. **JDK 28 Valhalla Java grammar & structural analyzers** — `tree-sitter-java-valhalla` (`0.23.5`), `ast-grep-valhalla` (`0.51.1`), and `ripwire` (`0.6.9`, paired with `ripwire-agent-install` / [`scripts/install-agent-skills.sh`](scripts/install-agent-skills.sh) for opt-in skills and hooks across 6 coding-agent CLIs)
+1. **JDK 28 Valhalla Java grammar & structural analyzers** — `tree-sitter-java-valhalla` (`0.23.5`), `ast-grep-valhalla` (`0.51.2`), and `ripwire` (`0.6.9`, paired with `ripwire-agent-install` / [`scripts/install-agent-skills.sh`](scripts/install-agent-skills.sh) for opt-in skills and hooks across 6 coding-agent CLIs)
 2. **Code search, hybrid markdown search, file ranking, and hash-anchored editing** — `tgrep` (`1.2.7`), `ck` (`0.8.1`), `fff-mcp` (`0.11.0`), `qmd` (`2.8.3`, local BM25 + `sqlite-vec` + GGUF reranking + MCP + skill), and `hashline` (`0.9.24`, CLI + stdio MCP server + bundled `SKILL.md`)
 3. **Local agent memory & token compression (hardened local/loopback defaults)** — `basic-memory` (`1.0.0`, local stdio JSON-RPC MCP + CLI + bundled skills; cloud/HTTP/SSE disabled), `hindsight` (`1.2.1` CLI + `0.8.7` coding-agents stdio MCP + skills; loopback `127.0.0.1`/`::1`/`localhost` only, cloud disabled), and `squeez` (`1.49.3`, CLI + stdio MCP with `auto_compress_md=false`, `persona=off`, `wrap_bash=false`)
 4. **Multi-agent messaging, coordination, and Beads graph tracking** — `agent-mail` (`0.3.40`, `mcp-agent-mail` + `am`), `br` (`0.7.6`), `bd` (`1.3.4`), `bv` (`0.26.0`), `nats` (`0.5.1`), and `herdr` (`0.9.5`)
