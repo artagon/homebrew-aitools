@@ -873,12 +873,15 @@ verify_one_formula() {
       fi
       export GH_STATE_DIR="${f_work}/gh-state"
       export XDG_CONFIG_HOME="${f_work}/brew-xdg"
+      export HOMEBREW_USER_CONFIG_HOME="${f_work}/brew-xdg/homebrew"
       export HOMEBREW_CACHE="${f_work}/brew-cache"
       export HOMEBREW_LOGS="${f_work}/brew-logs"
       export HOMEBREW_TEMP="${f_work}/brew-temp"
-      mkdir -p "${GH_STATE_DIR}" "${XDG_CONFIG_HOME}" "${HOMEBREW_CACHE}" "${HOMEBREW_LOGS}" "${HOMEBREW_TEMP}"
+      mkdir -p "${GH_STATE_DIR}" "${XDG_CONFIG_HOME}" "${HOMEBREW_USER_CONFIG_HOME}" \
+        "${HOMEBREW_CACHE}" "${HOMEBREW_LOGS}" "${HOMEBREW_TEMP}"
       brew trust --tap "${TAP_NAME}" >/dev/null 2>&1
       brew verify \
+        --quiet \
         "--bottle-tag=${bottle_tag}" \
         --force \
         --json \

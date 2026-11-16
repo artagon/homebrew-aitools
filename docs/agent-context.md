@@ -85,7 +85,7 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
   `scripts/autobump.sh rewrite FILE OLD NEW`.
 - The script never updates the integration test pins. A Ripwire bump that changes
   the bundled installer or skill set fails `tests.yml` until a reviewer checks the
-  payload and updates `tests/integration_agent_install.py`.
+  payload and updates `tests/integration-agent-install.sh`.
 
 ## Bottles
 
@@ -114,7 +114,7 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
   3. `push-main`: verifies `commits.mbox` modifies only `bottle do ... end` DSL
      lines relative to `head_sha`, fast-forwards `main` (`tries: 1`), flips draft
      releases to published (or deletes unshipped drafts if the push fails), runs
-     `brew verify --bottle-tag=arm64_tahoe --force --json`, and closes the pull
+     `brew verify --quiet --bottle-tag=arm64_tahoe --force --json`, and closes the pull
      request only if its `headRefOid` still equals `head_sha`.
 - Publish with `gh workflow run publish.yml -f pull_request=<number> -f head_sha=<sha>`;
   GitHub dispatches only workflows that exist on `main`. A formula pull request
@@ -173,11 +173,11 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
 - `publish.yml` runs `scripts/update-readme-bottles.sh` after merging `bottle do` blocks so the
   fenced `BOTTLE_PROVENANCE_TABLE` section in `README.md` stays synchronized with `Formula/*.rb`
   without creating merge conflicts on parallel bump pull requests; `push-main` validates with
-  `scripts/ci/verify_patch_policy.py` that only `bottle do ... end` DSL statements and the fenced
+  `scripts/ci/verify-patch-policy.sh` that only `bottle do ... end` DSL statements and the fenced
   `README.md` provenance table changed relative to `head_sha`.
 - Multi-step CI logic lives in `scripts/ci/` (`common.sh` non-executable sourced `ci::*` library,
   `build-provenance-manifest.sh`, `stage-backfill.sh`, `sign-and-attest.sh`, `publish-bottles.sh`,
-  and `verify_patch_policy.py`) with environment-only workflow inputs and regex allowlists.
+  and `verify-patch-policy.sh`) with environment-only workflow inputs and regex allowlists.
 - `tests.yml` uploads bottles and provenance manifests only from a passing run
   and restores no cache, because its artifacts become release assets.
 - Do not pass `token:` to setup-homebrew: it writes the token into the global
@@ -204,7 +204,7 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
      `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest that this tap's
      CI fetched the SHA-256-pinned upstream binary and packaged the bottle, not
      that upstream compiled the binary reproducibly from source.
-  3. `tests/integration_agent_install.py` pins Ripwire's installer SHA-256 but not
+  3. `tests/integration-agent-install.sh` pins Ripwire's installer SHA-256 but not
      its hook scripts.
 
 Use [the integration suite](../tests/README.md) to validate wrapper behavior with
