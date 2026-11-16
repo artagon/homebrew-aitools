@@ -29,8 +29,8 @@
   workflow, binding both `--` (`Bottle::Filename#to_s`) and `-` (`Bottle::Filename#url_encode`)
   subjects in one attestation statement; backfill existing releases with `attest.yml`.
 - Exercise both installer entrypoints against the real bundled payload in isolated homes, and run
-  `tests/test-verify-provenance.sh` across `/bin/bash` 3.2 and Bash 5+ when changing provenance
-  scripts, workflows, or bottle conventions.
+  `bats --tap tests/verify_provenance.bats` across `/bin/bash` 3.2 and Bash 5+ when changing
+  provenance scripts, workflows, or bottle conventions.
 - Never activate hooks or modify live agent, Homebrew trust (`~/.homebrew/trust.json`), or
   Sigstore (`~/.sigstore`) configuration during tests.
 - Keep review packets immutable; rerun affected tests and independent reviews after fixes.

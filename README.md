@@ -407,7 +407,7 @@ A bump fails on purpose when:
 
 - the grammar patch or Ripwire's query patch no longer applies;
 - ast-grep pins a tree-sitter-java version that the patched crate cannot replace; or
-- Ripwire changes its bundled installer or skills, which `tests/integration-agent-install.sh` pins.
+- Ripwire changes its bundled installer or skills, which `tests/helpers/agent_install_helper.bash` pins.
 
 One-time repository setting: in Settings → Actions → General, allow GitHub Actions to create and
 approve pull requests. To check or apply bumps locally:
@@ -515,6 +515,6 @@ cosign verify-blob \
 
 ## Validation
 
-See [integration and provenance tests](tests/README.md) for isolated checks under stock macOS `/bin/bash` 3.2 and modern Bash 5+:
-- `tests/integration-agent-install.sh` exercises both Ripwire activation entrypoints and opt-in hook registration against the real bundled payload in temporary agent homes.
-- `tests/test-verify-provenance.sh` exercises `scripts/verify-provenance.sh`, `scripts/update-readme-bottles.sh`, and `scripts/ci/*` across all bottled formulae, online and air-gapped offline bundles, tamper rejection, and isolated `--homebrew` verification without touching live user state.
+See [integration and provenance tests](tests/README.md) for isolated `bats-core` 1.14+ checks under stock macOS `/bin/bash` 3.2 and modern Bash 5+:
+- [`tests/integration_agent_install.bats`](tests/integration_agent_install.bats) exercises both Ripwire activation entrypoints and opt-in hook registration against the real bundled payload in temporary agent homes.
+- [`tests/verify_provenance.bats`](tests/verify_provenance.bats) exercises `scripts/verify-provenance.sh`, `scripts/update-readme-bottles.sh`, and `scripts/ci/*` across all bottled formulae, online and air-gapped offline bundles, tamper rejection, and isolated `--homebrew` verification without touching live user state.

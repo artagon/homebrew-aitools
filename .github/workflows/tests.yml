@@ -60,14 +60,18 @@ jobs:
       - run: brew test-bot --only-tap-syntax
 
       - name: Install test prerequisites
-        run: brew install bash jq
+        run: brew install bash bats-core jq shellcheck shfmt
 
-      - name: Run provenance verifier unit and Bash 3.2/5+ tests
+      - name: Lint Bats suites and helpers
         run: |
-          ./tests/test-verify-provenance.sh \
-            --receipt "${RUNNER_TEMP}/verify-provenance-receipt.json" \
-            --bash32 /bin/bash \
-            --modern-bash "$(brew --prefix)/bin/bash"
+          shellcheck --shell=bash --severity=info -x tests/helpers/*.bash
+          shellcheck --shell=bats --severity=info -x tests/*.bats
+          shfmt -ln bats -i 2 -d tests/*.bats
+
+      - name: Run provenance verifier Bats suite across Bash 3.2 and Bash 5+
+        run: |
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
+            bats --tap tests/verify_provenance.bats
 
       - name: Verify README bottle provenance table on main
         if: github.event_name == 'push'
@@ -90,23 +94,25 @@ jobs:
       # test-bot leaves each tested formula installed from its new bottle.
       # If installer/test files changed without rebuilding ripwire, pour the published
       # ripwire bottle so both installer entrypoints are still exercised.
-      - name: Run installer integration tests
+      - name: Run installer integration Bats suite
         if: github.event_name != 'push'
         run: |
           if ! brew list --formula ripwire >/dev/null 2>&1; then
             git fetch --no-tags --depth=50 origin main || true
             if git diff --name-only origin/main...HEAD -- \
-              scripts/install-agent-skills.sh tests/integration-agent-install.sh | grep -q .; then
+              scripts/install-agent-skills.sh tests/integration_agent_install.bats tests/helpers/agent_install_helper.bash | grep -q .; then
               brew install artagon/aitools/ripwire
             else
               echo "ripwire and installer files were not modified in this run"
               exit 0
             fi
           fi
-          ./tests/integration-agent-install.sh \
-            --receipt "${RUNNER_TEMP}/ripwire-integration.json" \
-            --bash32 /bin/bash \
-            --modern-bash "$(brew --prefix)/bin/bash"
+          command -v bats >/dev/null 2>&1 || brew install bats-core
+          [[ -x "$(brew --prefix)/bin/bash" ]] || brew install bash
+          command -v jq >/dev/null 2>&1 || brew install jq
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
+            BATS_RIPWIRE_PKGSHARE="$(brew --prefix ripwire)/share/ripwire" \
+            bats --tap tests/integration_agent_install.bats
 
       - name: Install Anchore syft for bottle SBOMs
         if: success() && github.event_name != 'push'
