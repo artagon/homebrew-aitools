@@ -16,7 +16,7 @@ class Qmd < Formula
 
   def install
     # Remove bun/pnpm lockfiles so bin/qmd always selects Homebrew's Node runtime.
-    rm_f ["bun.lock", "pnpm-lock.yaml"]
+    rm ["bun.lock", "pnpm-lock.yaml"]
 
     # Compile TypeScript dist/ first, then pack and install production + native addons into libexec.
     system "npm", "install", *std_npm_args(prefix: false)
@@ -25,7 +25,7 @@ class Qmd < Formula
 
     (pkgshare/"skills").install "skills/qmd"
 
-    node_bin = Formula["node"].opt_bin/"node"
+    node_bin = formula_opt_bin("node")/"node"
     (bin/"qmd").write <<~SH
       #!/bin/bash
       set -euo pipefail

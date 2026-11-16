@@ -12,7 +12,7 @@ Twelve formulae build from source: `tree-sitter-java-valhalla` (a patched
 plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` (Go), `adrkit`
 (`bun` build targeting the `node` runtime), `qmd` (TypeScript/Node with native
 `better-sqlite3`, `sqlite-vec`, and `node-llama-cpp`), and `basic-memory` (`uv`
-Python 3.13 build from source with Apple Silicon Mach-O re-signing). CI builds
+Python 3.13 build from source). CI builds
 and publishes Apple Silicon `macos-26` bottles across the tap.
 
 `ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, and `qmd` bundle
