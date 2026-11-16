@@ -11,16 +11,12 @@ class Qmd < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/qmd-2.8.3"
-    rebuild 1
-    sha256 cellar: :any, arm64_tahoe: "b217890db1c72ca5e9222abbd07ea8a7d159278827882d9fea52fb521cb85c72"
-  end
-
   depends_on "python@3.13" => :build
   depends_on "node"
 
   def install
+    ENV["NODE_LLAMA_CPP_SKIP_DOWNLOAD"] = "true"
+
     # Remove bun/pnpm lockfiles so bin/qmd selects Homebrew's Node runtime deterministically.
     rm ["bun.lock", "pnpm-lock.yaml"]
 
@@ -36,6 +32,15 @@ class Qmd < Formula
       next if name == native_tag || name.start_with?("#{native_tag}.")
 
       entry.directory? ? rm_r(entry) : rm(entry)
+    end
+
+    # Prune optional CUDA/Vulkan GPU addon packages on Linux so CPU-portable bottles
+    # do not retain unfulfilled libcuda/libcudart/libvulkan dynamic library references.
+    if OS.linux?
+      (libexec/"lib/node_modules/@tobilu/qmd/node_modules/@node-llama-cpp")
+        .glob("*-{cuda,cuda-ext,vulkan}").each do |gpu_pkg|
+        rm_r(gpu_pkg) if gpu_pkg.exist?
+      end
     end
 
     (pkgshare/"skills").install "skills/qmd"

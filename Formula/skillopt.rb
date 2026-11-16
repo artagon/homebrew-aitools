@@ -11,12 +11,6 @@ class Skillopt < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillopt-0.2.0"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "b523eddf612dd4333616e6c76f5f2f655d461ba528643cffb0a90c33e1a8bd06"
-  end
-
   depends_on "uv" => :build
 
   preserve_rpath

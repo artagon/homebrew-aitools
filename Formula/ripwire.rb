@@ -22,6 +22,15 @@ class Ripwire < Formula
     depends_on macos: :sonoma
   end
 
+  on_linux do
+    depends_on "gcc"
+  end
+
+  fails_with :gcc do
+    version "13"
+    cause "Requires C++23 std::print (GCC 14+)"
+  end
+
   # Index records, JEP 401 value records, compact constructors, and annotation
   # interfaces as Java definitions; upstream's query captures none of them.
   patch :DATA
