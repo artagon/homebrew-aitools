@@ -106,81 +106,161 @@ class Hindsight < Formula
                 'const SERVER_MODES: ServerMode[] = ["self-hosted", "daemon"];'
         s.gsub! "  { mode: \"cloud\", label: \"Hindsight Cloud\", hint: \"hosted, needs an API token\" },\n",
                 ""
-        s.gsub! 'Choose [1-3] (default 1): ', 'Choose [1-2] (default 1): '
+        s.gsub! "Choose [1-3] (default 1): ", "Choose [1-2] (default 1): "
         s.gsub! 'if (answer === "") return "cloud";', 'if (answer === "") return "self-hosted";'
-        s.gsub! <<~LEGACY_OLD.chomp, <<~LEGACY_NEW.chomp
-            const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
-            if (legacy) {
-              const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
-              if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
-              if (legacy.apiToken) carried.apiToken = legacy.apiToken;
-              if (legacy.apiPort) carried.apiPort = legacy.apiPort;
-        LEGACY_OLD
-            const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
-            if (legacy) {
-              if (legacy.serverMode === "cloud") {
-                c.log?.("❌ Legacy Hindsight Cloud config cannot be migrated in this loopback-only build; pass --server self-hosted --api-url http://127.0.0.1:8888 or --server daemon.");
+        s.gsub! <<~SERVER_OLD.chomp, <<~SERVER_NEW.chomp
+          function configureServer(c: InstallCtx, args: string[], installing: readonly string[]): boolean {
+            const explicit = flagValue(args, "server");
+            if (explicit && !SERVER_MODES.includes(explicit as ServerMode)) {
+              c.log?.(`unknown --server "${explicit}" — expected one of: ${SERVER_MODES.join(", ")}`);
+              return false;
+            }
+            // Same override as the runtime, or a user with HINDSIGHT_CONFIG set would be configured into a
+            // file their sessions never read.
+            const configPath = hindsightConfigPath(c);
+            const existing = readJson(configPath);
+            const alreadyConfigured = !!(existing.serverMode || existing.apiUrl);
+
+            let mode = explicit as ServerMode | undefined;
+            if (!mode) {
+              if (alreadyConfigured) return true; // respect what's already there
+              // Someone coming from the old per-agent plugin already chose where their memory lives.
+              // Adopt it rather than asking again — and above all rather than defaulting to Cloud, which
+              // would quietly redirect their prompts and transcripts to a different server.
+              const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
+              if (legacy) {
+                const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
+                if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
+                if (legacy.apiToken) carried.apiToken = legacy.apiToken;
+                if (legacy.apiPort) carried.apiPort = legacy.apiPort;
+                writeJson(configPath, carried);
+                c.log?.(
+                  `server: ${legacy.serverMode}${legacy.apiUrl ? ` (${legacy.apiUrl})` : ""} — carried over ` +
+                    `from the ${legacy.harness} plugin (${legacy.source})\\n` +
+                    `        Only the endpoint moves; conversations do not. To bring this repo's history\\n` +
+                    `        across, re-run here with --import-conversations.`
+                );
+                if (legacy.serverMode === "daemon") reportDaemonPrereqs(c);
+                return true;
+              }
+              if (!c.interactive) {
+                c.log?.(
+                  `\\nserver: defaulting to Hindsight Cloud. Re-run with --server self-hosted|daemon to change,\\n` +
+                    `        or edit ${configPath}.`
+                );
+                return true;
+              }
+              mode = promptServerMode(c);
+              if (!mode) return true;
+            }
+
+            const next: Record<string, unknown> = { ...existing, serverMode: mode };
+            if (mode === "cloud") {
+              delete next.apiUrl; // fall back to the built-in Cloud URL rather than pinning a stale one
+              // Cloud always authenticates — a config without a token only surfaces later as 401s on the
+              // first session, so the token is REQUIRED here (it used to be "blank to set later").
+              const token = flagValue(args, "api-token") ?? (c.interactive ? askToken(c) : undefined);
+              if (!token) {
+                c.log?.(
+                  `❌ Hindsight Cloud needs an API token — pass --api-token <token> (or set apiToken in ${configPath}).`
+                );
                 return false;
               }
-              if (legacy.apiUrl) {
-                try {
-                  assertLoopbackUrl(legacy.apiUrl);
-                } catch (err) {
-                  c.log?.(`❌ ${(err as Error).message}`);
+              next.apiToken = token;
+            } else if (mode === "self-hosted") {
+              const url =
+                flagValue(args, "api-url") ??
+                (c.interactive
+                  ? readLineSync(c, "Server URL (e.g. http://localhost:8888): ").trim()
+                  : undefined);
+              if (!url) {
+                c.log?.(
+                  `❌ self-hosted mode needs a server URL — pass --api-url <url> (or set apiUrl in ${configPath}).`
+                );
+                return false;
+              }
+              next.apiUrl = url;
+              const token = flagValue(args, "api-token");
+              if (token) next.apiToken = token;
+            } else {
+              delete next.apiUrl; // daemon mode derives its URL from apiPort
+              reportDaemonPrereqs(c);
+            }
+
+            writeJson(configPath, next);
+            c.log?.(`server: ${mode} (${configPath})`);
+            return true;
+          }
+        SERVER_OLD
+          function configureServer(c: InstallCtx, args: string[], installing: readonly string[]): boolean {
+            const explicit = flagValue(args, "server");
+            if (explicit && !SERVER_MODES.includes(explicit as ServerMode)) {
+              c.log?.(`unknown --server "${explicit}" — expected one of: ${SERVER_MODES.join(", ")}`);
+              return false;
+            }
+            const configPath = hindsightConfigPath(c);
+            const existing = readJson(configPath);
+            const alreadyConfigured = !!(existing.serverMode || existing.apiUrl);
+
+            let mode = explicit as ServerMode | undefined;
+            if (!mode) {
+              if (alreadyConfigured) return true;
+              const legacy = (c.readLegacy ?? readLegacyEndpoint)(c.home, installing);
+              if (legacy) {
+                if (legacy.serverMode === "cloud") {
+                  c.log?.("❌ Legacy Hindsight Cloud config cannot be migrated in this loopback-only build; pass --server self-hosted --api-url http://127.0.0.1:8888 or --server daemon.");
                   return false;
                 }
+                if (legacy.apiUrl) {
+                  try {
+                    assertLoopbackUrl(legacy.apiUrl);
+                  } catch (err) {
+                    c.log?.(`❌ ${(err as Error).message}`);
+                    return false;
+                  }
+                }
+                const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
+                if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
+                if (legacy.apiToken) carried.apiToken = legacy.apiToken;
+                if (legacy.apiPort) carried.apiPort = legacy.apiPort;
+                writeJson(configPath, carried);
+                if (legacy.serverMode === "daemon") reportDaemonPrereqs(c);
+                return true;
               }
-              const carried: Record<string, unknown> = { ...existing, serverMode: legacy.serverMode };
-              if (legacy.apiUrl) carried.apiUrl = legacy.apiUrl;
-              if (legacy.apiToken) carried.apiToken = legacy.apiToken;
-              if (legacy.apiPort) carried.apiPort = legacy.apiPort;
-        LEGACY_NEW
-        s.gsub! <<~NONTTY_OLD.chomp, <<~NONTTY_NEW.chomp
-            if (!c.interactive) {
-              c.log?.(
-                `\\nserver: defaulting to Hindsight Cloud. Re-run with --server self-hosted|daemon to change,\\n` +
-                  `        or edit ${configPath}.`
-              );
-              return true;
+              if (!c.interactive) {
+                writeJson(configPath, { ...existing, serverMode: "self-hosted", apiUrl: "http://127.0.0.1:8888" });
+                c.log?.(`\\nserver: defaulting to loopback self-hosted (http://127.0.0.1:8888).`);
+                return true;
+              }
+              mode = promptServerMode(c);
+              if (!mode) return true;
             }
-        NONTTY_OLD
-            if (!c.interactive) {
-              writeJson(configPath, { ...existing, serverMode: "self-hosted", apiUrl: "http://127.0.0.1:8888" });
-              c.log?.(
-                `\\nserver: defaulting to loopback self-hosted (http://127.0.0.1:8888). Re-run with --server self-hosted|daemon to change,\\n` +
-                  `        or edit ${configPath}.`
-              );
-              return true;
+
+            const next: Record<string, unknown> = { ...existing, serverMode: mode };
+            if (mode === "self-hosted") {
+              const prompted = c.interactive
+                ? (readLineSync(c, "Server URL (default http://127.0.0.1:8888): ").trim() || "http://127.0.0.1:8888")
+                : undefined;
+              const url = flagValue(args, "api-url") ?? prompted ?? "http://127.0.0.1:8888";
+              try {
+                assertLoopbackUrl(url);
+              } catch (err) {
+                c.log?.(`❌ ${(err as Error).message}`);
+                return false;
+              }
+              next.apiUrl = url;
+              const token = flagValue(args, "api-token");
+              if (token) next.apiToken = token;
+            } else {
+              delete next.apiUrl;
+              reportDaemonPrereqs(c);
             }
-        NONTTY_NEW
-        s.gsub! <<~SELFHOST_OLD.chomp, <<~SELFHOST_NEW.chomp
-          } else if (mode === "self-hosted") {
-            const url =
-              flagValue(args, "api-url") ??
-              (c.interactive
-                ? readLineSync(c, "Server URL (e.g. http://localhost:8888): ").trim()
-                : undefined);
-            if (!url) {
-              c.log?.(
-                `❌ self-hosted mode needs a server URL — pass --api-url <url> (or set apiUrl in ${configPath}).`
-              );
-              return false;
-            }
-            next.apiUrl = url;
-        SELFHOST_OLD
-          } else if (mode === "self-hosted") {
-            const prompted = c.interactive
-              ? (readLineSync(c, "Server URL (default http://127.0.0.1:8888): ").trim() || "http://127.0.0.1:8888")
-              : undefined;
-            const url = flagValue(args, "api-url") ?? prompted ?? "http://127.0.0.1:8888";
-            try {
-              assertLoopbackUrl(url);
-            } catch (err) {
-              c.log?.(`❌ ${(err as Error).message}`);
-              return false;
-            }
-            next.apiUrl = url;
-        SELFHOST_NEW
+
+            writeJson(configPath, next);
+            c.log?.(`server: ${mode} (${configPath})`);
+            return true;
+          }
+        SERVER_NEW
       end
 
       system "npm", "ci", "--ignore-scripts"
@@ -307,7 +387,7 @@ class Hindsight < Formula
       {"jsonrpc":"2.0","method":"notifications/initialized"}
       {"jsonrpc":"2.0","id":2,"method":"tools/list"}
     JSON
-    output = pipe_output("#{bin}/hindsight-mcp", requests, 0)
+    output = pipe_output(bin/"hindsight-mcp", requests, 0)
     assert_match '"name":"hindsight"', output
     assert_match '"hindsight_reflect"', output
 
