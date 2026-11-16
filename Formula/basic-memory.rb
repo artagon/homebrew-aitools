@@ -31,9 +31,7 @@ class BasicMemory < Formula
       libexec.glob("**/*.dylib").each do |dylib|
         next if dylib.symlink?
 
-        chmod 0755, dylib
-        system "install_name_tool", "-id", "@rpath/#{dylib.basename}", dylib
-        system "codesign", "--force", "--sign", "-", dylib
+        change_dylib_id dylib, "@rpath/#{dylib.basename}"
       end
     end
 
