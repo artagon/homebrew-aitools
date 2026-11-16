@@ -13,6 +13,10 @@ class Skillopt < Formula
 
   depends_on "uv" => :build
 
+  on_linux do
+    depends_on "python@3.13"
+  end
+
   preserve_rpath
 
   def install
@@ -22,12 +26,18 @@ class Skillopt < Formula
               'REPO_ROOT = os.environ.get("SKILLOPT_SLEEP_REPO") or os.path.abspath(',
               'REPO_ROOT = os.environ.get("SKILLOPT_SLEEP_REPO") or os.getcwd() or os.path.abspath('
 
-    ENV["UV_PYTHON_PREFERENCE"] = "only-managed"
-    ENV["UV_PYTHON_INSTALL_DIR"] = libexec/"python"
+    python_arg = if OS.mac?
+      ENV["UV_PYTHON_PREFERENCE"] = "only-managed"
+      ENV["UV_PYTHON_INSTALL_DIR"] = libexec/"python"
+      "3.13"
+    else
+      ENV["UV_PYTHON_PREFERENCE"] = "only-system"
+      (formula_opt_bin("python@3.13")/"python3.13").to_s
+    end
     ENV["UV_TOOL_DIR"] = libexec/"tools"
     ENV["UV_TOOL_BIN_DIR"] = libexec/"bin"
 
-    system "uv", "tool", "install", ".", "--python", "3.13", "--no-cache"
+    system "uv", "tool", "install", ".", "--python", python_arg, "--no-cache"
 
     # Normalize bundled wheel dylib IDs (including hidden .dylibs directories) to @rpath
     # so preserve_rpath prevents Mach-O header overflow during bottle relocation.
