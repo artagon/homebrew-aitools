@@ -10,6 +10,14 @@ class TreeSitterJavaValhalla < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "b9eb087611d5596ce5aa84d932fea7c7db8f6f360aff709310d216ca0cfa85d3"
+    sha256 cellar: :any, arm64_linux:  "1a479854f1373430240636495725997e7af1601900702bc45c477634367c5072"
+    sha256 cellar: :any, x86_64_linux: "86bd920213aca579f69607e4ed9ef324068373a1b0a6d3af18e50ca960aa2c17"
+  end
+
   depends_on "tree-sitter-cli" => [:build, :test]
 
   # Matches the JDK 28 Valhalla javac parser: the JEP 401 `value` modifier as a
