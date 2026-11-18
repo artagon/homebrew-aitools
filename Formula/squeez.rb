@@ -4,6 +4,7 @@ class Squeez < Formula
   url "https://github.com/claudioemmanuel/squeez/archive/refs/tags/v1.49.3.tar.gz"
   sha256 "1fc60e2b46a96b0deb8ae9537beeddd1d68a2ace75efba56bb93a5d3c521e74d"
   license "Apache-2.0"
+  revision 1
   head "https://github.com/claudioemmanuel/squeez.git", branch: "main"
 
   livecheck do

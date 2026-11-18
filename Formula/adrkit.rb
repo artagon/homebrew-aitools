@@ -4,6 +4,7 @@ class Adrkit < Formula
   url "https://github.com/mbeacom/adrkit/archive/refs/tags/v0.20.0.tar.gz"
   sha256 "58e22e45f1dd27629711ad11968195c5acd597bb8f889cab3a188b19d892ec77"
   license "Apache-2.0"
+  revision 1
   head "https://github.com/mbeacom/adrkit.git", branch: "main"
 
   livecheck do

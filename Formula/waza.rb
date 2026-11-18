@@ -4,6 +4,7 @@ class Waza < Formula
   url "https://github.com/microsoft/waza/archive/refs/tags/v0.41.0.tar.gz"
   sha256 "b149312962adbc0711d900d295417f60e450acb153ea3eb8d150dd1287aa8a39"
   license "MIT"
+  revision 1
   head "https://github.com/microsoft/waza.git", branch: "main"
 
   livecheck do

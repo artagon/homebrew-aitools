@@ -4,6 +4,7 @@ class Skillfile < Formula
   url "https://github.com/eljulians/skillfile/archive/refs/tags/v1.9.2.tar.gz"
   sha256 "c796768bf37f68346366bd9eaa7dab2f41b7e7440248b67dce9feec58b10a27a"
   license "Apache-2.0"
+  revision 1
   head "https://github.com/eljulians/skillfile.git", branch: "main"
 
   livecheck do
