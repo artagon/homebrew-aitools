@@ -226,10 +226,13 @@ pins in \`tests/helpers/agent_install_helper.bash\`.
 EOF
     pr_num="$(gh pr list --base "${base}" --head "${branch}" --state open --json number --jq '.[0].number // empty')"
   fi
-  # Events from GITHUB_TOKEN start no pull_request run; a dispatch is allowed, and
-  # brew pr-pull finds its bottles through the check suite on the branch head.
+  # Pull requests from GITHUB_TOKEN create only an inert action_required pull_request
+  # run under first_time_contributors approval; dispatch tests.yml on the branch head.
   head_sha="$(git ls-remote --heads origin "${branch}" | awk '{ print $1 }')"
-  run_count="$(gh run list --workflow tests.yml --branch "${branch}" --commit "${head_sha}" --json databaseId --jq 'length')"
+  run_count="$(
+    gh run list --workflow tests.yml --branch "${branch}" --commit "${head_sha}" --json conclusion \
+      --jq '[.[] | select(.conclusion != "action_required")] | length'
+  )"
   if [[ "${run_count:-0}" -eq 0 ]]
   then
     gh workflow run tests.yml --ref "${branch}" -f "formulae=${formulae}"

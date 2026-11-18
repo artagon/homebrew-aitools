@@ -17,7 +17,7 @@ Maintain formulae, Bash wrappers, provenance scripts, and release workflows in `
 2. **Literal URLs, checksums, & `livecheck`**:
    - Every formula requires a direct class-body `livecheck do ... end` block.
    - Keep every `url "..."` literal-versioned (never `#{version}`) followed immediately by `sha256 "<64-lowercase-hex>"` (or `version "<X.Y.Z>"` then `sha256 "<64-lowercase-hex>"` for scoped tags) with no trailing comment so `scripts/autobump.sh` rewrites single-URL, multi-platform, and `resource` stanzas uniformly.
-   - Place `version "<X.Y.Z>"` between `url` and `sha256` (`brew style` `ComponentsOrder`) when the archive tag uses scoped npm syntax (`@scope/pkg@X.Y.Z` / `%40...%40X.Y.Z`) so `main`'s `verify-provenance.sh` and `Homebrew` agree cleanly.
+   - Place `version "<X.Y.Z>"` between `url` and `sha256` (`brew style` `ComponentsOrder`) only when Homebrew cannot scan the version from `url`; omit `version` on `%40scope%2Fpkg%40X.Y.Z` URLs (`brew audit` rejects redundant `version` stanzas, and `verify-provenance.sh` parses `%40...%40` tags directly).
 3. **Licenses**:
    - Use standard SPDX identifiers where valid (`MIT`, `Apache-2.0`, `AGPL-3.0-or-later`, `Elastic-2.0`).
    - When an upstream license adds a custom rider (`MIT License with OpenAI/Anthropic Rider`), declare `license :cannot_represent` and run `prefix.install "LICENSE"`.

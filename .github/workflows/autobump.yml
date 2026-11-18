@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     permissions:
-      # Pull requests opened with GITHUB_TOKEN start no pull_request run.
+      # Pull requests from GITHUB_TOKEN sit in action_required without dispatching tests.yml.
       actions: write # dispatch tests.yml on each bump branch
       contents: write # push the bump branches
       pull-requests: write # open the bump pull requests

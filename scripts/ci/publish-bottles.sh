@@ -80,8 +80,14 @@ case "${subcmd}" in
 
     run_obj="$(
       gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yml/runs?head_sha=${HEAD_SHA}&per_page=100" |
-        jq -c --arg repo "${GITHUB_REPOSITORY}" \
-          '[.workflow_runs[] | select(.head_repository.full_name == $repo)] | sort_by(.created_at) | last // empty'
+        jq -c --arg repo "${GITHUB_REPOSITORY}" '
+          [.workflow_runs[]
+            | select(.head_repository.full_name == $repo and (.event == "pull_request" or .event == "workflow_dispatch"))
+          ] as $runs
+          | ([$runs[] | select(.conclusion != "action_required")] | if length > 0 then . else $runs end)
+          | sort_by(.created_at, .id)
+          | last // empty
+        '
     )"
     [[ -n "${run_obj}" ]] || ci::fail "No tests.yml run found for ${HEAD_SHA}"
     conclusion="$(printf '%s\n' "${run_obj}" | jq -r '.conclusion // "missing"')"
@@ -211,7 +217,9 @@ case "${subcmd}" in
     ci::require_sha40 "${base_main_sha}" "base_main_sha"
     printf 'base_main_sha=%s\n' "${base_main_sha}" >>"${GITHUB_OUTPUT}"
 
-    brew pr-pull --debug --no-upload --tap="${GITHUB_REPOSITORY}" --head-sha="${HEAD_SHA}" \
+    brew pr-pull --debug --no-upload \
+      --workflows=publish.yml --ignore-missing-artifacts=publish.yml \
+      --tap="${GITHUB_REPOSITORY}" --head-sha="${HEAD_SHA}" \
       "${PULL_REQUEST}"
 
     sorted_json_list="${RUNNER_TEMP}/sorted-bottle-jsons.txt"
