@@ -404,13 +404,20 @@ case "${subcmd}" in
         --certificate-oidc-issuer "${oidc_issuer}" \
         "work/${rel_fn}"
 
+      work_bottle_sha="$(ci::sha256_hex "work/${rel_fn}")"
+      [[ "${work_bottle_sha}" = "${bottle_sha}" ]] ||
+        ci::fail "Work bottle digest mismatch before cosign verification for ${rel_fn}"
+
+      # Pass --digest instead of a blob path so bottles larger than cosign's
+      # 128 MiB stream cap (134217728 bytes) verify against the exact SHA-256.
       cosign verify-blob-attestation \
         --bundle "out/${rel_fn}.spdx.sigstore.json" \
         --trusted-root "${cosign_trusted_root}" \
         --type spdxjson \
         --certificate-identity "${cert_id}" \
         --certificate-oidc-issuer "${oidc_issuer}" \
-        "work/${rel_fn}"
+        --digest "${work_bottle_sha}" \
+        --digestAlg sha256
 
       dsse_spdx="${RUNNER_TEMP}/dsse-spdx-${i}.json"
       detached_spdx="${RUNNER_TEMP}/detached-spdx-${i}.json"

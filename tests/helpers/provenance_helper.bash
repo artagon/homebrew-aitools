@@ -332,7 +332,7 @@ jq -cn --arg tuf "\${tuf_root}" '{tool: "cosign", args: \$ARGS.positional, tuf_r
 
 subcmd="\${1:-}"
 shift || true
-cert_id=""; oidc_iss=""; bpath=""; tr=""; att_type=""
+cert_id=""; oidc_iss=""; bpath=""; tr=""; att_type=""; digest=""; digest_alg=""
 while [[ "\$#" -gt 0 ]]; do
   case "\$1" in
     --offline) printf 'deprecated --offline passed to cosign v3\n' >&2; exit 1 ;;
@@ -341,6 +341,8 @@ while [[ "\$#" -gt 0 ]]; do
     --bundle) bpath="\$2"; shift 2 ;;
     --trusted-root) tr="\$2"; shift 2 ;;
     --type) att_type="\$2"; shift 2 ;;
+    --digest) digest="\$2"; shift 2 ;;
+    --digestAlg) digest_alg="\$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -363,6 +365,7 @@ case "\${subcmd}" in
     ;;
   verify-blob-attestation)
     [[ "\${att_type}" = "spdxjson" ]] || exit 1
+    [[ "\${digest}" =~ ^[0-9a-f]{64}\$ && "\${digest_alg}" = "sha256" ]] || exit 1
     printf 'Verified OK\n'
     exit 0
     ;;
