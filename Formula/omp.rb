@@ -8,6 +8,13 @@ class Omp < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/omp-18.22.2"
+    sha256 arm64_tahoe:  "63aef2cf2c008db2c40f94de1e5deea3605f6d8e001c9d182322ece91f9748e5"
+    sha256 arm64_linux:  "3d76befddcddd95f8cbb34632d0d9c7acc2d07ffeecc92d1e5516853f939fe5a"
+    sha256 x86_64_linux: "1a840942ac6cf4864eae594fc5175b77e4bb74768bcfbb744138eb93eacdd9c7"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/can1357/oh-my-pi/releases/download/v18.22.2/omp-darwin-arm64"
