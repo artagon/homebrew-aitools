@@ -1,0 +1,4 @@
+# Match Homebrew `brew style` (`shellcheck --shell=bash --enable=all --external-sources`)
+# across repository Bash scripts under `scripts/`.
+external-sources=true
+enable=all

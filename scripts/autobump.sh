@@ -17,7 +17,10 @@
 set -euo pipefail
 
 tap="artagon/aitools"
-repo="$(cd "$(dirname "$0")/.." && pwd -P)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+script_base="$(basename "${BASH_SOURCE[0]}")"
+script_path="${script_dir}/${script_base}"
+repo="$(cd "${script_dir}/.." && pwd -P)"
 formula_dir="${repo}/Formula"
 grammar="tree-sitter-java-valhalla"
 
@@ -64,6 +67,11 @@ bump_text() {
   do
     if [[ -n "${pending}" ]]
     then
+      if [[ "${line}" == "  version \"${old}\"" ]]
+      then
+        printf '  version "%s"\n' "${new}"
+        continue
+      fi
       [[ "${line}" =~ ${sha_re} ]] || die "no sha256 line after a url naming ${old} in ${file}"
       printf '%ssha256 "%s"\n' "${BASH_REMATCH[1]}" "${pending}"
       pending=""
@@ -84,8 +92,14 @@ bump_text() {
       dropped=1
       continue
     fi
+    if [[ "${line}" == "  version \"${old}\"" ]]
+    then
+      printf '  version "%s"\n' "${new}"
+      continue
+    fi
     printf '%s\n' "${line}"
   done <"${file}"
+  [[ -z "${pending}" ]] || die "no sha256 line after a url naming ${old} in ${file}"
   [[ "${changed}" -gt 0 ]] || die "no url names version ${old} in ${file}"
 }
 
@@ -225,7 +239,7 @@ EOF
 }
 
 main() {
-  local command base="main" name old new failures=0
+  local command base="main" name old new dirty="" failures=0
   [[ "$#" -gt 0 ]] || usage
   command="$1"
   shift
@@ -243,11 +257,22 @@ main() {
       bump_revision "$1"
       ;;
     check | write | pr)
-      if [[ "${command}" = pr ]] && [[ "${1:-}" = --base ]]
+      if [[ "${command}" = pr ]]
       then
-        [[ "$#" -ge 2 ]] || usage
-        base="$2"
-        shift 2
+        if [[ "${1:-}" = --base ]]
+        then
+          [[ "$#" -ge 2 ]] || usage
+          base="$2"
+          shift 2
+        fi
+        if [[ "${GITHUB_ACTIONS:-}" != "true" ]]
+        then
+          dirty="$(git status --porcelain)"
+          if [[ -n "${dirty}" ]]
+          then
+            die "refusing 'pr' with uncommitted changes outside GitHub Actions"
+          fi
+        fi
       fi
       # Global, not local: the EXIT trap runs after main returns.
       list="$(mktemp)"
@@ -261,7 +286,7 @@ main() {
             apply_bump "${name}" "${old}" "${new}"
             ;;
           pr)
-            if ! bash "$0" _pr_one "${name}" "${old}" "${new}" "${base}" </dev/null
+            if ! "${BASH:-bash}" "${script_path}" _pr_one "${name}" "${old}" "${new}" "${base}" </dev/null
             then
               printf 'autobump: %s %s failed\n' "${name}" "${new}" >&2
               failures=$((failures + 1))

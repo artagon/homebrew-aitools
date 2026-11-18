@@ -1,0 +1,43 @@
+id: formula-cannot-represent-license
+language: Ruby
+severity: error
+message: Install the full upstream LICENSE into prefix when declaring license :cannot_represent.
+note: Custom non-SPDX riders require prefix.install "LICENSE" inside def install so the full license text ships in the bottle.
+files:
+  - Formula/*.rb
+rule:
+  kind: class
+  has:
+    field: superclass
+    kind: superclass
+    regex: '^<\s*Formula$'
+    stopBy: neighbor
+  all:
+    - has:
+        field: body
+        kind: body_statement
+        stopBy: neighbor
+        has:
+          pattern: license :cannot_represent
+          stopBy: neighbor
+    - not:
+        has:
+          kind: method
+          stopBy: end
+          all:
+            - has:
+                field: name
+                regex: '^install$'
+                stopBy: neighbor
+            - has:
+                kind: call
+                regex: '^prefix\.install\b'
+                stopBy: end
+                has:
+                  field: arguments
+                  kind: argument_list
+                  stopBy: neighbor
+                  has:
+                    kind: string
+                    regex: '^"LICENSE"$'
+                    stopBy: neighbor

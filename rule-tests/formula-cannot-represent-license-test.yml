@@ -1,0 +1,74 @@
+id: formula-cannot-represent-license
+valid:
+  - |
+    class Br < Formula
+      license :cannot_represent
+
+      def install
+        bin.install "br"
+        prefix.install "LICENSE"
+      end
+    end
+  - |
+    class AgentMail < Formula
+      license :cannot_represent
+
+      def install
+        bin.install "am"
+        prefix.install "README.md", "LICENSE"
+      end
+    end
+  - |
+    class Openlit < Formula
+      license "Apache-2.0"
+
+      def install
+        bin.install "openlit"
+      end
+    end
+invalid:
+  - |
+    class CustomTool < Formula
+      license :cannot_represent
+
+      def install
+        bin.install "custom-tool"
+      end
+    end
+  - |
+    class AnotherTool < Formula
+      license :cannot_represent
+
+      def install
+        prefix.install "README.md"
+      end
+    end
+  - |
+    class DocOnlyLicense < Formula
+      license :cannot_represent
+
+      def caveats
+        "See LICENSE upstream"
+      end
+    end
+  - |
+    class TestBlockOnlyLicense < Formula
+      license :cannot_represent
+
+      def install
+        bin.install "tool"
+      end
+
+      test do
+        prefix.install "LICENSE"
+      end
+    end
+  - |
+    class RenamedReadmeLicense < Formula
+      license :cannot_represent
+
+      def install
+        bin.install "tool"
+        prefix.install "README.md" => "LICENSE"
+      end
+    end

@@ -457,6 +457,20 @@ case_agent_cli_contract() {
     printf '%s\n' "$listing" | grep -Eq "^[[:space:]]*${t}[[:space:]]+not found[[:space:]]+" || return 1
   done
 
+  # Verify RIPWIRE_INSTALLER env override works identically across both entrypoints without RIPWIRE_PKGSHARE.
+  local inst_listing=""
+  inst_listing="$(
+    cd "$home" \
+      && "$AGENT_ENV_BIN" -i \
+        "HOME=$home" \
+        "PATH=$root/bin" \
+        "LC_ALL=C" \
+        "TMPDIR=$root/tmp" \
+        "RIPWIRE_INSTALLER=$AGENT_PAYLOAD_DIR/skills/install.sh" \
+        "$shell_bin" "$entry" --list
+  )"
+  [[ "$inst_listing" = "$listing" ]] || return 1
+
   local bad_rc=0
   (
     cd "$home" \

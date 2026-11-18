@@ -1,0 +1,14 @@
+id: formula-no-interpolated-url
+language: Ruby
+severity: error
+message: Use a literal version in the source URL instead of Ruby interpolation.
+note: scripts/autobump.sh rewrites literal version strings in source and resource URLs.
+files:
+  - Formula/*.rb
+rule:
+  pattern: url $URL
+constraints:
+  URL:
+    has:
+      kind: interpolation
+      stopBy: end

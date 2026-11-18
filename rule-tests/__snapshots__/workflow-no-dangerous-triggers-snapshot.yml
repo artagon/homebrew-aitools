@@ -1,0 +1,102 @@
+id: workflow-no-dangerous-triggers
+snapshots:
+  "name: Unsafe Array\non: [push, pull_request_target]\n":
+    labels:
+    - source: "on: [push, pull_request_target]"
+      style: primary
+      start: 19
+      end: 50
+    - source: pull_request_target
+      style: secondary
+      start: 30
+      end: 49
+    - source: pull_request_target
+      style: secondary
+      start: 30
+      end: 49
+    - source: "on"
+      style: secondary
+      start: 19
+      end: 21
+  "name: Unsafe Flow Trigger\n{ \"on\": \"workflow_run\" }\n":
+    labels:
+    - source: "\"on\": \"workflow_run\""
+      style: primary
+      start: 28
+      end: 48
+    - source: "\"workflow_run\""
+      style: secondary
+      start: 34
+      end: 48
+    - source: "\"workflow_run\""
+      style: secondary
+      start: 34
+      end: 48
+    - source: "\"on\""
+      style: secondary
+      start: 28
+      end: 32
+  "name: Unsafe Followup\non:\n  workflow_run:\n    workflows: [CI]\n    types: [completed]\n":
+    labels:
+    - source: |
+        on:
+          workflow_run:
+            workflows: [CI]
+            types: [completed]
+      style: primary
+      start: 22
+      end: 85
+    - source: workflow_run
+      style: secondary
+      start: 28
+      end: 40
+    - source: workflow_run
+      style: secondary
+      start: 28
+      end: 40
+    - source: "on"
+      style: secondary
+      start: 22
+      end: 24
+  "name: Unsafe PR\non:\n  pull_request_target:\n    types: [opened]\n":
+    labels:
+    - source: |
+        on:
+          pull_request_target:
+            types: [opened]
+      style: primary
+      start: 16
+      end: 63
+    - source: pull_request_target
+      style: secondary
+      start: 22
+      end: 41
+    - source: pull_request_target
+      style: secondary
+      start: 22
+      end: 41
+    - source: "on"
+      style: secondary
+      start: 16
+      end: 18
+  "name: Unsafe Quoted Trigger\n'on':\n  \"pull_request_target\":\n    types: [opened]\n":
+    labels:
+    - source: |
+        'on':
+          "pull_request_target":
+            types: [opened]
+      style: primary
+      start: 28
+      end: 79
+    - source: "\"pull_request_target\""
+      style: secondary
+      start: 36
+      end: 57
+    - source: "\"pull_request_target\""
+      style: secondary
+      start: 36
+      end: 57
+    - source: "'on'"
+      style: secondary
+      start: 28
+      end: 32

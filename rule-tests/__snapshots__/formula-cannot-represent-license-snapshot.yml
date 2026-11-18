@@ -1,0 +1,162 @@
+id: formula-cannot-represent-license
+snapshots:
+  "class AnotherTool < Formula\n  license :cannot_represent\n\n  def install\n    prefix.install \"README.md\"\n  end\nend\n":
+    labels:
+    - source: |-
+        class AnotherTool < Formula
+          license :cannot_represent
+        
+          def install
+            prefix.install "README.md"
+          end
+        end
+      style: primary
+      start: 0
+      end: 111
+    - source: license :cannot_represent
+      style: secondary
+      start: 30
+      end: 55
+    - source: |-
+        license :cannot_represent
+        
+          def install
+            prefix.install "README.md"
+          end
+      style: secondary
+      start: 30
+      end: 107
+    - source: < Formula
+      style: secondary
+      start: 18
+      end: 27
+  "class CustomTool < Formula\n  license :cannot_represent\n\n  def install\n    bin.install \"custom-tool\"\n  end\nend\n":
+    labels:
+    - source: |-
+        class CustomTool < Formula
+          license :cannot_represent
+        
+          def install
+            bin.install "custom-tool"
+          end
+        end
+      style: primary
+      start: 0
+      end: 109
+    - source: license :cannot_represent
+      style: secondary
+      start: 29
+      end: 54
+    - source: |-
+        license :cannot_represent
+        
+          def install
+            bin.install "custom-tool"
+          end
+      style: secondary
+      start: 29
+      end: 105
+    - source: < Formula
+      style: secondary
+      start: 17
+      end: 26
+  "class DocOnlyLicense < Formula\n  license :cannot_represent\n\n  def caveats\n    \"See LICENSE upstream\"\n  end\nend\n":
+    labels:
+    - source: |-
+        class DocOnlyLicense < Formula
+          license :cannot_represent
+        
+          def caveats
+            "See LICENSE upstream"
+          end
+        end
+      style: primary
+      start: 0
+      end: 110
+    - source: license :cannot_represent
+      style: secondary
+      start: 33
+      end: 58
+    - source: |-
+        license :cannot_represent
+        
+          def caveats
+            "See LICENSE upstream"
+          end
+      style: secondary
+      start: 33
+      end: 106
+    - source: < Formula
+      style: secondary
+      start: 21
+      end: 30
+  "class RenamedReadmeLicense < Formula\n  license :cannot_represent\n\n  def install\n    bin.install \"tool\"\n    prefix.install \"README.md\" => \"LICENSE\"\n  end\nend\n":
+    labels:
+    - source: |-
+        class RenamedReadmeLicense < Formula
+          license :cannot_represent
+        
+          def install
+            bin.install "tool"
+            prefix.install "README.md" => "LICENSE"
+          end
+        end
+      style: primary
+      start: 0
+      end: 156
+    - source: license :cannot_represent
+      style: secondary
+      start: 39
+      end: 64
+    - source: |-
+        license :cannot_represent
+        
+          def install
+            bin.install "tool"
+            prefix.install "README.md" => "LICENSE"
+          end
+      style: secondary
+      start: 39
+      end: 152
+    - source: < Formula
+      style: secondary
+      start: 27
+      end: 36
+  "class TestBlockOnlyLicense < Formula\n  license :cannot_represent\n\n  def install\n    bin.install \"tool\"\n  end\n\n  test do\n    prefix.install \"LICENSE\"\n  end\nend\n":
+    labels:
+    - source: |-
+        class TestBlockOnlyLicense < Formula
+          license :cannot_represent
+        
+          def install
+            bin.install "tool"
+          end
+        
+          test do
+            prefix.install "LICENSE"
+          end
+        end
+      style: primary
+      start: 0
+      end: 158
+    - source: license :cannot_represent
+      style: secondary
+      start: 39
+      end: 64
+    - source: |-
+        license :cannot_represent
+        
+          def install
+            bin.install "tool"
+          end
+        
+          test do
+            prefix.install "LICENSE"
+          end
+      style: secondary
+      start: 39
+      end: 154
+    - source: < Formula
+      style: secondary
+      start: 27
+      end: 36

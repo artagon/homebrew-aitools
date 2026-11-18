@@ -1,0 +1,53 @@
+id: workflow-no-run-interpolation
+valid:
+  - |
+    defaults:
+      run:
+        shell: bash -xeuo pipefail {0}
+    jobs:
+      test:
+        runs-on: ${{ matrix.os }}
+        steps:
+          - env:
+              HEAD_SHA: ${{ inputs.head_sha }}
+            run: ./scripts/ci/publish-bottles.sh validate
+  - |
+    jobs:
+      lint:
+        steps:
+          - run: |
+              shellcheck scripts/*.sh
+              bats --tap tests/*.bats
+  - |
+    jobs:
+      upload:
+        steps:
+          - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+            with:
+              path: ${{ runner.temp }}/out/*
+invalid:
+  - |
+    jobs:
+      bad1:
+        steps:
+          - run: echo "${{ inputs.pull_request }}"
+  - |
+    jobs:
+      bad2:
+        steps:
+          - run: |
+              git checkout ${{ github.head_ref }}
+  - |
+    jobs:
+      bad3:
+        steps:
+          - run: ./scripts/deploy.sh "${{ github.event.pull_request.title }}"
+  - |
+    jobs:
+      bad4:
+        steps:
+          - "run": echo "${{ inputs.pull_request }}"
+  - |
+    jobs:
+      bad5:
+        steps: [ { 'run': 'echo ${{ github.head_ref }}' } ]

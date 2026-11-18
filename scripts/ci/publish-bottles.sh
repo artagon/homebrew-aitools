@@ -16,6 +16,27 @@ SCRIPTS_DIR="$(cd "${CI_DIR}/.." && pwd -P)"
 # shellcheck source=scripts/ci/common.sh
 source "${CI_DIR}/common.sh"
 
+list_releases_json() {
+  local repo_slug="$1"
+  gh api --paginate "repos/${repo_slug}/releases?per_page=100" | jq -s 'add // []'
+}
+
+check_protected_paths() {
+  local base_sha="$1"
+  local head_sha="$2"
+  local allow_wf="$3"
+  if [[ "${allow_wf}" = "true" ]]
+  then
+    return 0
+  fi
+  local diff_out="${RUNNER_TEMP}/protected-paths.txt"
+  git diff --name-only --no-renames "${base_sha}" "${head_sha}" -- '.github/' 'scripts/' >"${diff_out}"
+  if [[ -s "${diff_out}" ]]
+  then
+    ci::fail "Pull request modifies protected .github/ or scripts/ paths; pass allow_workflow_changes=true only after auditing diffs"
+  fi
+}
+
 subcmd="${1:-}"
 [[ -n "${subcmd}" ]] || ci::fail "Usage: publish-bottles.sh <subcommand>"
 
@@ -49,13 +70,13 @@ case "${subcmd}" in
     [[ "${behind}" = "0" ]] ||
       ci::fail "The pull request is ${behind} commits behind main; update it and rerun tests"
 
-    if [[ "${allow_workflows}" != "true" ]]
-    then
-      if printf '%s\n' "${cmp_json}" | jq -e 'any(.files[]; (.filename | startswith(".github/workflows/")) or (.filename | startswith("scripts/ci/")))' >/dev/null
-      then
-        ci::fail "Pull request #${PULL_REQUEST} modifies .github/workflows/ or scripts/ci/; pass allow_workflow_changes=true only after auditing diffs"
-      fi
-    fi
+    base_main_sha="$(git rev-parse HEAD)"
+    ci::require_sha40 "${base_main_sha}" "base_main_sha"
+    git fetch --no-tags origin "${HEAD_SHA}"
+    git merge-base --is-ancestor "${base_main_sha}" "${HEAD_SHA}" ||
+      ci::fail "The pull request head ${HEAD_SHA} does not descend from main (${base_main_sha}); update it and rerun tests"
+
+    check_protected_paths "${base_main_sha}" "${HEAD_SHA}" "${allow_workflows}"
 
     run_obj="$(
       gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yml/runs?head_sha=${HEAD_SHA}&per_page=100" |
@@ -68,7 +89,9 @@ case "${subcmd}" in
       ci::fail "Newest tests.yml run for ${HEAD_SHA} is ${conclusion}, not success"
 
     test_run_id="$(printf '%s\n' "${run_obj}" | jq -r '.id | tostring')"
+    test_run_attempt="$(printf '%s\n' "${run_obj}" | jq -r '.run_attempt | tostring')"
     ci::require_uint "${test_run_id}" "test_run_id"
+    ci::require_uint "${test_run_attempt}" "test_run_attempt"
     printf 'test_run_id=%s\n' "${test_run_id}" >>"${GITHUB_OUTPUT}"
 
     raw_oses="$(ci::matrix_oses)"
@@ -129,10 +152,11 @@ case "${subcmd}" in
         jq -e \
           --arg head "${HEAD_SHA}" \
           --arg run_id "${test_run_id}" \
+          --arg attempt "${test_run_attempt}" \
           --arg mos "${matrix_os}" \
-          '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and .matrix_os == $mos' \
+          '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and ((.run_attempt | tonumber) >= 1 and (.run_attempt | tonumber) <= ($attempt | tonumber)) and .matrix_os == $mos' \
           "${manifest_path}" >/dev/null ||
-          ci::fail "${prov_art_name} build-manifest.json failed head_sha/run_id/matrix_os check"
+          ci::fail "${prov_art_name} build-manifest.json failed head_sha/run_id/run_attempt/matrix_os check"
         manifest_files+=("${manifest_path}")
 
         shopt -s nullglob
@@ -355,6 +379,8 @@ case "${subcmd}" in
 
     git fetch --no-tags origin "${HEAD_SHA}"
 
+    pr_formulae_file="${RUNNER_TEMP}/pr-formulae.txt"
+    git diff --name-only --no-renames --diff-filter=ACMR "${base_main_sha}" "${HEAD_SHA}" -- 'Formula/*.rb' >"${pr_formulae_file}"
     while IFS= read -r pr_formula_path
     do
       [[ -z "${pr_formula_path}" ]] && continue
@@ -377,7 +403,7 @@ case "${subcmd}" in
           'any(.[]; .formula == $f and .tag == $t)' "${entries_jsonl}" >/dev/null ||
           ci::fail "Changed formula ${pr_formula_path} is missing required ${req_tag} bottle from run ${TEST_RUN_ID}"
       done
-    done < <(git diff --name-only --diff-filter=ACMR "${base_main_sha}" "${HEAD_SHA}" -- 'Formula/*.rb')
+    done <"${pr_formulae_file}"
 
     if [[ -f README.md ]] && grep -Fq "<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->" README.md
     then
@@ -391,6 +417,8 @@ case "${subcmd}" in
       fi
     fi
 
+    staged_diff_file="${RUNNER_TEMP}/staged-diff.txt"
+    git diff --name-only --no-renames "${HEAD_SHA}" HEAD >"${staged_diff_file}"
     while IFS= read -r changed_path
     do
       [[ -z "${changed_path}" ]] && continue
@@ -408,10 +436,12 @@ case "${subcmd}" in
         fi
       done
       [[ "${matched}" -eq 1 ]] || ci::fail "Unexpected tree difference outside bottled formulae: ${changed_path}"
-    done < <(git diff --name-only "${HEAD_SHA}" HEAD)
+    done <"${staged_diff_file}"
 
     git format-patch --stdout "${base_main_sha}..HEAD" >"${stage_dir}/commits.mbox"
     [[ -s "${stage_dir}/commits.mbox" ]] || ci::fail "commits.mbox is empty"
+    mbox_sha="$(ci::sha256_hex "${stage_dir}/commits.mbox")"
+    printf 'commits_mbox_sha256=%s\n' "${mbox_sha}" >>"${GITHUB_OUTPUT}"
 
     jq -s '{
       schema: "artagon-bottle-release-map/v1",
@@ -428,6 +458,9 @@ case "${subcmd}" in
     ci::require_sha40 "${BASE_MAIN_SHA:-}" "BASE_MAIN_SHA"
     ci::require_sha40 "${HEAD_SHA:-}" "HEAD_SHA"
     ci::require_sha256 "${RELEASE_MAP_SHA256:-}" "RELEASE_MAP_SHA256"
+    ci::require_sha256 "${COMMITS_MBOX_SHA256:-}" "COMMITS_MBOX_SHA256"
+    allow_workflows="${ALLOW_WORKFLOW_CHANGES:-false}"
+    ci::require_bool "${allow_workflows}" "ALLOW_WORKFLOW_CHANGES"
 
     current_sha="$(git rev-parse HEAD)"
     [[ "${current_sha}" = "${BASE_MAIN_SHA}" ]] ||
@@ -438,6 +471,10 @@ case "${subcmd}" in
     [[ "${actual_map_sha}" = "${RELEASE_MAP_SHA256}" ]] ||
       ci::fail "release-map.json digest mismatch in push-main"
 
+    actual_mbox_sha="$(ci::sha256_hex "${stage_dir}/commits.mbox")"
+    [[ "${actual_mbox_sha}" = "${COMMITS_MBOX_SHA256}" ]] ||
+      ci::fail "commits.mbox digest mismatch in push-main"
+
     git am "${stage_dir}/commits.mbox"
     git merge-base --is-ancestor "${BASE_MAIN_SHA}" HEAD ||
       ci::fail "Applied patch series does not descend from ${BASE_MAIN_SHA}"
@@ -447,7 +484,11 @@ case "${subcmd}" in
       git fetch --no-tags origin "${HEAD_SHA}"
     fi
 
+    check_protected_paths "${BASE_MAIN_SHA}" "${HEAD_SHA}" "${allow_workflows}"
+
     repo_cwd="$(pwd -P)"
+    verify_diff_file="${RUNNER_TEMP}/verify-diff.txt"
+    git diff --name-only --no-renames "${HEAD_SHA}" HEAD >"${verify_diff_file}"
     while IFS= read -r changed_path
     do
       [[ -z "${changed_path}" ]] && continue
@@ -468,46 +509,127 @@ case "${subcmd}" in
 
       bash "${CI_DIR}/verify-patch-policy.sh" verify-formula-git "${HEAD_SHA}" "${changed_path}" ||
         ci::fail "Patch diff relative to HEAD_SHA modifies lines outside bottle do ... end in ${changed_path}"
-    done < <(git diff --name-only "${HEAD_SHA}" HEAD)
+
+      formula_name="$(basename "${changed_path}" .rb)"
+      after_parsed="${RUNNER_TEMP}/after-parsed-${formula_name}.json"
+      before_parsed="${RUNNER_TEMP}/before-parsed-${formula_name}.json"
+      before_repo="${RUNNER_TEMP}/before-repo-${formula_name}"
+      rm -rf -- "${before_repo}"
+      mkdir -p -- "${before_repo}/Formula"
+      git show "${HEAD_SHA}:${changed_path}" >"${before_repo}/${changed_path}"
+      if grep -Eq '^[[:space:]]*bottle do$' "${before_repo}/${changed_path}"
+      then
+        if ! PROVENANCE_REPO_ROOT="${before_repo}" \
+           bash "${SCRIPTS_DIR}/verify-provenance.sh" --parse-only --all-tags --json "${formula_name}" >"${before_parsed}" 2>/dev/null
+        then
+          # Version/revision bumps retain the previous release's bottle block in HEAD_SHA;
+          # treat stale pre-merge blocks as having zero reusable tags for the new version.
+          printf '{"results":[]}\n' >"${before_parsed}"
+        fi
+      else
+        printf '{"results":[]}\n' >"${before_parsed}"
+      fi
+
+      PROVENANCE_REPO_ROOT="${repo_cwd}" \
+        bash "${SCRIPTS_DIR}/verify-provenance.sh" --parse-only --all-tags --json "${formula_name}" >"${after_parsed}" ||
+        ci::fail "Failed to parse bottle metadata from merged ${changed_path}"
+
+      jq -e \
+        --slurpfile map "${stage_dir}/release-map.json" \
+        --slurpfile before "${before_parsed}" \
+        --arg f "${formula_name}" \
+        '
+          .ok == true
+          and (.results as $after_res
+            | ($after_res | length > 0)
+            and ([$map[0].bottles[] | select(.formula == $f)] as $mapped
+              | ($mapped | length > 0)
+              and all($mapped[];
+                . as $m
+                | any($after_res[];
+                    .bottle_tag == $m.tag
+                    and .pkg_version == $m.pkg_version
+                    and .release_tag == $m.release_tag
+                    and .rebuild == $m.rebuild
+                    and .brew_filename == $m.brew_filename
+                    and .release_filename == $m.release_filename
+                    and .expected_sha256 == $m.bottle_sha256
+                    and .root_url == $m.root_url
+                  )
+              )
+              and all($after_res[];
+                . as $a
+                | any($mapped[];
+                    .tag == $a.bottle_tag
+                    and .pkg_version == $a.pkg_version
+                    and .release_tag == $a.release_tag
+                    and .rebuild == $a.rebuild
+                    and .brew_filename == $a.brew_filename
+                    and .release_filename == $a.release_filename
+                    and .bottle_sha256 == $a.expected_sha256
+                    and .root_url == $a.root_url
+                  )
+                  or any($before[0].results[];
+                    .bottle_tag == $a.bottle_tag
+                    and .pkg_version == $a.pkg_version
+                    and .release_tag == $a.release_tag
+                    and .rebuild == $a.rebuild
+                    and .brew_filename == $a.brew_filename
+                    and .release_filename == $a.release_filename
+                    and .expected_sha256 == $a.expected_sha256
+                    and .root_url == $a.root_url
+                  )
+              )
+            )
+          )
+        ' "${after_parsed}" >/dev/null ||
+        ci::fail "Merged bottle metadata in ${changed_path} does not match signed release-map.json"
+    done <"${verify_diff_file}"
     ;;
 
   publish-releases)
     ci::require_repo_slug "${GITHUB_REPOSITORY:-}"
     [[ -n "${RUNNER_TEMP:-}" && -d "${RUNNER_TEMP}" ]] || ci::fail "RUNNER_TEMP is not a directory"
     stage_dir="${RUNNER_TEMP}/publish-stage"
+    releases_json="$(list_releases_json "${GITHUB_REPOSITORY}")"
+    release_tags_file="${RUNNER_TEMP}/publish-release-tags.txt"
+    jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u >"${release_tags_file}"
     while IFS= read -r release_tag
     do
       [[ -z "${release_tag}" ]] && continue
       ci::require_safe_filename "${release_tag}" "release_tag"
       draft_id="$(
-        gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
+        printf '%s\n' "${releases_json}" |
           jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
       )"
       if [[ -n "${draft_id}" ]]
       then
         gh release edit "${release_tag}" --repo "${GITHUB_REPOSITORY}" --draft=false
       fi
-    done < <(jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u)
+    done <"${release_tags_file}"
     ;;
 
   cleanup-drafts)
     ci::require_repo_slug "${GITHUB_REPOSITORY:-}"
     stage_dir="${RUNNER_TEMP:-}/publish-stage"
     [[ -f "${stage_dir}/release-map.json" ]] || exit 0
-    while IFS= read -r release_tag
+    raw_ids="${CREATED_DRAFT_IDS:-}"
+    [[ -n "${raw_ids}" ]] || exit 0
+    IFS=',' read -r -a draft_ids <<<"${raw_ids}"
+    for draft_id in ${draft_ids[@]+"${draft_ids[@]}"}
     do
-      [[ -z "${release_tag}" ]] && continue
-      ci::require_safe_filename "${release_tag}" "release_tag"
-      draft_id="$(
-        gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
-          jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
-      )"
-      if [[ -n "${draft_id}" ]]
+      [[ -z "${draft_id}" ]] && continue
+      ci::require_uint "${draft_id}" "draft release id"
+      rel_info="$(gh api "repos/${GITHUB_REPOSITORY}/releases/${draft_id}" || true)"
+      [[ -n "${rel_info}" ]] || continue
+      is_draft="$(printf '%s\n' "${rel_info}" | jq -r '.draft // false')"
+      rel_tag="$(printf '%s\n' "${rel_info}" | jq -r '.tag_name // empty')"
+      if [[ "${is_draft}" = "true" ]] &&
+         jq -e --arg tag "${rel_tag}" 'any(.bottles[]; .release_tag == $tag)' "${stage_dir}/release-map.json" >/dev/null
       then
-        ci::require_uint "${draft_id}" "draft release id"
         gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${draft_id}"
       fi
-    done < <(jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u)
+    done
     ;;
 
   verify-homebrew)

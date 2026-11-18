@@ -16,6 +16,11 @@ CI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=scripts/ci/common.sh
 source "${CI_DIR}/common.sh"
 
+list_releases_json() {
+  local repo_slug="$1"
+  gh api --paginate "repos/${repo_slug}/releases?per_page=100" | jq -s 'add // []'
+}
+
 subcmd="${1:-}"
 [[ -n "${subcmd}" ]] || ci::fail "Usage: sign-and-attest.sh <prepare|sign-and-verify|upload>"
 
@@ -120,10 +125,11 @@ case "${subcmd}" in
           jq -e \
             --arg head "${HEAD_SHA}" \
             --arg run_id "${TEST_RUN_ID}" \
+            --arg attempt "${builder_run_attempt}" \
             --arg mos "${matrix_os}" \
-            '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and .matrix_os == $mos' \
+            '.schema == "artagon-bottle-build-manifest/v1" and .head_sha == $head and .run_id == $run_id and ((.run_attempt | tonumber) >= 1 and (.run_attempt | tonumber) <= ($attempt | tonumber)) and .matrix_os == $mos' \
             "${manifest_file}" >/dev/null ||
-            ci::fail "${prov_art_name} build-manifest.json head_sha/run_id/matrix_os mismatch"
+            ci::fail "${prov_art_name} build-manifest.json head_sha/run_id/run_attempt/matrix_os mismatch"
 
           if [[ -z "${prov_artifact_digest}" ]]
           then
@@ -150,6 +156,12 @@ case "${subcmd}" in
 
     mkdir -p -- work out
     : >work/subject-checksums.txt
+
+    all_releases_json="[]"
+    if [[ "${MODE}" = "publish" ]]
+    then
+      all_releases_json="$(list_releases_json "${GITHUB_REPOSITORY}")"
+    fi
 
     bottle_count="$(jq '.bottles | length' stage/release-map.json)"
     ci::require_uint "${bottle_count}" "bottle_count"
@@ -214,6 +226,10 @@ case "${subcmd}" in
 
       if [[ "${MODE}" = "publish" ]]
       then
+        if printf '%s\n' "${all_releases_json}" | jq -e --arg tag "${release_tag}" 'any(.[]; .draft == true and .tag_name == $tag)' >/dev/null
+        then
+          ci::fail "Pre-existing draft release found for ${release_tag}; inspect or delete stale draft before publishing"
+        fi
         if pub_rel="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${release_tag}" 2>/dev/null)"
         then
           if printf '%s\n' "${pub_rel}" | jq -e --arg name "${rel_fn}" '.draft == false and any(.assets[]; .name == $name)' >/dev/null
@@ -435,6 +451,28 @@ case "${subcmd}" in
     [[ "${MODE:-}" = "publish" || "${MODE:-}" = "backfill" ]] ||
       ci::fail "MODE must be publish or backfill (got: ${MODE:-})"
 
+    upload_succeeded=0
+    created_drafts_tsv="${RUNNER_TEMP:-/tmp}/created-drafts-$$.tsv"
+    : >"${created_drafts_tsv}"
+    created_ids_csv=""
+
+    cleanup_partial_upload_drafts() {
+      local exit_rc=$?
+      if [[ "${upload_succeeded}" -eq 0 && -f "${created_drafts_tsv}" ]]
+      then
+        local d_tag="" d_id=""
+        while IFS=$'\t' read -r d_tag d_id
+        do
+          [[ -n "${d_id}" ]] || continue
+          printf 'Deleting partial draft release %s (%s) after upload failure\n' "${d_tag}" "${d_id}" >&2
+          gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${d_id}" || true
+        done <"${created_drafts_tsv}"
+      fi
+      rm -f -- "${created_drafts_tsv}"
+      return "${exit_rc}"
+    }
+    trap cleanup_partial_upload_drafts EXIT
+
     bottle_count="$(jq '.bottles | length' stage/release-map.json)"
     ci::require_uint "${bottle_count}" "bottle_count"
     i=0
@@ -460,27 +498,50 @@ case "${subcmd}" in
 
       if [[ "${MODE}" = "publish" ]]
       then
-        if ! gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${release_tag}" >/dev/null 2>&1
+        if awk -F '\t' -v t="${release_tag}" '$1 == t { found = 1 } END { exit(found ? 0 : 1) }' "${created_drafts_tsv}"
         then
-          draft_id="$(
-            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" |
+          gh release upload "${release_tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber \
+            -- \
+            "work/${rel_fn}" \
+            "${sidecars[@]}"
+        elif gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${release_tag}" >/dev/null 2>&1
+        then
+          gh release upload "${release_tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            -- \
+            "work/${rel_fn}" \
+            "${sidecars[@]}"
+        else
+          existing_draft_id="$(
+            list_releases_json "${GITHUB_REPOSITORY}" |
               jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
           )"
-          if [[ -z "${draft_id}" ]]
+          if [[ -n "${existing_draft_id}" ]]
           then
-            gh release create "${release_tag}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --draft \
-              --title "${release_tag}" \
-              --notes "Homebrew bottle and cryptographic build provenance for ${release_tag}."
+            rm -f -- "${created_drafts_tsv}"
+            ci::fail "Refusing to upload to pre-existing draft release ${existing_draft_id} (${release_tag})"
           fi
+          gh release create "${release_tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft \
+            --title "${release_tag}" \
+            --notes "Homebrew bottle and cryptographic build provenance for ${release_tag}."
+          created_id="$(
+            list_releases_json "${GITHUB_REPOSITORY}" |
+              jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
+          )"
+          ci::require_uint "${created_id}" "created draft release id"
+          printf '%s\t%s\n' "${release_tag}" "${created_id}" >>"${created_drafts_tsv}"
+          created_ids_csv="${created_ids_csv:+${created_ids_csv},}${created_id}"
+          gh release upload "${release_tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber \
+            -- \
+            "work/${rel_fn}" \
+            "${sidecars[@]}"
         fi
-        gh release upload "${release_tag}" \
-          --repo "${GITHUB_REPOSITORY}" \
-          --clobber \
-          -- \
-          "work/${rel_fn}" \
-          "${sidecars[@]}"
       else
         gh release upload "${release_tag}" \
           --repo "${GITHUB_REPOSITORY}" \
@@ -490,6 +551,14 @@ case "${subcmd}" in
       fi
       i=$((i + 1))
     done
+
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]
+    then
+      printf 'created_draft_ids=%s\n' "${created_ids_csv}" >>"${GITHUB_OUTPUT}"
+    fi
+    upload_succeeded=1
+    trap - EXIT
+    rm -f -- "${created_drafts_tsv}"
     ;;
 
   *)

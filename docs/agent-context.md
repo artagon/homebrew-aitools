@@ -223,8 +223,9 @@ Same-named formulae across taps (`tgrep`, `nats`, `herdr`) do not declare
   3. `tests/helpers/agent_install_helper.bash` pins Ripwire's installer SHA-256 but
      not its hook scripts.
 
-Use [the integration suite](../tests/README.md) to validate wrapper behavior with
-real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew
+Use [the integration suite](../tests/README.md), [structural ast-grep rules](ast-grep.md),
+and [repository tool boundaries](../TOOLS.md) to validate wrapper and formula changes
+with real payloads. An extracted Ruby-evaluated wrapper test does not prove Homebrew
 installation, upgrade, permissions, or formula-test lifecycle behavior. Verify
 those through actual Homebrew commands in an isolated prefix. Archive checksum
 verification does not prove execution on another architecture or operating system.

@@ -1,0 +1,39 @@
+id: bash-no-bash4-features
+valid:
+  - |
+    f() {
+      local -a items=("one")
+      local -r name="ok"
+      printf '%s\n' "${items[0]}" "${name}"
+    }
+  - |
+    declare -r CONST_VAL="42"
+    declare -a list=("a" "b")
+  - |
+    if declare -F my_helper >/dev/null 2>&1; then
+      my_helper
+    fi
+  - |
+    export -n UNEXPORTED_VAR
+invalid:
+  - |
+    declare -A seen=()
+  - |
+    f() {
+      local -n out_ref="$1"
+      out_ref="bad"
+    }
+  - |
+    f() {
+      declare -g GLOBAL_STATE="1"
+    }
+  - |
+    typeset -rA TABLE=([k]="v")
+  - |
+    declare -c cap_var="hello"
+  - |
+    local +n sneaky_ref="x"
+  - |
+    builtin declare -A sneaky_map=()
+  - |
+    command local -n sneaky_cmd_ref="$1"

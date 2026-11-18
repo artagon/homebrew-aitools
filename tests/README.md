@@ -1,5 +1,9 @@
 # Integration and provenance tests (`bats-core`)
 
+Repository structural checks use `ast-grep test --config sgconfig.yml` and
+`ast-grep scan --config sgconfig.yml --inspect summary`. See
+[ast-grep checks](../docs/ast-grep.md) for rule coverage, fixtures, and parser limits.
+
 Run both `bats-core` 1.14+ suites (`artagon-shell/shell-testing/v1`) from the repository root:
 
 ```sh

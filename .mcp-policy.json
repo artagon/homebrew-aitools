@@ -1,0 +1,10 @@
+{
+  "include": [
+    "context7",
+    "github-docs",
+    "claude-code-docs",
+    "openai-docs",
+    "agent-mail",
+    "cao-ops"
+  ]
+}

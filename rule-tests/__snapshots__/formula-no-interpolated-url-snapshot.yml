@@ -1,0 +1,42 @@
+id: formula-no-interpolated-url
+snapshots:
+  "on_macos do\n  on_arm do\n    url \"https://example.org/v#{version}/tool-arm64.tar.gz\"\n  end\nend\n":
+    labels:
+    - source: url "https://example.org/v#{version}/tool-arm64.tar.gz"
+      style: primary
+      start: 28
+      end: 83
+    - source: "#{version}"
+      style: secondary
+      start: 54
+      end: 64
+  "resource \"license\" do\n  url \"https://example.org/#{version}/LICENSE\"\nend\n":
+    labels:
+    - source: url "https://example.org/#{version}/LICENSE"
+      style: primary
+      start: 24
+      end: 68
+    - source: "#{version}"
+      style: secondary
+      start: 49
+      end: 59
+  "url \"https://example.org/#{release_tag}.tar.gz\"\n":
+    labels:
+    - source: url "https://example.org/#{release_tag}.tar.gz"
+      style: primary
+      start: 0
+      end: 47
+    - source: "#{release_tag}"
+      style: secondary
+      start: 25
+      end: 39
+  "url \"https://example.org/v#{version}.tar.gz\"\n":
+    labels:
+    - source: url "https://example.org/v#{version}.tar.gz"
+      style: primary
+      start: 0
+      end: 44
+    - source: "#{version}"
+      style: secondary
+      start: 26
+      end: 36

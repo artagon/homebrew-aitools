@@ -1,0 +1,38 @@
+id: formula-source-sha256
+valid:
+  - |
+    sha256 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  - |
+    resource "license" do
+      sha256 "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    end
+  - |
+    bottle do
+      sha256 cellar: :any_skip_relocation, arm64_tahoe: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    end
+  - |
+    # sha256 "bad"
+    system "sha256", "archive.tar.gz"
+invalid:
+  - |
+    sha256 "abc123"
+  - |
+    sha256 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
+  - |
+    sha256 "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789"
+  - |
+    sha256 :no_check
+  - |
+    sha256 "#{archive_checksum}"
+  - |
+    on_linux do
+      on_arm do
+        sha256 "bad"
+      end
+    end
+  - |
+    resource "license" do
+      sha256 "bad"
+    end
+  - |
+    sha256 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'

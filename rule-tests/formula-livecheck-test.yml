@@ -1,0 +1,61 @@
+id: formula-livecheck
+valid:
+  - |
+    class Example < Formula
+      livecheck do
+        url :stable
+        strategy :github_latest
+      end
+    end
+  - |
+    class Example < Formula
+      desc "Example tool"
+      livecheck do
+        skip "No upstream releases"
+      end
+      def install
+        bin.install "example"
+      end
+    end
+  - |
+    class Example < Formula
+      livecheck do
+      end
+    end
+  - |
+    class Helper < OtherBase
+      def install
+      end
+    end
+  - |
+    class Helper < Formula::Helper
+    end
+invalid:
+  - |
+    class Example < Formula
+      url "https://example.org/v1.2.3.tar.gz"
+    end
+  - |
+    class Example < Formula
+    end
+  - |
+    class Example < Formula
+      # livecheck do ... end
+      desc "livecheck do; url :stable; end"
+    end
+  - |
+    class Example < Formula
+      def install
+        livecheck do
+          url :stable
+        end
+      end
+    end
+  - |
+    class Example < Formula
+      resource "helper" do
+        livecheck do
+          url :stable
+        end
+      end
+    end

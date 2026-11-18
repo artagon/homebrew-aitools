@@ -1,0 +1,41 @@
+id: bash-no-mapfile-readarray
+valid:
+  - |
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      printf '%s\n' "${line}"
+    done < input.txt
+  - |
+    # mapfile -t lines < input.txt
+    printf '%s\n' 'readarray -t lines'
+  - |
+    command -v mapfile
+  - |
+    cat <<'SCRIPT'
+    mapfile -t lines < input.txt
+    SCRIPT
+  - |
+    @test "reading lines" {
+      run bash -c 'printf "%s\n" example'
+      [ "$status" -eq 0 ]
+    }
+invalid:
+  - |
+    mapfile -t lines < input.txt
+  - |
+    readarray -t lines < input.txt
+  - |
+    readarray < input.txt
+  - |
+    mapfile
+  - |
+    builtin mapfile -t lines < input.txt
+  - |
+    builtin readarray lines
+  - |
+    command mapfile lines
+  - |
+    command readarray -t lines
+  - |
+    @test "reading lines" {
+      mapfile -t lines < input.txt
+    }

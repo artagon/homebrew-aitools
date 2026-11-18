@@ -1,0 +1,23 @@
+id: bash-no-bash4-features
+language: Bash
+severity: error
+message: Avoid Bash 4+ declaration flags (-A associative arrays, -n namerefs, -g globals) incompatible with macOS /bin/bash 3.2.
+note: All tap scripts and helpers must execute under stock macOS /bin/bash 3.2 with set -euo pipefail.
+files:
+  - scripts/**/*.sh
+  - tests/helpers/**/*.bash
+  - tests/**/*.bats
+rule:
+  any:
+    - kind: declaration_command
+      regex: '^(declare|local|typeset)\b'
+      has:
+        kind: word
+        regex: '^[-+][a-zA-Z]*[Angluc][a-zA-Z]*$'
+        stopBy: neighbor
+    - kind: command
+      regex: '^(builtin|command)\s+(declare|local|typeset)\b'
+      has:
+        kind: word
+        regex: '^[-+][a-zA-Z]*[Angluc][a-zA-Z]*$'
+        stopBy: neighbor

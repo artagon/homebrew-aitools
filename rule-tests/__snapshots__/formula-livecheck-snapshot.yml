@@ -1,0 +1,75 @@
+id: formula-livecheck
+snapshots:
+  "class Example < Formula\n  # livecheck do ... end\n  desc \"livecheck do; url :stable; end\"\nend\n":
+    labels:
+    - source: |-
+        class Example < Formula
+          # livecheck do ... end
+          desc "livecheck do; url :stable; end"
+        end
+      style: primary
+      start: 0
+      end: 92
+    - source: < Formula
+      style: secondary
+      start: 14
+      end: 23
+  "class Example < Formula\n  def install\n    livecheck do\n      url :stable\n    end\n  end\nend\n":
+    labels:
+    - source: |-
+        class Example < Formula
+          def install
+            livecheck do
+              url :stable
+            end
+          end
+        end
+      style: primary
+      start: 0
+      end: 90
+    - source: < Formula
+      style: secondary
+      start: 14
+      end: 23
+  "class Example < Formula\n  resource \"helper\" do\n    livecheck do\n      url :stable\n    end\n  end\nend\n":
+    labels:
+    - source: |-
+        class Example < Formula
+          resource "helper" do
+            livecheck do
+              url :stable
+            end
+          end
+        end
+      style: primary
+      start: 0
+      end: 99
+    - source: < Formula
+      style: secondary
+      start: 14
+      end: 23
+  "class Example < Formula\n  url \"https://example.org/v1.2.3.tar.gz\"\nend\n":
+    labels:
+    - source: |-
+        class Example < Formula
+          url "https://example.org/v1.2.3.tar.gz"
+        end
+      style: primary
+      start: 0
+      end: 69
+    - source: < Formula
+      style: secondary
+      start: 14
+      end: 23
+  "class Example < Formula\nend\n":
+    labels:
+    - source: |-
+        class Example < Formula
+        end
+      style: primary
+      start: 0
+      end: 27
+    - source: < Formula
+      style: secondary
+      start: 14
+      end: 23

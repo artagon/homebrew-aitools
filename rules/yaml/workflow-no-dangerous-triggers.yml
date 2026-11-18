@@ -1,0 +1,27 @@
+id: workflow-no-dangerous-triggers
+language: YAML
+severity: error
+message: Never use pull_request_target or workflow_run triggers in GitHub Actions workflows.
+note: Privileged PR triggers risk untrusted code execution with write tokens or OIDC credentials.
+files:
+  - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+rule:
+  any:
+    - kind: block_mapping_pair
+    - kind: flow_pair
+  has:
+    field: key
+    regex: '^(on|''on''|"on")$'
+    stopBy: neighbor
+  all:
+    - has:
+        field: value
+        stopBy: neighbor
+        has:
+          any:
+            - kind: string_scalar
+            - kind: double_quote_scalar
+            - kind: single_quote_scalar
+          regex: '^[''"]?(pull_request_target|workflow_run)[''"]?$'
+          stopBy: end
