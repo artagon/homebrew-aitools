@@ -15,13 +15,14 @@
   Homebrew wrappers and builds (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
   `SKILLFILE_NO_UPDATE_NOTIFIER=1`, `WAZA_NO_UPDATE_CHECK=1`, `BASIC_MEMORY_AUTO_UPDATE=false`,
   `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_FORCE_LOCAL=true`; loopback-only `hindsight`;
-  conservative `squeez` defaults; `--backend mock` `skillopt-sleep` defaults) and warn against
+  conservative `squeez` defaults; `--backend mock` `skillopt-sleep` defaults; CLI-subscription-only
+  `magpie`, `omp`, and `pi-agent-rust` defaults) and warn against
   in-place self-updaters in `caveats`.
 - Use `license :cannot_represent` and install the full upstream `LICENSE` into `prefix` when an
   upstream license includes a non-SPDX custom rider.
 - Declare `conflicts_with` only when a differently named formula installs conflicting binaries
-  (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`), not for same-named formulae across taps
-  (`tgrep`, `nats`, `herdr`).
+  (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`), not for same-named
+  formulae across taps (`tgrep`, `nats`, `herdr`).
 - Land formula changes through `publish.yml` (`brew pr-pull`), never a direct merge, so bottles
   and provenance sidecars ship with them; see [Bottles](docs/agent-context.md#bottles) and
   [Build provenance](docs/agent-context.md#build-provenance).

@@ -36,9 +36,14 @@ brew install artagon/aitools/skillfile
 brew install artagon/aitools/skillprism
 brew install artagon/aitools/waza
 brew install artagon/aitools/skillopt
+
+# Subscription-only AI gateway & terminal coding agents (no API keys):
+brew install artagon/aitools/magpie
+brew install artagon/aitools/omp
+brew install artagon/aitools/pi-agent-rust
 ```
 
-Use the fully qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships same-named `tgrep`, `nats`, and `herdr` formulae, plus differently named formulae that install overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, and `adr-tools`; run `brew unlink <formula>` first when one of those is already linked). Installing, upgrading, or uninstalling any formula in this tap **never** modifies live user agent configuration files (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.config`, etc.).
+Use the fully qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships same-named `tgrep`, `nats`, and `herdr` formulae, plus differently named formulae that install overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, and `pi-coding-agent`; run `brew unlink <formula>` first when one of those is already linked). Installing, upgrading, or uninstalling any formula in this tap **never** modifies live user agent configuration files (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.config`, etc.).
 
 ---
 
@@ -71,6 +76,9 @@ Every formula in `artagon/aitools` is listed below with links to its tap formula
 | [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | Jinja2-style multi-harness skill template compiler (`SKILL.md.j2` -> per-agent `dist/`) | Source build (`cargo install --locked`); generates shell completions and `man1/skillprism.1` man page | Pure local compiler reading `skillprism.yaml` into `./dist/`; no network calls or live agent config edits |
 | [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | CLI and embedded web dashboard for evaluating and benchmarking AI agent workflows, custom agents, and skills | Source build: Vite/React `web/` SPA (`npm ci --ignore-scripts && npm run build`, `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`) + Go `cmd/waza` into `libexec`; generates shell completions; installs `pkgshare/skills/{waza,waza-interactive}` | Wrapper exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (exit `2`); zero agent config mutation |
 | [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | Reflective text-space skill optimizer (`skillopt-train`, `skillopt-eval`) and offline sleep consolidation CLI & MCP (`skillopt-sleep`, `skillopt-sleep-mcp`) | Source build via `uv` (managed Python `3.13`, `--no-cache`, `preserve_rpath`); patches `mcp_server.py` default `REPO_ROOT` to caller `os.getcwd()`; installs `pkgshare/{plugins,configs}` | `skillopt-sleep` defaults to `--backend mock` (zero API spend) and stages proposals for review before `adopt`; local stdio MCP (`skillopt-sleep-mcp`); zero agent config or cron mutation |
+| [`magpie`](Formula/magpie.rb) | [yetone/magpie](https://github.com/yetone/magpie) (`MIT`) | Subscription-first local AI gateway & smart router (`magpie`) for Claude, Codex, Copilot, and Gemini accounts | Source build (`go build` with embedded `packedassets`; macOS `production` WebKit tray + Linux static `nogui`); installs `THIRD_PARTY_NOTICES` and `pkgshare/examples/subscription-only/setup-groups.sh` | **CLI-subscription-only loopback (`127.0.0.1:3425`)**: telemetry, auto-updates, and background PII model downloads disabled; API-key providers and paid subscription extra-usage/credits blocked unless `MAGPIE_ALLOW_API_KEYS=1` / `MAGPIE_ALLOW_CREDITS=1`; `magpie update` blocked (exit `2`) |
+| [`omp`](Formula/omp.rb) | [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`MIT`) | Terminal AI coding agent (`omp`) with Rust `pi-natives` N-API core, hashline editing, LSP, DAP, and role routing | SHA-256-pinned upstream release binary into `libexec` + tag `LICENSE` resource; generates shell completions; stages `pkgshare/examples/subscription-only/{models.yml,config.yml}` | **CLI-subscription-only wrapper**: injects `homebrew-policy.yml` (`checkUpdate: false`, `update.auto: false`, `otlpExportEnabled: false`), disables OTel/AutoQA/Spotlight, scrubs ambient `*_API_KEY` env vars, and blocks `omp update`, `--api-key`, and `--include-env` (exit `2`) unless `OMP_ALLOW_API_KEYS=1` |
+| [`pi-agent-rust`](Formula/pi-agent-rust.rb) | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`:cannot_represent` — MIT + Rider) | Safe-Rust AI coding agent CLI (`pi`, `rpi`) with hashline editing and sub-100ms startup | SHA-256-pinned upstream release archive into `libexec` + full custom `LICENSE` in `prefix`; generates completions; installs `pkgshare/skills/pi-agent-rust` & `examples/subscription-only` (`conflicts_with "cln"`, `"pi-coding-agent"`) | **CLI-subscription-only wrappers (`pi`, `rpi`)**: exports `PI_SKIP_VERSION_CHECK=1` and `DO_NOT_TRACK=true`, scrubs ambient `*_API_KEY` env vars, and blocks `self-update` and `--api-key` (exit `2`) unless `PI_ALLOW_API_KEYS=1` |
 
 ---
 
@@ -372,6 +380,55 @@ waza run
 ```sh
 skillopt-sleep status --project . --json
 skillopt-sleep dry-run --project .
+```
+
+---
+
+## magpie
+
+- **Tap formula**: [`Formula/magpie.rb`](Formula/magpie.rb) (`brew install artagon/aitools/magpie`)
+- **Upstream project**: [yetone/magpie](https://github.com/yetone/magpie) (`v0.1.4403`, `MIT`) — subscription-first local gateway and smart router (`127.0.0.1:3425`) unifying Anthropic Messages, OpenAI Responses, Chat Completions, and Gemini protocols over flat-rate CLI OAuth accounts.
+- **Tap build defaults**: Compiled from Go source with embedded `packedassets` (`production` WebKit menu-bar build on macOS; static `CGO_ENABLED=0 -tags "nogui packedassets"` headless/TUI/web build on Linux), `THIRD_PARTY_NOTICES`, and a subscription-only routing bootstrap script at `$(brew --prefix magpie)/share/magpie/examples/subscription-only/setup-groups.sh`.
+- **Tap config defaults**:
+  - **CLI subscriptions only (zero API keys, zero overage billing)**: API-key provider creation/routing and Claude/Codex paid extra-usage credits are disabled unless `MAGPIE_ALLOW_API_KEYS=1` or `MAGPIE_ALLOW_CREDITS=1` is explicitly set.
+  - **Zero telemetry or background downloads**: `noStats`, `noUsageStats`, `noAutoUpdate`, `noAutoDownload`, `noUpdatePill`, and `redactModelOff` are enabled by default, and `magpie update` exits `2` (`brew upgrade artagon/aitools/magpie`).
+
+```sh
+magpie accounts add claude
+magpie accounts add codex
+magpie accounts add copilot
+magpie accounts add gemini
+magpie serve
+```
+
+---
+
+## omp
+
+- **Tap formula**: [`Formula/omp.rb`](Formula/omp.rb) (`brew install artagon/aitools/omp`)
+- **Upstream project**: [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`v18.22.2`, `MIT`) — terminal AI coding agent with a Rust `pi-natives` N-API core (`grep`, `ast_grep`, `ast_edit`, PTY, text-buffer), hashline editing, LSP, DAP, and multi-role model routing.
+- **Tap build defaults**: Installs SHA-256-pinned upstream release binary into `libexec/omp`, matching tag `LICENSE` into `prefix`, generated `bash`/`zsh`/`fish` completions, `libexec/homebrew-policy.yml`, and ready-to-copy Magpie subscription-only configs under `$(brew --prefix omp)/share/omp/examples/subscription-only/{models.yml,config.yml}`.
+- **Tap config defaults**: Wrapper prepends `homebrew-policy.yml` via `PI_CONFIG_FILES` (`startup.checkUpdate: false`, `update.auto: false`, `telemetry.otlpExportEnabled: false`), exports `OTEL_SDK_DISABLED=true`, `DO_NOT_TRACK=true`, `PI_AUTO_QA=0`, and `PI_SPOTLIGHT_EXPERIMENT=0`, scrubs ambient `*_API_KEY` and cloud token environment variables, and blocks `omp update`, `--api-key`, and `auth-broker migrate --include-env` (exit status `2`; set `OMP_ALLOW_API_KEYS=1` to override).
+
+```sh
+omp auth-broker login anthropic
+omp auth-broker login openai-codex
+# Or wire omp through local loopback magpie:
+magpie oh-my-pi group/sub-coder
+```
+
+---
+
+## pi-agent-rust
+
+- **Tap formula**: [`Formula/pi-agent-rust.rb`](Formula/pi-agent-rust.rb) (`brew install artagon/aitools/pi-agent-rust`)
+- **Upstream project**: [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`v0.8.0`, `license :cannot_represent` — MIT License with OpenAI/Anthropic Rider; full `LICENSE` installed in `prefix`).
+- **Tap build defaults**: Installs SHA-256-pinned upstream `pi` binary into `libexec/pi` with `bin/pi` and `bin/rpi` wrappers, `LICENSE`, `README.md`, generated shell completions, bundled skills under `$(brew --prefix pi-agent-rust)/share/pi-agent-rust/skills/pi-agent-rust`, and Magpie subscription-only JSON templates under `$(brew --prefix pi-agent-rust)/share/pi-agent-rust/examples/subscription-only/`. Declares `conflicts_with "cln"` and `conflicts_with "pi-coding-agent"`.
+- **Tap config defaults**: Both `pi` and `rpi` export `PI_SKIP_VERSION_CHECK=1`, `DO_NOT_TRACK=true`, and `PI_SUBAGENT_PI_BINARY`, scrub ambient `*_API_KEY` environment variables, and reject `self-update` and `--api-key` (exit status `2`; set `PI_ALLOW_API_KEYS=1` to override).
+
+```sh
+brew unlink cln pi-coding-agent   # only when either is installed
+brew install artagon/aitools/pi-agent-rust
 ```
 
 ---
