@@ -793,7 +793,9 @@ verify_one_formula() {
       cosign_spdx_args+=(--trusted-root "${cosign_trusted_root}")
     fi
     cosign_blob_args+=("${bottle_path}")
-    cosign_spdx_args+=("${bottle_path}")
+    # Pass --digest computed from bottle_path so bottles larger than cosign's
+    # 128 MiB stream cap (134217728 bytes) verify without hitting layer limits.
+    cosign_spdx_args+=(--digest "${actual_bottle_sha}" --digestAlg sha256)
 
     if ! TUF_ROOT="${scratch_dir}/cosign-tuf" cosign "${cosign_blob_args[@]}" >"${f_work}/cosign-blob.out" 2>&1
     then
