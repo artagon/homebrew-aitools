@@ -212,7 +212,7 @@ class Magpie < Formula
     pid = spawn bin/"magpie", "serve"
     ready = false
     20.times do
-      if system(bin/"magpie", "healthcheck")
+      if quiet_system bin/"magpie", "healthcheck"
         ready = true
         break
       end
