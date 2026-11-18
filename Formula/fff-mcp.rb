@@ -2,15 +2,11 @@ class FffMcp < Formula
   desc "Fast, frecency-ranked file search MCP server for AI agents"
   homepage "https://github.com/dmtrKovalenko/fff"
   license "MIT"
+  revision 1
 
   livecheck do
     url :homepage
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/fff-mcp-0.11.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "b4e95d364d63360fdb85a30b2575c039f5d65754ca12ec0fe555d393d2901719"
   end
 
   on_macos do
@@ -45,27 +41,80 @@ class FffMcp < Formula
   end
 
   def install
-    bin.install Dir["fff-mcp-*"].first => "fff-mcp"
+    libexec.install Dir["fff-mcp-*"].first => "fff-mcp"
+    chmod 0755, libexec/"fff-mcp"
+    (bin/"fff-mcp").write <<~SH
+      #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
+      set -euo pipefail
+
+      has_flag=0
+      is_info=0
+      skip_next=0
+      for arg in "$@"; do
+        if [[ "${skip_next}" -eq 1 ]]; then
+          skip_next=0
+          continue
+        fi
+        case "${arg}" in
+          --)
+            break
+            ;;
+          --frecency-db|--history-db|--log-file|--log-level|--max-cached-files|--idle-timeout-secs)
+            skip_next=1
+            ;;
+          --no-update-check)
+            has_flag=1
+            ;;
+          -h|--help|-V|--version)
+            is_info=1
+            ;;
+          *)
+            ;;
+        esac
+      done
+
+      if [[ "${has_flag}" -eq 0 && "${is_info}" -eq 0 ]]; then
+        exec "#{libexec}/fff-mcp" --no-update-check "$@"
+      fi
+      exec "#{libexec}/fff-mcp" "$@"
+    SH
+    chmod 0755, bin/"fff-mcp"
     resource("license").stage { prefix.install "LICENSE" }
   end
 
   def caveats
     <<~EOS
-      Register #{opt_bin}/fff-mcp as a stdio MCP server. Pass --no-update-check to
-      skip its startup update check, and --frecency-db <file> to rank by frecency.
+      Homebrew manages upgrades via:
+        brew upgrade artagon/aitools/fff-mcp
+
+      Register #{opt_bin}/fff-mcp as a stdio MCP server. Startup update checks are
+      disabled automatically (`--no-update-check`); pass `--frecency-db <file>` to
+      rank results by frecency.
     EOS
   end
 
   test do
+    ENV["XDG_STATE_HOME"] = (testpath/".local/state").to_s
+
     assert_match "fff-mcp #{version}", shell_output("#{bin}/fff-mcp --version")
     # Offline: --healthcheck returns before the update check and the MCP server start.
     (testpath/"repo").mkpath
+    (testpath/"--no-update-check").mkpath
     (testpath/"state").mkpath
     output = shell_output("#{bin}/fff-mcp --healthcheck --no-update-check " \
                           "--frecency-db #{testpath}/state/frecency.db " \
                           "--history-db #{testpath}/state/history.db #{testpath}/repo")
     assert_match "All checks passed.", output
     refute_match "path not resolved", output
+
+    delim_out = cd testpath do
+      shell_output("#{bin}/fff-mcp --healthcheck " \
+                   "--frecency-db #{testpath}/state/frecency2.db " \
+                   "--history-db #{testpath}/state/history2.db -- --no-update-check")
+    end
+    assert_match "Base path: --no-update-check", delim_out
+    assert_match "All checks passed.", delim_out
 
     assert_path_exists prefix/"LICENSE"
   end

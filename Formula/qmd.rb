@@ -11,14 +11,6 @@ class Qmd < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/qmd-2.8.3"
-    rebuild 2
-    sha256 cellar: :any, arm64_tahoe:  "97c6cc1b6122539e35451cb79e63ae5d60f46a647218ff2a8c05f994e44ba468"
-    sha256 cellar: :any, arm64_linux:  "dcb80a8f6d657f21f9b6bf5e413c404345f6b1e294c0c2b4d88fefcbe2933af0"
-    sha256 cellar: :any, x86_64_linux: "78b1cdb0a4e5e0fc6fb11e46df5981881ea71de0c12b4117582285bafb41f76d"
-  end
-
   depends_on "python@3.13" => :build
   depends_on "node"
 

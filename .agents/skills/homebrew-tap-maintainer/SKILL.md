@@ -13,7 +13,7 @@ Maintain formulae, Bash wrappers, provenance scripts, and release workflows in `
 
 1. **Naming & qualification**:
    - Use fully qualified `artagon/aitools/<formula>` names in `caveats` and documentation.
-   - Declare `conflicts_with` only when a differently named core formula installs overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`), never on same-named formulae (`tgrep`, `nats`, `herdr`).
+   - Declare `conflicts_with` only when a differently named core formula installs overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, `px`), never on same-named formulae (`tgrep`, `nats`, `herdr`).
 2. **Literal URLs, checksums, & `livecheck`**:
    - Every formula requires a direct class-body `livecheck do ... end` block.
    - Keep every `url "..."` literal-versioned (never `#{version}`) followed immediately by `sha256 "<64-lowercase-hex>"` (or `version "<X.Y.Z>"` then `sha256 "<64-lowercase-hex>"` for scoped tags) with no trailing comment so `scripts/autobump.sh` rewrites single-URL, multi-platform, and `resource` stanzas uniformly.

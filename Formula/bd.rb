@@ -2,15 +2,11 @@ class Bd < Formula
   desc "Git-backed graph issue tracker for AI coding agents"
   homepage "https://github.com/gastownhall/beads"
   license "MIT"
+  revision 1
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bd-1.3.4"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "c6f3d9bdcb5041c9ece17e6b11dacbde40b46d5ef86b1199167f47056d9b0235"
   end
 
   # Upstream release binaries embed the Dolt engine and link only system libraries.
@@ -39,20 +35,35 @@ class Bd < Formula
   conflicts_with "beads", because: "both install `bd` binaries"
 
   def install
-    # bd sends anonymous usage metrics by default; keep the build from sending any.
+    # bd sends anonymous usage metrics by default; disable metrics at build and runtime.
     ENV["BD_DISABLE_METRICS"] = "1"
 
-    bin.install "bd"
+    libexec.install "bd"
+    chmod 0755, libexec/"bd"
+    (bin/"bd").write <<~SH
+      #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
+      set -euo pipefail
+
+      export BD_DISABLE_METRICS="${BD_DISABLE_METRICS:-1}"
+      export DO_NOT_TRACK="${DO_NOT_TRACK:-1}"
+
+      exec "#{libexec}/bd" "$@"
+    SH
+    chmod 0755, bin/"bd"
+
     doc.install "README.md"
     prefix.install "LICENSE"
-    generate_completions_from_executable(bin/"bd", "completion")
+    generate_completions_from_executable(libexec/"bd", "completion")
   end
 
   def caveats
     <<~EOS
-      bd sends anonymous usage metrics by default. To opt out, run
-        bd metrics off
-      or set BD_DISABLE_METRICS=1.
+      Homebrew manages upgrades via:
+        brew upgrade artagon/aitools/bd
+
+      Anonymous usage metrics are disabled by default in the `bd` wrapper
+      (`BD_DISABLE_METRICS=1`, `DO_NOT_TRACK=1`).
 
       `bd init` writes AGENTS.md and agent setup files in the project unless you
       pass --skip-agents. Installing this formula modifies no agent configuration.
