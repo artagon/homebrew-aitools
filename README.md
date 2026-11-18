@@ -1,93 +1,81 @@
 # Artagon AI Tools Homebrew Tap (`artagon/aitools`)
 
-Curated developer tooling, MCP servers, local memory graphs, and Valhalla-aware AST analyzers for AI coding agents, published with SLSA v1, signed lineage, Sigstore `cosign` v3, and SPDX/CycloneDX SBOM provenance.
+[![brew test-bot](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml/badge.svg)](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml)
+[![Provenance: SLSA v1 + Sigstore](https://img.shields.io/badge/provenance-SLSA%20v1%20%2B%20Sigstore-2ea44f)](https://github.com/artagon/homebrew-aitools/attestations)
+[![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
+[![Formulae: 32](https://img.shields.io/badge/formulae-32-8250df)](#formula-catalog-by-domain)
+[![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
+
+Curated developer CLIs, local MCP servers, memory graphs, evaluation harnesses, OpenTelemetry collectors, subscription-only AI routing & coding agents, and JDK 28 Valhalla-aware AST analyzers for AI coding agents.
+
+> [!IMPORTANT]
+> **Tap Security & Non-Invasiveness Contract**
+> - **Zero live config mutation**: `brew install`, `upgrade`, and `uninstall` never modify `~/.claude*`, `~/.codex*`, `~/.gemini*`, `~/.config/*`, or shell profiles.
+> - **Hardened local-first defaults**: Wrappers disable startup update checks, telemetry, and unsolicited cloud routing, default local services to `127.0.0.1`, and block or warn against in-place self-updaters.
+> - **Cryptographic provenance**: Published bottles carry ref-bound SLSA v1 attestations, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
+
+[Quick Start](#quick-start) · [Formula Catalog](#formula-catalog-by-domain) · [MCP Server Reference](#mcp-server-reference) · [Bundled Agent Skills](#bundled-agent-skills--plugins) · [Provenance & Verification](#build-provenance--verification) · [Publishing & Autobump](#publishing--automatic-updates) · [Troubleshooting](#troubleshooting--faq)
+
+---
+
+## Quick Start
 
 ```sh
-# Tap this repository once:
+# 1. Tap and trust this repository once:
 brew tap artagon/aitools
+brew trust --tap artagon/aitools
 
-# Code search, AST analysis, and hash-anchored editing:
-brew install artagon/aitools/ripwire
-brew install artagon/aitools/ast-grep-valhalla
-brew install artagon/aitools/tree-sitter-java-valhalla
-brew install artagon/aitools/tgrep
-brew install artagon/aitools/ck
-brew install artagon/aitools/fff-mcp
-brew install artagon/aitools/hashline
-
-# Local agent memory, hybrid Markdown search, and token compression:
-brew install artagon/aitools/basic-memory
-brew install artagon/aitools/hindsight
-brew install artagon/aitools/qmd
-brew install artagon/aitools/squeez
-
-# Multi-agent coordination, messaging, and Beads tracking:
-brew install artagon/aitools/agent-mail
-brew install artagon/aitools/br
-brew install artagon/aitools/bd
-brew install artagon/aitools/bv
-brew install artagon/aitools/nats
-brew install artagon/aitools/herdr
-
-# Architecture decisions, skill evaluation/optimization, and agent config management:
-brew install artagon/aitools/adrkit
-brew install artagon/aitools/agentsync
-brew install artagon/aitools/skillfile
-brew install artagon/aitools/skillprism
-brew install artagon/aitools/waza
-brew install artagon/aitools/skillopt
-
-# Subscription-only AI gateway & terminal coding agents (no API keys):
-brew install artagon/aitools/magpie
-brew install artagon/aitools/omp
-brew install artagon/aitools/pi-agent-rust
+# 2. Install any formula with Homebrew attestation verification enabled:
+HOMEBREW_VERIFY_ATTESTATIONS=1 brew install artagon/aitools/ripwire
 ```
 
-Use the fully qualified `artagon/aitools/<formula>` names to select this tap. Homebrew core also ships same-named `tgrep`, `nats`, and `herdr` formulae, plus differently named formulae that install overlapping binaries (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, and `pi-coding-agent`; run `brew unlink <formula>` first when one of those is already linked). Installing, upgrading, or uninstalling any formula in this tap **never** modifies live user agent configuration files (`~/.claude`, `~/.codex`, `~/.gemini`, `~/.config`, etc.).
+Install curated domain bundles with fully qualified `artagon/aitools/<formula>` names:
+
+```sh
+# Code search, JDK 28 Valhalla Java AST, and hash-anchored editing:
+brew install artagon/aitools/ripwire artagon/aitools/ast-grep-valhalla artagon/aitools/tree-sitter-java-valhalla \
+  artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/fff-mcp artagon/aitools/hashline
+
+# Local agent memory, hybrid Markdown search, and token compression:
+brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/qmd artagon/aitools/squeez
+
+# Multi-agent mail, NATS event bus, terminal workspaces, and Beads issue graphs:
+brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
+  artagon/aitools/nats artagon/aitools/herdr
+
+# Architecture decisions, skill lifecycle compilers, and skill optimization:
+brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/skillfile \
+  artagon/aitools/skillprism artagon/aitools/waza artagon/aitools/skillopt
+
+# Live evaluation harnesses, versioned skill registries, and OpenTelemetry observability:
+brew install artagon/aitools/mlflow artagon/aitools/inspect-ai artagon/aitools/langfuse-cli \
+  artagon/aitools/phoenix-cli artagon/aitools/arize-phoenix artagon/aitools/openlit
+
+# Subscription-only AI gateway & terminal coding agents (no API keys):
+brew install artagon/aitools/magpie artagon/aitools/omp artagon/aitools/pi-agent-rust
+```
+
+> [!NOTE]
+> Always qualify `artagon/aitools/{tgrep,nats,herdr}` so Homebrew selects this tap over same-named `homebrew/core` formulae. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
 
 ---
 
-## Tap Project Catalog, Build Defaults, and Config Defaults
+## Formula Catalog by Domain
 
-Every formula in `artagon/aitools` is listed below with links to its tap formula, upstream repository, tap build defaults, and tap runtime/configuration defaults:
+### 1. Code Search, JDK 28 Valhalla Java AST & Hash-Anchored Editing
 
-| Tap Formula | Upstream Project & License | Description | Build Defaults in Tap | Config & Runtime Defaults in Tap |
-| :--- | :--- | :--- | :--- | :--- |
-| [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) (`MIT`) | Tree-sitter Java grammar extended for JDK 28 Valhalla (`value` classes/records, JEP 401/440/511/513) | Source build (`tree-sitter generate --abi 14` + C11 `-O2 -fPIC -shared`); additive Valhalla grammar patch; installs `libtree-sitter-java-valhalla` + crate sources in `pkgshare` | Contextual `value` keyword preserves upstream parse trees for standard Java;opt-in `customLanguages` registration for external `ast-grep` |
-| [`ast-grep-valhalla`](Formula/ast-grep-valhalla.rb) | [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`MIT`) | Structural AST code search, linting, rewriting, and MCP server with Valhalla Java built in | Source build (`cargo install --locked`, `crates/cli`) patching `tree-sitter-java` to `tree-sitter-java-valhalla`; generates `bash`/`zsh`/`fish`/`pwsh` completions; installs `ast-grep` & `sg` (`conflicts_with "ast-grep"`) | Built-in `java` language uses Valhalla grammar with zero `sgconfig.yml` changes; no startup telemetry or config writes |
-| [`ripwire`](Formula/ripwire.rb) | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`Apache-2.0`) | Codebase symbol maps, call graphs, blast-radius queries, and MCP server for AI agents | Source build (CMake + C++23) with `tree-sitter-java-valhalla` `parser.c` + Java query patch (records, value records, compact constructors, `@interface`); installs `ripwire`, `ripwire-agent-install`, and bundled `pkgshare` skills/hooks | No automatic skill or hook activation on `brew install`; `ripwire-agent-install` requires explicit `--hook` before touching Claude/Codex configs |
-| [`tgrep`](Formula/tgrep.rb) | [microsoft/tgrep](https://github.com/microsoft/tgrep) (`MIT`) | Trigram-indexed regex search CLI and background watcher daemon for large repositories | SHA-256-pinned upstream release binary (`aarch64`/`x86_64` macOS & Linux musl); installs `tgrep` and `README.md` | Local `.tgrep/` repository index only; no background service started automatically on install |
-| [`ck`](Formula/ck.rb) | [BeaconBay/ck](https://github.com/BeaconBay/ck) (`MIT OR Apache-2.0`) | Local regex, BM25 lexical, and semantic hybrid code search CLI + MCP server (`ck --serve`) | SHA-256-pinned upstream release binary (checks `glibc >= 2.39` on Linux); installs `ck`, docs, and `LICENSE-MIT` / `LICENSE-APACHE` | Local `.ck/` index; `--lex` and `--regex` run offline; first `--sem`/`--hybrid` caches ONNX model in `${XDG_CACHE_HOME:-~/.cache}/ck/models` |
-| [`fff-mcp`](Formula/fff-mcp.rb) | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) (`MIT`) | Fast frecency-ranked fuzzy file search and grep stdio MCP server | SHA-256-pinned upstream release binary (`macos >= :ventura`) + pinned tag `LICENSE` resource; installs `fff-mcp` | Stdio MCP server; pass `--no-update-check` in client MCP args to skip upstream startup update checks |
-| [`hashline`](Formula/hashline.rb) | [quangdang46/hashline](https://github.com/quangdang46/hashline) (`MIT OR Apache-2.0`) | Hash-anchored line reading and deterministic file patching CLI + stdio MCP server | Source build (`cargo install --locked`, `crates/core` into `libexec`); installs `hashline` wrapper and bundled `pkgshare/skills/hashline/SKILL.md` | Wrapper exports `HASHLINE_NO_UPDATE_CHECK=1`; upgrades managed via Homebrew (`hashline update` discouraged); zero agent config mutation |
-| [`basic-memory`](Formula/basic-memory.rb) | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) (`AGPL-3.0-or-later`) | Local-first Markdown Zettelkasten knowledge graph CLI (`basic-memory`, `bm`) and stdio MCP server | Source build via `uv` (managed Python `3.13`, `--no-cache`, `preserve_rpath`); installs `basic-memory`, `bm`, and `pkgshare/skills/memory-*` | **Local stdio JSON-RPC only**: exports `BASIC_MEMORY_FORCE_LOCAL=true`, `BASIC_MEMORY_EXPLICIT_ROUTING=true`, `BASIC_MEMORY_AUTO_UPDATE=false`, `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_CLOUD_PROMO_OPT_OUT=true`, `BASIC_MEMORY_LOGFIRE_ENABLED=false`; blocks `cloud`, `--cloud`, `update`, and `streamable-http`/`sse` transports |
-| [`hindsight`](Formula/hindsight.rb) | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) (`MIT`) | Semantic agent memory CLI (`hindsight`), stdio MCP server (`hindsight-mcp`), and agent harness installer (`hindsight-coding-agents`) | Source build: Rust `hindsight-cli` (`cargo install --locked`) + Node/TypeScript `coding-agents` bundle (`npm ci --ignore-scripts && npm run build`); installs 5 skill sets in `pkgshare/skills` | **Loopback HTTP + stdio JSON-RPC only**: compiled defaults `apiUrl=http://127.0.0.1:8888`, `serverMode="self-hosted"`, `autoUpdate=false`; removes Cloud from installer choices, rejects non-loopback URLs (`127.0.0.1`, `::1`, `localhost` only) and `update`, and requires explicit `HINDSIGHT_MCP_HARNESS` |
-| [`qmd`](Formula/qmd.rb) | [tobi/qmd](https://github.com/tobi/qmd) (`MIT`) | Tobi Lütke's Query Markup Documents — on-device BM25 + `sqlite-vec` + GGUF reranking search CLI & MCP server | Source build (`npm run build` + `std_npm_args`, pruning non-native `prebuilds/*` addons and lockfiles to bind Homebrew `node`); installs `qmd` and `pkgshare/skills/qmd` | Wrapper exports `QMD_SOURCE_MODE=0`; local SQLite index + stdio (`qmd mcp`) or loopback (`localhost:8181`) MCP; GGUF models download on first `embed`/`query` to `~/.cache/qmd` |
-| [`squeez`](Formula/squeez.rb) | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) (`Apache-2.0`) | Token-saving CLI output compressor and read-only stdio JSON-RPC MCP server (`squeez mcp`) | Source build (`cargo install --locked --bin squeez`) with source patches on `config.rs`, `persona.rs`, and `setup.rs`; installs `squeez` and `NOTICE` | **Conservative defaults** (both unconfigured and in `squeez setup` `config.ini`): `auto_compress_md=false`, `persona=off`, `wrap_bash=false`; wrapper blocks `squeez update` |
-| [`agent-mail`](Formula/agent-mail.rb) | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) (`:cannot_represent` — MIT + Rider) | Multi-agent asynchronous mail, thread summaries, and advisory file-reservation MCP server & CLI | SHA-256-pinned upstream release archive; installs `mcp-agent-mail`, `am`, `README.md`, and full custom `LICENSE` in `prefix` | Local stdio (`mcp-agent-mail`) or local HTTP (`am serve-http`); caveats warn against `am self-update`; zero agent config writes |
-| [`br`](Formula/br.rb) | [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`:cannot_represent` — MIT + Rider) | Fast Rust local-first graph issue tracker (`br`) for AI coding agents | SHA-256-pinned upstream release archive; generates `bash`/`zsh`/`fish` completions; installs `br` and full custom `LICENSE` in `prefix` | Local `.beads/` repository state only; caveats warn against `br upgrade` |
-| [`bd`](Formula/bd.rb) | [gastownhall/beads](https://github.com/gastownhall/beads) (`MIT`) | Distributed Git-backed graph issue tracker (`bd`) with embedded pure-Go Dolt store | SHA-256-pinned upstream release archive built with `BD_DISABLE_METRICS=1` during completion generation; installs `bd`, `LICENSE`, and completions (`conflicts_with "beads"`) | No external Dolt server required; set `BD_DISABLE_METRICS=1` or run `bd metrics off` at runtime to opt out of upstream telemetry |
-| [`bv`](Formula/bv.rb) | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`:cannot_represent` — MIT + Rider) | Graph-aware terminal UI and `--robot-*` JSON triage engine for Beads repositories | SHA-256-pinned upstream release archive; generates Cobra shell completions; installs `bv` and full custom `LICENSE` (`conflicts_with "beads_viewer"`) | Read-only graph analysis over `.beads/`; caveats warn against `bv --update` |
-| [`adrkit`](Formula/adrkit.rb) | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`Apache-2.0`) | Architecture Decision Record (ADR) authoring, linting, and stdio MCP governance server | Source build (`bun install --frozen-lockfile --ignore-scripts` + `bun build --target=node`); wrappers pin Homebrew `node`; installs `adr`, `adrkit`, `adrkit-mcp`, completions, and `pkgshare/skills` (`conflicts_with "adr-tools"`) | Defaults to `docs/adr` inside a Git worktree (`--cwd` / `--dir` override); zero agent config mutation |
-| [`nats`](Formula/nats.rb) | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | Official NATS JetStream, KV, and pub/sub CLI for agent event buses | Source build (`go build` with `-s -w -X main.version=...`); generates `bash` and `zsh` completions; installs `nats` | Stores named contexts under `${XDG_CONFIG_HOME:-~/.config}/nats/context`; no background daemon started |
-| [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | Multiplexed terminal workspace and session manager for AI coding agents | SHA-256-pinned upstream release binary + pinned tag `LICENSE` resource; generates shell completions; installs `herdr` | Local Unix socket & XDG config (`HERDR_CONFIG_PATH`, `HERDR_SOCKET_PATH`); caveats warn against `herdr update` |
-| [`agentsync`](Formula/agentsync.rb) | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | Symlink-based synchronizer for AI agent rules, skills, and MCP server definitions | SHA-256-pinned upstream release archive into `libexec` with env wrapper in `bin/agentsync`; installs `README.md` and `LICENSE` | Wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; modifies `.agents/agentsync.toml` only when explicitly invoked |
-| [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | Declarative `Skillfile` manifest validator and installer for AI agent skills | Source build (`cargo install --locked`, `crates/cli` into `libexec`); generates shell completions; installs `skillfile` wrapper | Wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1`; upgrades managed via Homebrew |
-| [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | Jinja2-style multi-harness skill template compiler (`SKILL.md.j2` -> per-agent `dist/`) | Source build (`cargo install --locked`); generates shell completions and `man1/skillprism.1` man page | Pure local compiler reading `skillprism.yaml` into `./dist/`; no network calls or live agent config edits |
-| [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | CLI and embedded web dashboard for evaluating and benchmarking AI agent workflows, custom agents, and skills | Source build: Vite/React `web/` SPA (`npm ci --ignore-scripts && npm run build`, `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`) + Go `cmd/waza` into `libexec`; generates shell completions; installs `pkgshare/skills/{waza,waza-interactive}` | Wrapper exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (exit `2`); zero agent config mutation |
-| [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | Reflective text-space skill optimizer (`skillopt-train`, `skillopt-eval`) and offline sleep consolidation CLI & MCP (`skillopt-sleep`, `skillopt-sleep-mcp`) | Source build via `uv` (managed Python `3.13`, `--no-cache`, `preserve_rpath`); patches `mcp_server.py` default `REPO_ROOT` to caller `os.getcwd()`; installs `pkgshare/{plugins,configs}` | `skillopt-sleep` defaults to `--backend mock` (zero API spend) and stages proposals for review before `adopt`; local stdio MCP (`skillopt-sleep-mcp`); zero agent config or cron mutation |
-| [`magpie`](Formula/magpie.rb) | [yetone/magpie](https://github.com/yetone/magpie) (`MIT`) | Subscription-first local AI gateway & smart router (`magpie`) for Claude, Codex, Copilot, and Gemini accounts | Source build (`go build` with embedded `packedassets`; macOS `production` WebKit tray + Linux static `nogui`); installs `THIRD_PARTY_NOTICES` and `pkgshare/examples/subscription-only/setup-groups.sh` | **CLI-subscription-only loopback (`127.0.0.1:3425`)**: telemetry, auto-updates, and background PII model downloads disabled; API-key providers and paid subscription extra-usage/credits blocked unless `MAGPIE_ALLOW_API_KEYS=1` / `MAGPIE_ALLOW_CREDITS=1`; `magpie update` blocked (exit `2`) |
-| [`omp`](Formula/omp.rb) | [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`MIT`) | Terminal AI coding agent (`omp`) with Rust `pi-natives` N-API core, hashline editing, LSP, DAP, and role routing | SHA-256-pinned upstream release binary into `libexec` + tag `LICENSE` resource; generates shell completions; stages `pkgshare/examples/subscription-only/{models.yml,config.yml}` | **CLI-subscription-only wrapper**: injects `homebrew-policy.yml` (`checkUpdate: false`, `update.auto: false`, `otlpExportEnabled: false`), disables OTel/AutoQA/Spotlight, scrubs ambient `*_API_KEY` env vars, and blocks `omp update`, `--api-key`, and `--include-env` (exit `2`) unless `OMP_ALLOW_API_KEYS=1` |
-| [`pi-agent-rust`](Formula/pi-agent-rust.rb) | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`:cannot_represent` — MIT + Rider) | Safe-Rust AI coding agent CLI (`pi`, `rpi`) with hashline editing and sub-100ms startup | SHA-256-pinned upstream release archive into `libexec` + full custom `LICENSE` in `prefix`; generates completions; installs `pkgshare/skills/pi-agent-rust` & `examples/subscription-only` (`conflicts_with "cln"`, `"pi-coding-agent"`) | **CLI-subscription-only wrappers (`pi`, `rpi`)**: exports `PI_SKIP_VERSION_CHECK=1` and `DO_NOT_TRACK=true`, scrubs ambient `*_API_KEY` env vars, and blocks `self-update` and `--api-key` (exit `2`) unless `PI_ALLOW_API_KEYS=1` |
+| Formula | Upstream & License | Binaries, Libraries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- |
+| [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) (`MIT`) | `libtree-sitter-java-valhalla` + crate sources in `pkgshare` | Source ABI `14` C11 build with additive JEP 401/440/511/513 Java grammar patch; contextual `value` preserves standard Java ASTs |
+| [`ast-grep-valhalla`](Formula/ast-grep-valhalla.rb) | [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`MIT`) | `ast-grep`, `sg`, shell completions | Source Rust build (`cargo install --locked`) compiling `tree-sitter-java-valhalla` into built-in `-l java`; `conflicts_with "ast-grep"` |
+| [`ripwire`](Formula/ripwire.rb) | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`Apache-2.0`) | `ripwire`, `ripwire-agent-install`, `pkgshare/{skills,hooks}` | Source CMake/C++23 build with Valhalla `parser.c` + Java query patch; opt-in skill/hook installer (`--hook` required for config edits) |
+| [`tgrep`](Formula/tgrep.rb) | [microsoft/tgrep](https://github.com/microsoft/tgrep) (`MIT`) | `tgrep` | SHA-256-pinned release binary; local `.tgrep/` trigram index only; no background watcher started automatically |
+| [`ck`](Formula/ck.rb) | [BeaconBay/ck](https://github.com/BeaconBay/ck) (`MIT OR Apache-2.0`) | `ck` (`--lex`, `--sem`, `--hybrid`, `--serve` MCP) | SHA-256-pinned release binary (`glibc >= 2.39` on Linux); `--lex`/`--regex` fully offline; ONNX models cached on first `--sem` |
+| [`fff-mcp`](Formula/fff-mcp.rb) | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) (`MIT`) | `fff-mcp` stdio MCP server | SHA-256-pinned release binary + tag `LICENSE`; wrapper automatically passes `--no-update-check` |
+| [`hashline`](Formula/hashline.rb) | [quangdang46/hashline](https://github.com/quangdang46/hashline) (`MIT OR Apache-2.0`) | `hashline` CLI + `hashline mcp` + `pkgshare/skills/hashline` | Source Rust build (`cargo install --locked`); wrapper exports `HASHLINE_NO_UPDATE_CHECK=1` |
 
----
-
-## JDK 28 Valhalla Java grammar (`tree-sitter-java-valhalla`)
-
-- **Tap formula**: [`Formula/tree-sitter-java-valhalla.rb`](Formula/tree-sitter-java-valhalla.rb) (`brew install artagon/aitools/tree-sitter-java-valhalla`)
-- **Upstream project**: [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) (`v0.23.5`, `MIT`)
-- **Tap build defaults**: Regenerates `src/parser.c` from source at Tree-sitter ABI `14` (`tree-sitter generate --abi 14 --js-runtime native`) with this tap's additive JDK 28 Valhalla patch, compiles `libtree-sitter-java-valhalla` (`-std=c11 -O2 -fPIC -shared`), and stages the complete Rust/C crate under `$(brew --prefix tree-sitter-java-valhalla)/share/tree-sitter-java-valhalla` so `ast-grep-valhalla` and `ripwire` compile it in directly.
-- **Tap config defaults**: `value` remains a contextual keyword so identifiers, methods, fields, and annotation elements named `value` produce byte-identical syntax trees to upstream `0.23.5`. External `ast-grep` installations can load the shared library opt-in via `customLanguages` in `sgconfig.yml`.
+<details>
+<summary><strong>JDK 28 Valhalla Java syntax (`tree-sitter-java-valhalla`) & Ripwire CLI installer details</strong></summary>
 
 | Syntax | Example | Specification |
 | :--- | :--- | :--- |
@@ -97,391 +85,180 @@ Every formula in `artagon/aitools` is listed below with links to its tap formula
 | Qualified record patterns | `o instanceof Shape.Circle(int r)` | JEP 440 |
 | Annotations before a varargs ellipsis | `Object @Nullable ... rest` | JLS 8.4.1 |
 
----
-
-## ast-grep-valhalla
-
-- **Tap formula**: [`Formula/ast-grep-valhalla.rb`](Formula/ast-grep-valhalla.rb) (`brew install artagon/aitools/ast-grep-valhalla`)
-- **Upstream project**: [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`0.51.3`, `MIT`) — structural code search, linting, rewriting, and MCP server (`ast-grep` and `sg`).
-- **Tap build defaults**: Built from Rust source (`cargo install --locked`, `crates/cli`) with `[patch.crates-io]` replacing `tree-sitter-java` with `artagon/aitools/tree-sitter-java-valhalla`, plus `bash`, `zsh`, `fish`, and `pwsh` completions. Declares `conflicts_with "ast-grep"`.
-- **Tap config defaults**: Built-in `-l java` patterns, `sgconfig.yml` lint gates, and `ast-grep lsp` / MCP modes parse JDK 28 Valhalla Java out of the box without `--custom-languages`.
+Opt-in Ripwire skill and hook activation (`ripwire-agent-install` / [`scripts/install-agent-skills.sh`](scripts/install-agent-skills.sh)):
 
 ```sh
-brew unlink ast-grep   # only when core ast-grep is installed
-brew install artagon/aitools/ast-grep-valhalla
+ripwire-agent-install --list                  # inspect detected CLIs (no writes)
+ripwire-agent-install --claude --codex --agy  # install skills only
+ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registration
+"$(brew --prefix ripwire)/share/ripwire/skills/install.sh" --uninstall --target ~/.claude/skills
 ```
 
----
+</details>
 
-## ripwire
+### 2. Local Agent Memory, Hybrid Markdown Search & Token Compression
 
-- **Tap formula**: [`Formula/ripwire.rb`](Formula/ripwire.rb) (`brew install artagon/aitools/ripwire`)
-- **Upstream project**: [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`v0.6.10`, `Apache-2.0`) — codebase symbol maps, call graphs, blast-radius analysis, and MCP server (`ripwire --mcp`) for AI coding agents.
-- **Tap build defaults**: Built from C++23 source via CMake on macOS 14+ (or Linux with a C++23 toolchain), replacing vendored `tree-sitter-java` `parser.c` with `artagon/aitools/tree-sitter-java-valhalla` and applying an additive `queries/java/tags.scm` patch so records, JEP 401 value records, compact constructors, and `@interface` declarations are indexed as definitions. Installs `ripwire`, `ripwire-agent-install`, and bundled skills/hooks under `$(brew --prefix ripwire)/share/ripwire/`.
-- **Tap config defaults**: Installing or upgrading the formula never modifies agent configs or shell profiles. Skill linking and hook registration are strictly opt-in via `ripwire-agent-install` (supporting stock macOS `/bin/bash` 3.2).
-
-```sh
-ripwire . --for="find the code that handles authentication"
-```
-
-### Optional agent integration (`ripwire-agent-install`)
-
-| Agent CLI | Binary / Environment | Skills Target Path | Hook Support |
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
-| **Claude Code** | `claude` / `~/.claude` | `~/.claude/skills` | `~/.claude/settings.json` (`--hook`) |
-| **OpenAI Codex** | `codex` / `~/.codex` | `${AGENTS_HOME:-$HOME/.agents}/skills` | `${CODEX_HOME:-$HOME/.codex}/hooks.json` (`--hook`) |
-| **Google Antigravity** | `agy` / `~/.gemini` / existing `AGY_SKILLS_DIR` | `${AGY_SKILLS_DIR:-$HOME/.gemini/antigravity-cli/skills}` | MCP server (`ripwire --mcp`) |
-| **Moonshot Kimi** | `kimi` / `~/.kimi-code` | `${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills` | MCP server (`ripwire --mcp`) |
-| **Grok CLI** | `grok` / `~/.grok` | `${GROK_HOME:-$HOME/.grok}/skills` | MCP server (`ripwire --mcp`) |
-| **GitHub Copilot** | `copilot` / `~/.copilot` | `${COPILOT_HOME:-$HOME/.copilot}/skills` | MCP server (`ripwire --mcp`) |
-| **Cross-Agent Shared** | APM / multi-agent | `~/.agents/skills` | Standard discovery root |
+| [`basic-memory`](Formula/basic-memory.rb) | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) (`AGPL-3.0-or-later`) | `basic-memory`, `bm`, `pkgshare/skills/memory-*` | Source `uv` Python `3.13` build (`preserve_rpath`); forces `BASIC_MEMORY_FORCE_LOCAL=true`, disables promos/Logfire, and blocks `cloud`, `update`, and HTTP/SSE transports |
+| [`hindsight`](Formula/hindsight.rb) | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) (`MIT`) | `hindsight`, `hindsight-mcp`, `hindsight-coding-agents`, `pkgshare/skills` | Source Rust CLI + TypeScript/Node MCP bundle; compiled defaults bind `http://127.0.0.1:8888` (`self-hosted`, `autoUpdate=false`), reject non-loopback URLs and `cloud`/`update`, and require `HINDSIGHT_MCP_HARNESS` |
+| [`qmd`](Formula/qmd.rb) | [tobi/qmd](https://github.com/tobi/qmd) (`MIT`) | `qmd` CLI + `qmd mcp` + `pkgshare/skills/qmd` | Source TypeScript/Node build pruning foreign `prebuilds/*`; exports `QMD_SOURCE_MODE=0`; local SQLite BM25 + `sqlite-vec` + GGUF reranking |
+| [`squeez`](Formula/squeez.rb) | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) (`Apache-2.0`) | `squeez` CLI + `squeez mcp`, `NOTICE` | Source Rust build patching conservative defaults (`auto_compress_md=false`, `persona=off`, `wrap_bash=false`) and blocking `squeez update` |
 
-```sh
-# Inspect detected agent CLIs without modifying any files:
-ripwire-agent-install --list
+### 3. Multi-Agent Coordination, Event Buses & Beads Graph Tracking
 
-# Auto-detect installed CLIs and symlink Ripwire skills (no hooks registered):
-ripwire-agent-install
-
-# Explicitly register Claude Code or Codex skills + opt-in advisory hooks:
-ripwire-agent-install --claude --hook
-ripwire-agent-install --codex --hook
-```
-
----
-
-## tgrep
-
-- **Tap formula**: [`Formula/tgrep.rb`](Formula/tgrep.rb) (`brew install artagon/aitools/tgrep`)
-- **Upstream project**: [microsoft/tgrep](https://github.com/microsoft/tgrep) (`v1.2.7`, `MIT`) — trigram-indexed grep with a client/server watcher architecture for sub-second regex sweeps in large repositories.
-- **Tap build defaults**: Installs SHA-256-pinned upstream prebuilt release binaries (`aarch64`/`x86_64` macOS and static `musl` Linux) plus `README.md`. Use `artagon/aitools/tgrep` to disambiguate from Homebrew core's `tgrep`.
-- **Tap config defaults**: Stores repository indexes locally in `./.tgrep`; no background watcher runs until `tgrep serve .` is started explicitly.
-
-```sh
-tgrep index .
-tgrep serve . &
-tgrep "pattern" .
-tgrep status .
-```
-
----
-
-## ck
-
-- **Tap formula**: [`Formula/ck.rb`](Formula/ck.rb) (`brew install artagon/aitools/ck`)
-- **Upstream project**: [BeaconBay/ck](https://github.com/BeaconBay/ck) (`0.8.1`, `MIT OR Apache-2.0`) — local regex, BM25 lexical, and semantic hybrid code search CLI with a built-in MCP server (`ck --serve`).
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binaries (`aarch64`/`x86_64` macOS and Linux `gnu`, verifying `glibc >= 2.39` on Linux) plus `LICENSE-MIT` and `LICENSE-APACHE`.
-- **Tap config defaults**: Keeps repository indexes in `./.ck/`. `--regex` and `--lex` run completely offline; first `--sem` or `--hybrid` run caches an ONNX embedding model in `${XDG_CACHE_HOME:-~/.cache}/ck/models` (Intel macOS upstream binary lacks ONNX Runtime; use `--lex` or `--regex` there).
-
-```sh
-ck --regex 'retry_failed_start' .
-ck --lex 'failed server start' .
-ck --hybrid 'where does the server retry a failed start' .
-```
-
----
-
-## fff-mcp
-
-- **Tap formula**: [`Formula/fff-mcp.rb`](Formula/fff-mcp.rb) (`brew install artagon/aitools/fff-mcp`)
-- **Upstream project**: [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) (`v0.11.0`, `MIT`) — fast frecency-ranked fuzzy file search and `grep`/`multi_grep` stdio MCP server.
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binary (`depends_on macos: :ventura` on macOS) and stages the matching tag `LICENSE` into `prefix`.
-- **Tap config defaults**: Runs as an on-demand stdio MCP server (`$(brew --prefix)/opt/fff-mcp/bin/fff-mcp`); pass `--no-update-check` to disable upstream startup update checks and `--frecency-db <file>` to persist frecency rankings.
-
----
-
-## hashline
-
-- **Tap formula**: [`Formula/hashline.rb`](Formula/hashline.rb) (`brew install artagon/aitools/hashline`)
-- **Upstream project**: [quangdang46/hashline](https://github.com/quangdang46/hashline) (`v0.9.24`, `MIT OR Apache-2.0`) — hash-anchored line reading and deterministic patch application via CLI and stdio MCP server (`hashline mcp`).
-- **Tap build defaults**: Compiled from Rust source (`cargo install --locked`, `crates/core` into `libexec`) with an env wrapper at `bin/hashline` and a bundled agent skill at `$(brew --prefix hashline)/share/hashline/skills/hashline/SKILL.md`.
-- **Tap config defaults**: Wrapper exports `HASHLINE_NO_UPDATE_CHECK=1` to suppress upstream startup update checks; upgrades are managed exclusively through `brew upgrade artagon/aitools/hashline` (never `hashline update`). Modifies no agent config files.
-
-### MCP registration (`<path>` = `$(brew --prefix)/opt/hashline/bin/hashline`)
-
-| Client | Config file | Config key | Registration command or entry |
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
-| **Claude Code** | `~/.claude.json` | `mcpServers` | `claude mcp add hashline -- <path> mcp` |
-| **OpenAI Codex** | `~/.codex/config.toml` | `mcp_servers.hashline` | `command = "<path>"`, `args = ["mcp"]` |
-| **Google Antigravity CLI** | `~/.gemini/config/mcp_config.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` |
-| **Cursor / Windsurf** | `~/.cursor/mcp.json` / `~/.codeium/windsurf/mcp_config.json` | `mcpServers` | `{"command": "<path>", "args": ["mcp"]}` |
-| **VS Code** | `.vscode/mcp.json` | `servers` | `{"command": "<path>", "args": ["mcp"]}` |
+| [`agent-mail`](Formula/agent-mail.rb) | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) (`:cannot_represent` — MIT + Rider) | `mcp-agent-mail`, `am`, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` in `prefix`; local stdio or HTTP (`am serve-http`); warns against `am self-update` |
+| [`br`](Formula/br.rb) | [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`:cannot_represent` — MIT + Rider) | `br`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` in `prefix`; local `.beads/` state only; warns against `br upgrade` |
+| [`bd`](Formula/bd.rb) | [gastownhall/beads](https://github.com/gastownhall/beads) (`MIT`) | `bd`, shell completions, `LICENSE` | SHA-256-pinned archive with embedded pure-Go Dolt (`conflicts_with "beads"`); wrapper exports `BD_DISABLE_METRICS=1` and `DO_NOT_TRACK=1` |
+| [`bv`](Formula/bv.rb) | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`:cannot_represent` — MIT + Rider) | `bv`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` (`conflicts_with "beads_viewer"`); read-only `--robot-*` graph triage |
+| [`nats`](Formula/nats.rb) | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | `nats`, `bash`/`zsh` completions | Source Go build; stores contexts in `${XDG_CONFIG_HOME:-~/.config}/nats/context`; no daemon started |
+| [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; warns against `herdr update` |
 
----
+### 4. Architecture Decisions, Skill Lifecycle & Benchmarking
 
-## basic-memory
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- |
+| [`adrkit`](Formula/adrkit.rb) | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`Apache-2.0`) | `adr`, `adrkit`, `adrkit-mcp`, completions, `pkgshare/skills` | Source `bun` build targeting Homebrew `node` (`conflicts_with "adr-tools"`); local `docs/adr` governance |
+| [`agentsync`](Formula/agentsync.rb) | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | `agentsync`, `README.md`, `LICENSE` | SHA-256-pinned archive; wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; edits `.agents/agentsync.toml` only when run |
+| [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | `skillfile`, shell completions | Source Rust build (`cargo install --locked`); wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1` |
+| [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | `skillprism`, completions, `man1/skillprism.1` | Source Rust offline Jinja2 multi-harness `SKILL.md.j2` compiler (`./dist/`); zero network or live config writes |
+| [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | `waza` + embedded SPA, completions, `pkgshare/skills` | Source Vite/React + Go build (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`); exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (`exit 2`) |
+| [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | `skillopt-{train,eval,sleep}`, `skillopt-sleep-mcp`, `pkgshare/{plugins,configs}` | Source `uv` Python `3.13` build; `skillopt-sleep` defaults to `--backend mock` (zero API spend) and human review before `adopt` |
 
-- **Tap formula**: [`Formula/basic-memory.rb`](Formula/basic-memory.rb) (`brew install artagon/aitools/basic-memory`)
-- **Upstream project**: [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) (`v1.0.0`, `AGPL-3.0-or-later`) — local-first Markdown Zettelkasten knowledge graph CLI (`basic-memory`, `bm`) and stdio JSON-RPC MCP server.
-- **Tap build defaults**: Installed from source into an isolated `libexec` `uv` tool environment using managed Python `3.13` (`preserve_rpath` enabled so macOS native wheels retain valid `@rpath` linkage), plus bundled `memory-*` skills under `$(brew --prefix basic-memory)/share/basic-memory/skills`.
-- **Tap config defaults**:
-  - **Local stdio JSON-RPC only**: `bin/basic-memory` and `bin/bm` export `BASIC_MEMORY_FORCE_LOCAL=true` and `BASIC_MEMORY_EXPLICIT_ROUTING=true`, and reject the top-level `cloud` subcommand, the `--cloud` routing flag, and `--transport streamable-http` / `--transport sse` (exit status `2`).
-  - **Zero self-updates, promos, or telemetry**: exports `BASIC_MEMORY_AUTO_UPDATE=false`, `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_CLOUD_PROMO_OPT_OUT=true`, `BASIC_MEMORY_LOGFIRE_ENABLED=false`, and `BASIC_MEMORY_LOGFIRE_SEND_TO_LOGFIRE=false`, and blocks `basic-memory update` / `bm update`.
-  - **MCP registration**: `$(brew --prefix)/opt/basic-memory/bin/basic-memory mcp`.
+### 5. Evaluation Harnesses, Skill Registries & OpenTelemetry Observability
 
----
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- |
+| [`mlflow`](Formula/mlflow.rb) | [mlflow/mlflow](https://github.com/mlflow/mlflow) (`Apache-2.0`) | `mlflow` (`mcp run`, `skills`), `mlflow-codex`, `mlflow-claude-code`, `pkgshare/skills` | Source Yarn 4 React UI + TypeScript agent CLIs + `uv` `mlflow[mcp]`; exports `MLFLOW_DISABLE_TELEMETRY=true` and `DO_NOT_TRACK=true` |
+| [`inspect-ai`](Formula/inspect-ai.rb) | [UKGovernmentBEIS/inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai) (`MIT`) | `inspect` bundling `inspect-swe` (`0.3.0`) + `inspect-mlflow` (`0.9.0`) | Source `uv` Python `3.13` wheel bundle with `mcp`, `anthropic`, `openai`, and `google-genai`; exports `MLFLOW_DISABLE_TELEMETRY=true` |
+| [`langfuse-cli`](Formula/langfuse-cli.rb) | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) (`MIT`) | `langfuse` (`api`, `skills`), `pkgshare/skills` | Source `bun` build targeting Homebrew `node`; patches `DEFAULT_HOST` from `cloud.langfuse.com` to `http://127.0.0.1:3000` |
+| [`phoenix-cli`](Formula/phoenix-cli.rb) | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) (`Apache-2.0`) | `px`, `phoenix-cli`, `pxi`, `pkgshare/{skills,plugins}` | Source `pnpm` TypeScript build (`conflicts_with "pixie", "px"`); disables npm update checks, exports `SCARF_NO_ANALYTICS=true`, and blocks `px self update` (`exit 2`) |
+| [`arize-phoenix`](Formula/arize-phoenix.rb) | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) (`Elastic-2.0`) | `phoenix`, `arize-phoenix`, `LICENSE`, `IP_NOTICE`, `pkgshare/{skills,plugins}` | Source `pnpm` `phoenix-ui` + `uv` workspace wheels; defaults `PHOENIX_HOST=127.0.0.1`, `PHOENIX_TELEMETRY_ENABLED=false`, and `PHOENIX_ALLOW_EXTERNAL_RESOURCES=false` |
+| [`openlit`](Formula/openlit.rb) | [openlit/openlit](https://github.com/openlit/openlit) (`Apache-2.0`) | `openlit`, completions, `pkgshare/{plugins,agent-guides}` | Source Go build; defaults OTLP HTTP to `http://127.0.0.1:4318` (`0600` `~/.config/openlit/config.env`); opt-in `openlit coding install` |
 
-## hindsight
+<details>
+<summary><strong>Evaluation & OpenTelemetry coding-agent integration details (`inspect-ai` & `openlit`)</strong></summary>
 
-- **Tap formula**: [`Formula/hindsight.rb`](Formula/hindsight.rb) (`brew install artagon/aitools/hindsight`)
-- **Upstream project**: [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) (`v1.2.1`, `MIT`) — semantic agent memory bank CLI (`hindsight` `1.2.1`), local stdio MCP server (`hindsight-mcp`), and multi-harness integration CLI (`hindsight-coding-agents` `0.8.7`).
-- **Tap build defaults**: Compiles the Rust `hindsight-cli` crate from source (`cargo install --locked`) and bundles the TypeScript `hindsight-integrations/coding-agents` package (`npm ci --ignore-scripts && npm run build`) targeting Homebrew's `node` runtime, installing 5 skill directories under `$(brew --prefix hindsight)/share/hindsight/skills`.
-- **Tap config defaults**:
-  - **Loopback HTTP + stdio JSON-RPC only**: source patches on `hindsight-cli/src/config.rs`, `coding-agents/src/core/config.ts`, and `coding-agents/src/installer.ts` set default `apiUrl = "http://127.0.0.1:8888"` and `serverMode = "self-hosted"`, remove Hindsight Cloud from interactive and non-interactive installer choices, and fail closed on `cloud` or any endpoint outside `127.0.0.1`, `::1`, or `localhost`.
-  - **Explicit harness & no self-updates**: `autoUpdate` is compiled to `false`, `hindsight-coding-agents update` is blocked, and `hindsight-mcp` requires an explicit `HINDSIGHT_MCP_HARNESS` (e.g. `HINDSIGHT_MCP_HARNESS=claude-code $(brew --prefix)/opt/hindsight/bin/hindsight-mcp`) so memories are never stamped under a guessed harness.
+`inspect-ai` pre-bundles live coding-agent trial adapters (`inspect_swe`: `claude_code`, `codex_cli`, `antigravity`, `gemini_cli`, `kimi_code`, `opencode`, `mini_swe_agent`) and MLflow trace hooks (`inspect_mlflow` via `MLFLOW_INSPECT_TRACING=true` + `MLFLOW_TRACKING_URI`). For task suites with custom Python dependencies, pin `inspect-ai` and `inspect-swe` in your project's `uv.lock` (`uv run inspect eval`).
 
----
+`openlit` coding-agent CLI support (`openlit coding install --vendor=<vendor> --dry-run`):
 
-## qmd
+| Agent CLI | Built-in `openlit coding` installer | Connection path |
+| :--- | :--- | :--- |
+| **Claude Code** | Yes (`--vendor=claude-code`) | Opt-in plugin hooks (`~/.claude/plugins/openlit-cc`) or `openlit coding launch claude`, plus optional native OTel export |
+| **OpenAI Codex** | Yes (`--vendor=codex`) | Opt-in local marketplace & hooks (`~/.local/share/openlit/codex-marketplace`), or Codex native `[otel]` export |
+| **Cursor** | Yes (`--vendor=cursor`) | Opt-in user hook merge (`~/.cursor/hooks.json`) |
+| **OpenCode** | Yes (`--vendor=opencode`) | Opt-in OpenCode plugin installation or `openlit coding launch opencode` |
+| **GitHub Copilot CLI** | No | Point native OpenTelemetry export (`OTEL_EXPORTER_OTLP_ENDPOINT`) at the OpenLIT collector |
+| **Google Antigravity (`agy`)** | No | External hook script or OTLP bridge forwarding spans to `http://127.0.0.1:4318` |
 
-- **Tap formula**: [`Formula/qmd.rb`](Formula/qmd.rb) (`brew install artagon/aitools/qmd`)
-- **Upstream project**: [tobi/qmd](https://github.com/tobi/qmd) (`v2.8.3`, `MIT`) — Tobi Lütke's Query Markup Documents: on-device hybrid BM25 full-text search, `sqlite-vec` vector similarity, and local GGUF LLM reranking for Markdown collections via CLI and MCP server.
-- **Tap build defaults**: Compiles TypeScript `dist/` from source and installs production Node dependencies + native host addons (`better-sqlite3`, `sqlite-vec`, `tree-sitter-*`, `node-llama-cpp`) into `libexec`, removing `bun.lock`/`pnpm-lock.yaml` to bind Homebrew's `node` and pruning non-host `prebuilds/*` binaries. Installs the bundled skill at `$(brew --prefix qmd)/share/qmd/skills/qmd`.
-- **Tap config defaults**: Wrapper exports `QMD_SOURCE_MODE=0`. Runs offline for BM25 search (`qmd search`); first `qmd embed` or `qmd query` downloads GGUF models into `~/.cache/qmd`. Supports stdio MCP (`$(brew --prefix)/opt/qmd/bin/qmd mcp`) and loopback HTTP MCP (`qmd mcp --http`, `localhost:8181`).
+</details>
 
----
+### 6. Subscription-Only AI Gateway & Terminal Coding Agents
 
-## squeez
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- |
+| [`magpie`](Formula/magpie.rb) | [yetone/magpie](https://github.com/yetone/magpie) (`MIT`) | `magpie`, `THIRD_PARTY_NOTICES`, `pkgshare/examples/subscription-only/setup-groups.sh` | Source Go `packedassets` build (macOS WebKit tray + Linux static `nogui`); loopback `127.0.0.1:3425`, telemetry/auto-update/PII downloads disabled, API-key providers and paid credits blocked unless `MAGPIE_ALLOW_API_KEYS=1` / `MAGPIE_ALLOW_CREDITS=1`, `magpie update` blocked (`exit 2`) |
+| [`omp`](Formula/omp.rb) | [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`MIT`) | `omp`, completions, `pkgshare/examples/subscription-only/{models.yml,config.yml}` | SHA-256-pinned binary + tag `LICENSE`; injects `homebrew-policy.yml` (`checkUpdate: false`, `update.auto: false`, `otlpExportEnabled: false`), disables OTel/AutoQA/Spotlight, scrubs ambient `*_API_KEY`, and blocks `omp update`, `--api-key`, and `--include-env` (`exit 2`) unless `OMP_ALLOW_API_KEYS=1` |
+| [`pi-agent-rust`](Formula/pi-agent-rust.rb) | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`:cannot_represent` — MIT + Rider) | `pi`, `rpi`, completions, `LICENSE`, `pkgshare/{skills/pi-agent-rust,examples/subscription-only}` | SHA-256-pinned archive + full custom `LICENSE` (`conflicts_with "cln", "pi-coding-agent"`); exports `PI_SKIP_VERSION_CHECK=1` and `DO_NOT_TRACK=true`, scrubs ambient `*_API_KEY`, and blocks `self-update` and `--api-key` (`exit 2`) unless `PI_ALLOW_API_KEYS=1` |
 
-- **Tap formula**: [`Formula/squeez.rb`](Formula/squeez.rb) (`brew install artagon/aitools/squeez`)
-- **Upstream project**: [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) (`v1.49.3`, `Apache-2.0`) — zero-dependency Rust CLI output compressor and read-only stdio JSON-RPC MCP server (`squeez mcp`).
-- **Tap build defaults**: Compiled from Rust source (`cargo install --locked --bin squeez`) with compile-time patches applied to `src/config.rs`, `src/commands/persona.rs`, and `src/commands/setup.rs` (`DEFAULT_CONFIG_INI`), plus `NOTICE` installed in `prefix`.
-- **Tap config defaults**: Enforces conservative defaults both before and after running `squeez setup`: `auto_compress_md = false`, `persona = off`, and `wrap_bash = false`. Wrapper blocks `squeez update` (use `brew upgrade artagon/aitools/squeez`). Register the stdio MCP server with `$(brew --prefix)/opt/squeez/bin/squeez mcp`.
-
----
-
-## agent-mail
-
-- **Tap formula**: [`Formula/agent-mail.rb`](Formula/agent-mail.rb) (`brew install artagon/aitools/agent-mail`)
-- **Upstream project**: [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) (`v0.3.40`, `license :cannot_represent` — MIT License with OpenAI/Anthropic Rider; full `LICENSE` installed in `prefix`).
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binaries (`mcp-agent-mail` and `am`), `README.md`, and `LICENSE`.
-- **Tap config defaults**: Provides stdio MCP (`$(brew --prefix)/opt/agent-mail/bin/mcp-agent-mail`) and local HTTP MCP (`am serve-http`) for multi-agent mail, threads, and advisory file reservations. Do not run `am self-update`; upgrade via Homebrew.
-
----
-
-## br
-
-- **Tap formula**: [`Formula/br.rb`](Formula/br.rb) (`brew install artagon/aitools/br`)
-- **Upstream project**: [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`v0.7.6`, `license :cannot_represent` — MIT License with OpenAI/Anthropic Rider; full `LICENSE` installed in `prefix`).
-- **Tap build defaults**: Installs SHA-256-pinned upstream `br` binary, `README.md`, `LICENSE`, and generated `bash`/`zsh`/`fish` shell completions.
-- **Tap config defaults**: Operates purely on local `.beads/` project state; do not run `br upgrade` (use `brew upgrade artagon/aitools/br`).
-
----
-
-## bd
-
-- **Tap formula**: [`Formula/bd.rb`](Formula/bd.rb) (`brew install artagon/aitools/bd`)
-- **Upstream project**: [gastownhall/beads](https://github.com/gastownhall/beads) (`v1.3.4`, `MIT`) — distributed Git-backed graph issue tracker (`bd`) with embedded pure-Go Dolt storage.
-- **Tap build defaults**: Installs SHA-256-pinned upstream `bd` binary (linking only system libraries), `README.md`, `LICENSE`, and shell completions generated with `BD_DISABLE_METRICS=1`. Declares `conflicts_with "beads"`.
-- **Tap config defaults**: Embedded Dolt requires no external server. Upstream `bd` enables anonymous telemetry by default at runtime — set `BD_DISABLE_METRICS=1` or run `bd metrics off` to disable it, and pass `--skip-agents` to `bd init` if you do not want project `AGENTS.md` files written.
+<details>
+<summary><strong>Subscription-only OAuth onboarding (`magpie`, `omp`, & `pi-agent-rust`)</strong></summary>
 
 ```sh
-brew unlink beads   # only when beads is installed
-brew install artagon/aitools/bd
-```
-
----
-
-## bv
-
-- **Tap formula**: [`Formula/bv.rb`](Formula/bv.rb) (`brew install artagon/aitools/bv`)
-- **Upstream project**: [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`v0.26.0`, `license :cannot_represent` — MIT License with OpenAI/Anthropic Rider; full `LICENSE` installed in `prefix`).
-- **Tap build defaults**: Installs SHA-256-pinned upstream `bv` binary, `README.md`, `LICENSE`, and Cobra shell completions. Declares `conflicts_with "beads_viewer"`.
-- **Tap config defaults**: Read-only terminal UI and `--robot-*` JSON graph triage engine over `.beads/issues.jsonl`; do not run `bv --update`.
-
-```sh
-brew unlink beads_viewer   # only when beads_viewer is installed
-brew install artagon/aitools/bv
-```
-
----
-
-## adrkit
-
-- **Tap formula**: [`Formula/adrkit.rb`](Formula/adrkit.rb) (`brew install artagon/aitools/adrkit`)
-- **Upstream project**: [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`v0.20.0`, `Apache-2.0`) — Architecture Decision Record CLI (`adr`, `adrkit`) and stdio MCP server (`adrkit-mcp`).
-- **Tap build defaults**: Bundles ESM artifacts from TypeScript source with `bun build --target=node` (`--frozen-lockfile --production --ignore-scripts`), wraps `adr`, `adrkit`, and `adrkit-mcp` against Homebrew's `node` binary, generates shell completions, and installs agent skills under `$(brew --prefix adrkit)/share/adrkit/skills`. Declares `conflicts_with "adr-tools"`.
-- **Tap config defaults**: Reads and lints `docs/adr` inside a Git worktree by default (`--cwd` and `--dir` override); modifies no agent configuration files.
-
-```sh
-brew unlink adr-tools   # only when core adr-tools is installed
-brew install artagon/aitools/adrkit
-```
-
----
-
-## nats
-
-- **Tap formula**: [`Formula/nats.rb`](Formula/nats.rb) (`brew install artagon/aitools/nats`)
-- **Upstream project**: [nats-io/natscli](https://github.com/nats-io/natscli) (`v0.5.1`, `Apache-2.0`) — CLI for NATS pub/sub, JetStream streams, and KV stores used in multi-agent coordination buses.
-- **Tap build defaults**: Compiled from Go source (`*std_go_args(ldflags: "-s -w -X main.version=...")`) with generated `bash` and `zsh` completions. Use `artagon/aitools/nats` to select this tap over Homebrew core's `nats`.
-- **Tap config defaults**: Saves connection contexts under `${XDG_CONFIG_HOME:-~/.config}/nats/context`; starts no background server.
-
----
-
-## herdr
-
-- **Tap formula**: [`Formula/herdr.rb`](Formula/herdr.rb) (`brew install artagon/aitools/herdr`)
-- **Upstream project**: [herdrdev/herdr](https://github.com/herdrdev/herdr) (`v0.9.5`, `Apache-2.0`) — multiplexed terminal workspace and session manager for AI coding agents.
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binary, matching tag `LICENSE` resource, and generated shell completions. Use `artagon/aitools/herdr` to select this tap.
-- **Tap config defaults**: Uses XDG config/state paths (`HERDR_CONFIG_PATH`, `HERDR_SOCKET_PATH`); upgrade via `brew upgrade artagon/aitools/herdr` rather than `herdr update`.
-
----
-
-## agentsync
-
-- **Tap formula**: [`Formula/agentsync.rb`](Formula/agentsync.rb) (`brew install artagon/aitools/agentsync`)
-- **Upstream project**: [dallay/agentsync](https://github.com/dallay/agentsync) (`v1.53.1`, `MIT`) — declarative symlink synchronizer for AI agent rules, skills, and MCP server configs.
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binary into `libexec` with an environment wrapper at `bin/agentsync`, plus `README.md` and `LICENSE`.
-- **Tap config defaults**: Wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; writes `.agents/agentsync.toml` or target symlinks only when explicitly run by the user.
-
----
-
-## skillfile
-
-- **Tap formula**: [`Formula/skillfile.rb`](Formula/skillfile.rb) (`brew install artagon/aitools/skillfile`)
-- **Upstream project**: [eljulians/skillfile](https://github.com/eljulians/skillfile) (`v1.9.2`, `Apache-2.0`) — declarative `Skillfile` package manager and validator for AI coding agent skills.
-- **Tap build defaults**: Compiled from Rust source (`cargo install --locked`, `crates/cli` into `libexec`) with generated shell completions and an env wrapper at `bin/skillfile`.
-- **Tap config defaults**: Wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1`; upgrades are managed through `brew upgrade artagon/aitools/skillfile`.
-
----
-
-## skillprism
-
-- **Tap formula**: [`Formula/skillprism.rb`](Formula/skillprism.rb) (`brew install artagon/aitools/skillprism`)
-- **Upstream project**: [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`v0.5.0`, `Apache-2.0`) — template compiler rendering multi-harness AI agent skills from `SKILL.md.j2` and `skill.yaml`.
-- **Tap build defaults**: Compiled from Rust source (`cargo install --locked`) with generated shell completions and `man1/skillprism.1` man page.
-- **Tap config defaults**: Compiles local `skillprism.yaml` projects into `./dist/<harness>/` with no network calls or live agent config modifications.
-
----
-
-## waza
-
-- **Tap formula**: [`Formula/waza.rb`](Formula/waza.rb) (`brew install artagon/aitools/waza`)
-- **Upstream project**: [microsoft/waza](https://github.com/microsoft/waza) (`v0.41.0`, `MIT`) — CLI and embedded React dashboard for evaluating, grading, and benchmarking AI agent workflows, custom agents, and skills.
-- **Tap build defaults**: Builds the `web/` Vite/React dashboard from source (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm ci --ignore-scripts && npm run build`), embeds it into the Go `cmd/waza` binary (`*std_go_args(output: libexec/"waza", ldflags: "-s -w -X main.version=...")`), generates `bash`/`zsh`/`fish` shell completions, and installs bundled skills under `$(brew --prefix waza)/share/waza/skills/{waza,waza-interactive}`.
-- **Tap config defaults**: Wrapper exports `WAZA_NO_UPDATE_CHECK=1` by default and rejects the in-place `waza update` self-updater (exit status `2`; upgrade via `brew upgrade artagon/aitools/waza`). Modifies no agent configuration files.
-
-```sh
-waza init --no-skill ./my-evals
-waza check
-waza run
-```
-
----
-
-## skillopt
-
-- **Tap formula**: [`Formula/skillopt.rb`](Formula/skillopt.rb) (`brew install artagon/aitools/skillopt`)
-- **Upstream project**: [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`v0.2.0`, `MIT`) — reflective text-space skill optimizer (`skillopt-train`, `skillopt-eval`), offline session sleep consolidation CLI (`skillopt-sleep`), and stdlib-only local stdio JSON-RPC MCP server (`skillopt-sleep-mcp`).
-- **Tap build defaults**: Installed from source into an isolated `libexec` `uv` tool environment using managed Python `3.13` (`preserve_rpath` + `@rpath` dylib normalization on macOS), patches `plugins/copilot/mcp_server.py` so `REPO_ROOT` defaults to `os.getcwd()` when `SKILLOPT_SLEEP_REPO` is unset, and installs agent plugins (`claude-code`, `codex`, `copilot`, `devin`, `openclaw`) and experiment `configs` under `$(brew --prefix skillopt)/share/skillopt/`.
-- **Tap config defaults**: `skillopt-sleep` defaults to `--backend mock` (zero API spend) and stages proposals for human review (`nothing live changes until skillopt-sleep adopt`). Register the stdio MCP server with `$(brew --prefix)/opt/skillopt/bin/skillopt-sleep-mcp`. Modifies no agent configuration files or cron schedules on install.
-
-```sh
-skillopt-sleep status --project . --json
-skillopt-sleep dry-run --project .
-```
-
----
-
-## magpie
-
-- **Tap formula**: [`Formula/magpie.rb`](Formula/magpie.rb) (`brew install artagon/aitools/magpie`)
-- **Upstream project**: [yetone/magpie](https://github.com/yetone/magpie) (`v0.1.4403`, `MIT`) — subscription-first local gateway and smart router (`127.0.0.1:3425`) unifying Anthropic Messages, OpenAI Responses, Chat Completions, and Gemini protocols over flat-rate CLI OAuth accounts.
-- **Tap build defaults**: Compiled from Go source with embedded `packedassets` (`production` WebKit menu-bar build on macOS; static `CGO_ENABLED=0 -tags "nogui packedassets"` headless/TUI/web build on Linux), `THIRD_PARTY_NOTICES`, and a subscription-only routing bootstrap script at `$(brew --prefix magpie)/share/magpie/examples/subscription-only/setup-groups.sh`.
-- **Tap config defaults**:
-  - **CLI subscriptions only (zero API keys, zero overage billing)**: API-key provider creation/routing and Claude/Codex paid extra-usage credits are disabled unless `MAGPIE_ALLOW_API_KEYS=1` or `MAGPIE_ALLOW_CREDITS=1` is explicitly set.
-  - **Zero telemetry or background downloads**: `noStats`, `noUsageStats`, `noAutoUpdate`, `noAutoDownload`, `noUpdatePill`, and `redactModelOff` are enabled by default, and `magpie update` exits `2` (`brew upgrade artagon/aitools/magpie`).
-
-```sh
+# 1. Authenticate flat-rate CLI subscriptions in local Magpie (127.0.0.1:3425):
 magpie accounts add claude
 magpie accounts add codex
 magpie accounts add copilot
 magpie accounts add gemini
 magpie serve
-```
 
----
-
-## omp
-
-- **Tap formula**: [`Formula/omp.rb`](Formula/omp.rb) (`brew install artagon/aitools/omp`)
-- **Upstream project**: [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`v18.22.2`, `MIT`) — terminal AI coding agent with a Rust `pi-natives` N-API core (`grep`, `ast_grep`, `ast_edit`, PTY, text-buffer), hashline editing, LSP, DAP, and multi-role model routing.
-- **Tap build defaults**: Installs SHA-256-pinned upstream release binary into `libexec/omp`, matching tag `LICENSE` into `prefix`, generated `bash`/`zsh`/`fish` completions, `libexec/homebrew-policy.yml`, and ready-to-copy Magpie subscription-only configs under `$(brew --prefix omp)/share/omp/examples/subscription-only/{models.yml,config.yml}`.
-- **Tap config defaults**: Wrapper prepends `homebrew-policy.yml` via `PI_CONFIG_FILES` (`startup.checkUpdate: false`, `update.auto: false`, `telemetry.otlpExportEnabled: false`), exports `OTEL_SDK_DISABLED=true`, `DO_NOT_TRACK=true`, `PI_AUTO_QA=0`, and `PI_SPOTLIGHT_EXPERIMENT=0`, scrubs ambient `*_API_KEY` and cloud token environment variables, and blocks `omp update`, `--api-key`, and `auth-broker migrate --include-env` (exit status `2`; set `OMP_ALLOW_API_KEYS=1` to override).
-
-```sh
+# 2. Authenticate omp directly via OAuth or route through Magpie:
 omp auth-broker login anthropic
 omp auth-broker login openai-codex
-# Or wire omp through local loopback magpie:
 magpie oh-my-pi group/sub-coder
 ```
 
----
-
-## pi-agent-rust
-
-- **Tap formula**: [`Formula/pi-agent-rust.rb`](Formula/pi-agent-rust.rb) (`brew install artagon/aitools/pi-agent-rust`)
-- **Upstream project**: [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`v0.8.0`, `license :cannot_represent` — MIT License with OpenAI/Anthropic Rider; full `LICENSE` installed in `prefix`).
-- **Tap build defaults**: Installs SHA-256-pinned upstream `pi` binary into `libexec/pi` with `bin/pi` and `bin/rpi` wrappers, `LICENSE`, `README.md`, generated shell completions, bundled skills under `$(brew --prefix pi-agent-rust)/share/pi-agent-rust/skills/pi-agent-rust`, and Magpie subscription-only JSON templates under `$(brew --prefix pi-agent-rust)/share/pi-agent-rust/examples/subscription-only/`. Declares `conflicts_with "cln"` and `conflicts_with "pi-coding-agent"`.
-- **Tap config defaults**: Both `pi` and `rpi` export `PI_SKIP_VERSION_CHECK=1`, `DO_NOT_TRACK=true`, and `PI_SUBAGENT_PI_BINARY`, scrub ambient `*_API_KEY` environment variables, and reject `self-update` and `--api-key` (exit status `2`; set `PI_ALLOW_API_KEYS=1` to override).
-
-```sh
-brew unlink cln pi-coding-agent   # only when either is installed
-brew install artagon/aitools/pi-agent-rust
-```
+</details>
 
 ---
 
-## Automatic version updates
+## MCP Server Reference
 
-[`autobump.yml`](.github/workflows/autobump.yml) runs daily and on demand. Each formula's `livecheck` block finds the latest upstream release, and [`scripts/autobump.sh`](scripts/autobump.sh) opens one pull request per new version. The script moves every literal-versioned URL to the new release and recomputes its SHA-256, so multi-platform binary formulae bump the same way as single-archive source formulae. A `tree-sitter-java-valhalla` bump also increments the `revision` of `ast-grep-valhalla` and `ripwire`.
+Thirteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/homebrew` on Apple Silicon or `/home/linuxbrew/.linuxbrew` on Linux; for `ast-grep` MCP, point `ast-grep-mcp` at `AST_GREP_BINARY="$PREFIX/opt/ast-grep-valhalla/bin/ast-grep"`):
 
-## Bottles and publishing
+| Formula | Transport | Stable Entrypoint & Arguments | Required Env / Notes |
+| :--- | :--- | :--- | :--- |
+| `ripwire` | stdio | `"$PREFIX/opt/ripwire/bin/ripwire" --mcp` | Read-only call-graph & symbol queries |
+| `ck` | stdio | `"$PREFIX/opt/ck/bin/ck" --serve` | Local BM25 + semantic hybrid code search |
+| `fff-mcp` | stdio | `"$PREFIX/opt/fff-mcp/bin/fff-mcp"` | Wrapper injects `--no-update-check` automatically |
+| `hashline` | stdio | `"$PREFIX/opt/hashline/bin/hashline" mcp` | Hash-anchored file read & patch tools |
+| `basic-memory` | stdio | `"$PREFIX/opt/basic-memory/bin/basic-memory" mcp` | Local Markdown knowledge graph (`stdio` only) |
+| `hindsight` | stdio | `"$PREFIX/opt/hindsight/bin/hindsight-mcp"` | Requires `HINDSIGHT_MCP_HARNESS=<claude-code\|codex\|antigravity-cli>`; talks only to loopback `:8888` |
+| `qmd` | stdio / HTTP | `"$PREFIX/opt/qmd/bin/qmd" mcp` | Pass `--http` for loopback `127.0.0.1:8181` |
+| `squeez` | stdio | `"$PREFIX/opt/squeez/bin/squeez" mcp` | Read-only CLI output token compressor |
+| `agent-mail` | stdio / HTTP | `"$PREFIX/opt/agent-mail/bin/mcp-agent-mail"` | Or `"$PREFIX/opt/agent-mail/bin/am" serve-http` |
+| `adrkit` | stdio | `"$PREFIX/opt/adrkit/bin/adrkit-mcp"` | Local `docs/adr` governance server |
+| `skillopt` | stdio | `"$PREFIX/opt/skillopt/bin/skillopt-sleep-mcp"` | Defaults working repo to caller `cwd` (`SKILLOPT_SLEEP_REPO` overrides) |
+| `mlflow` | stdio | `"$PREFIX/opt/mlflow/bin/mlflow" mcp run` | Set `MLFLOW_TRACKING_URI` (e.g. `http://127.0.0.1:5000` or `sqlite:///mlflow.db`) |
+| `arize-phoenix` | Streamable HTTP | `http://127.0.0.1:6006/mcp` | Served automatically when `phoenix serve` is running |
 
-Every pull request runs [`tests.yml`](.github/workflows/tests.yml): `brew test-bot` builds, tests, and bottles changed formulae on a `macos-26` Apple Silicon runner, runs the provenance and installer suites, and generates SPDX 2.3 and CycloneDX 1.6 SBOMs plus `build-manifest.json` (`scripts/ci/build-provenance-manifest.sh`). After reviewing the diff, publish from `main`:
-
-```sh
-gh workflow run publish.yml -f pull_request=<number> \
-  -f head_sha="$(gh pr view <number> --json headRefOid --jq .headRefOid)"
-```
-
-[`publish.yml`](.github/workflows/publish.yml) snapshots trusted `scripts/` from `main` before applying PR commits and separates staging, OIDC signing, and publishing:
-
-1. `stage-bottles` (`contents: read`) validates PR ancestry and workflow/CI-script guards (`scripts/ci/publish-bottles.sh`), verifies `bottles_macos-26` and `provenance_macos-26` ZIP digests, runs `brew pr-pull --no-upload`, merges `bottle do` blocks, and refreshes the `README.md` bottle provenance table (`scripts/update-readme-bottles.sh`).
-2. [`sign-bottles.yml`](.github/workflows/sign-bottles.yml) (`@refs/heads/main`) verifies the builder run's `head_sha` via the GitHub API (`scripts/ci/sign-and-attest.sh`), mints SLSA v1 and `bottle-lineage/v1` attestations, signs Sigstore `cosign` v3 bundles, self-verifies online and air-gapped offline, and uploads assets to draft GitHub Releases (`<formula>-<pkg_version>`).
-3. `push-main` enforces block-aware `bottle do ... end` and fenced `README.md` diff policy (`scripts/ci/verify-patch-policy.sh`), pushes `main`, publishes the draft releases, and verifies every bottle with `brew verify`.
-
-Do not merge formula pull requests directly; formulae would ship without bottles or attestations. To backfill or refresh provenance sidecars on already-published releases from `main`:
-
-```sh
-gh workflow run attest.yml
-gh workflow run attest.yml -f formulae="ripwire ast-grep-valhalla"
-```
-
-Bump pull requests follow the same path; `scripts/autobump.sh` dispatches `tests.yml` on each one.
-A bump fails on purpose when:
-
-- the grammar patch or Ripwire's query patch no longer applies;
-- ast-grep pins a tree-sitter-java version that the patched crate cannot replace; or
-- Ripwire changes its bundled installer or skills, which `tests/helpers/agent_install_helper.bash` pins.
-
-One-time repository setting: in Settings → Actions → General, allow GitHub Actions to create and
-approve pull requests. To check or apply bumps locally:
+Register any stdio server above in your coding agent (`hashline` shown as example):
 
 ```sh
-scripts/autobump.sh check
-scripts/autobump.sh write tgrep
+# Claude Code (~/.claude.json or .mcp.json):
+claude mcp add --transport stdio --scope user hashline -- "$(brew --prefix)/opt/hashline/bin/hashline" mcp
+
+# OpenAI Codex (~/.codex/config.toml):
+codex mcp add hashline -- "$(brew --prefix)/opt/hashline/bin/hashline" mcp
+
+# Google Antigravity CLI (~/.gemini/config/mcp_config.json — omit "type" for stdio, use "serverUrl" for HTTP):
+agy mcp add hashline --command "$(brew --prefix)/opt/hashline/bin/hashline" --args mcp
 ```
 
-## Build provenance and verification
+---
 
-Published bottles ship with cryptographic build provenance attested by [`.github/workflows/sign-bottles.yml`](.github/workflows/sign-bottles.yml) on `refs/heads/main`. Each GitHub Release (`<formula>-<pkg_version>`) carries the bottle tarball and 8 sidecars:
+## Bundled Agent Skills & Plugins
 
-| Asset suffix | Format | Purpose |
+Fourteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie` and `omp` also stage subscription-only routing templates under `share/<formula>/examples/subscription-only/`):
+
+| Formula | Installed Asset Path (`$(brew --prefix <formula>)/share/<formula>/...`) | Opt-In Activation |
+| :--- | :--- | :--- |
+| `ripwire` | `skills/ripwire-*`, `hooks/*` | `ripwire-agent-install --claude --codex --agy` |
+| `hashline` | `skills/hashline/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `adrkit` | `skills/` (`decision-memory`, ADR workflows) | Symlink or `agentsync` / `skillfile` |
+| `basic-memory` | `skills/memory-*` | Symlink or `agentsync` / `skillfile` |
+| `hindsight` | `skills/hindsight-{architect,docs,local,self-hosted,coding-agent}` | `hindsight-coding-agents install <client> --server self-hosted` |
+| `qmd` | `skills/qmd/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `waza` | `skills/{waza,waza-interactive}` | Symlink or `agentsync` / `skillfile` |
+| `skillopt` | `plugins/{claude-code,codex,copilot}`, `configs/` | Symlink plugin or reference sample configs |
+| `pi-agent-rust` | `skills/pi-agent-rust`, `examples/subscription-only/` | Symlink from `share/pi-agent-rust/skills` |
+| `mlflow` | `skills/mlflow-*` (evaluation, trace analysis, instrumentation, onboarding) | `mlflow skills list` or symlink from `share/mlflow/skills` |
+| `langfuse-cli` | `skills/{langfuse,migrate-to-langfuse}` | `langfuse skills` or symlink from `share/langfuse-cli/skills` |
+| `phoenix-cli` | `skills/phoenix-{cli,error-analysis,evals,harbor,tracing}`, `plugins/{claude,codex}` | Symlink from `share/phoenix-cli/skills` |
+| `arize-phoenix` | `skills/phoenix-*`, `plugins/{claude,codex}` | Symlink from `share/arize-phoenix/skills` |
+| `openlit` | `plugins/{claude-code,codex,cursor,opencode}`, `agent-guides/` | `openlit coding install --vendor=<vendor> --dry-run` |
+
+---
+
+## Build Provenance & Verification
+
+```mermaid
+flowchart LR
+  PR["PR or autobump.yml"] --> TB["tests.yml (read-only): brew test-bot + syft SBOMs"]
+  TB --> ST["publish.yml stage-bottles (read-only): verify ZIP + brew pr-pull"]
+  ST --> SG["sign-bottles.yml@refs/heads/main (OIDC): SLSA v1 + lineage v1 + cosign v3"]
+  SG --> PM["publish.yml push-main: verify-patch-policy + fast-forward + brew verify"]
+```
+
+Each GitHub Release (`<formula>-<pkg_version>`) ships the bottle tarball and **8** cryptographic provenance sidecars attested on `refs/heads/main`:
+
+| Asset Suffix | Format | Purpose |
 | :--- | :--- | :--- |
 | `.sha256` | `shasum -a 256` | Bottle SHA-256 checksum matching `Formula/<name>.rb` |
-| `.intoto.jsonl` | Sigstore bundle (JSONL) | SLSA v1 build provenance binding both `--` and `-` bottle filenames |
+| `.intoto.jsonl` | Sigstore bundle (JSONL) | SLSA v1 provenance binding both `--` (`Bottle::Filename#to_s`) and `-` (`Bottle::Filename#url_encode`) filenames |
 | `.lineage.intoto.jsonl` | Sigstore bundle (JSONL) | Signed `bottle-lineage/v1` predicate binding builder run and SBOM SHA-256 digests |
 | `.sigstore.json` | Sigstore v0.3 bundle | Keyless `cosign` v3 blob signature (`Fulcio` + `Rekor`) |
 | `.spdx.json` | SPDX 2.3 JSON | Bottle archive SBOM generated by Anchore `syft` |
@@ -489,7 +266,55 @@ Published bottles ship with cryptographic build provenance attested by [`.github
 | `.cdx.json` | CycloneDX 1.6 JSON | Bottle archive SBOM in CycloneDX format |
 | `.provenance.json` | JSON | Human-readable summary of builder run, commit SHAs, and asset digests |
 
+### 1. Native Homebrew verification
+
+Requires `gh` authenticated to `github.com` or `HOMEBREW_GITHUB_API_TOKEN`:
+
+```sh
+HOMEBREW_VERIFY_ATTESTATIONS=1 brew install artagon/aitools/ripwire
+brew verify --bottle-tag=arm64_tahoe artagon/aitools/ripwire
+brew verify --bottle-tag=x86_64_linux artagon/aitools/ripwire
+brew verify --bottle-tag=arm64_linux artagon/aitools/ripwire
+```
+
+### 2. Multi-layer & air-gapped offline verification (`scripts/verify-provenance.sh`)
+
+[`scripts/verify-provenance.sh`](scripts/verify-provenance.sh) enforces the exact signer SAN (`sign-bottles.yml@refs/heads/main`), `--source-ref refs/heads/main`, `--deny-self-hosted-runners`, atomic `--` + `-` dual-subject binding, signed `bottle-lineage/v1` SBOM digests, and Sigstore `cosign` v3 bundles:
+
+```sh
+# Online check for one formula or all bottled formulae across all bottle tags:
+./scripts/verify-provenance.sh --all-tags ripwire
+./scripts/verify-provenance.sh --all --all-tags --require-cosign --homebrew
+
+# Export bundles once, then verify strictly offline (provide a separately verified trusted_root.jsonl):
+./scripts/verify-provenance.sh --save-bundles ./bundles ripwire
+./scripts/verify-provenance.sh --offline \
+  --bundle-dir ./bundles \
+  --trusted-root /path/to/verified/trusted_root.jsonl \
+  --require-cosign \
+  ripwire
+```
+
+### 3. Direct CLI verification (`gh` and `cosign`)
+
+```sh
+gh attestation verify ripwire-0.6.10.arm64_tahoe.bottle.1.tar.gz \
+  --repo artagon/homebrew-aitools \
+  --cert-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
+  --source-ref "refs/heads/main" \
+  --deny-self-hosted-runners
+
+cosign verify-blob \
+  --bundle ripwire-0.6.10.arm64_tahoe.bottle.1.tar.gz.sigstore.json \
+  --certificate-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  ripwire-0.6.10.arm64_tahoe.bottle.1.tar.gz
+```
+
 ### Published bottle versions, certificates, and provenance proofs
+
+<details>
+<summary><strong>Expand published bottle SHA-256 digests, SLSA/Sigstore certificates, and signed SBOM links</strong></summary>
 
 <!-- BEGIN BOTTLE_PROVENANCE_TABLE -->
 <!-- Auto-generated from Formula/*.rb by scripts/update-readme-bottles.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
@@ -538,59 +363,40 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | `x86_64_linux` · `0.23.5` (rebuild 1) | [Release](https://github.com/artagon/homebrew-aitools/releases/tag/tree-sitter-java-valhalla-0.23.5) · [Bottle](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz) · [`86bd920213ac…`](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.sha256) | [SLSA v1](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.intoto.jsonl) · [Lineage v1](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.lineage.intoto.jsonl) · [Sigstore](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.sigstore.json) · [Summary](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.provenance.json) · [API Proof](https://api.github.com/repos/artagon/homebrew-aitools/attestations/sha256:86bd920213aca579f69607e4ed9ef324068373a1b0a6d3af18e50ca960aa2c17) | [SPDX 2.3](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.spdx.json) · [SPDX Sig](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.spdx.sigstore.json) · [CycloneDX 1.6](https://github.com/artagon/homebrew-aitools/releases/download/tree-sitter-java-valhalla-0.23.5/tree-sitter-java-valhalla-0.23.5.x86_64_linux.bottle.1.tar.gz.cdx.json) |
 <!-- END BOTTLE_PROVENANCE_TABLE -->
 
-### 1. Native Homebrew verification
-
-Enable Homebrew's built-in attestation verification (requires `gh` authenticated to `github.com` or `HOMEBREW_GITHUB_API_TOKEN`):
-
-```sh
-HOMEBREW_VERIFY_ATTESTATIONS=1 brew install artagon/aitools/ripwire
-brew verify --bottle-tag=arm64_tahoe artagon/aitools/ripwire
-brew verify --bottle-tag=x86_64_linux artagon/aitools/ripwire
-brew verify --bottle-tag=arm64_linux artagon/aitools/ripwire
-```
-
-### 2. Strict multi-layer & air-gapped verification (`scripts/verify-provenance.sh`)
-
-[`scripts/verify-provenance.sh`](scripts/verify-provenance.sh) enforces the exact signer SAN (`...@refs/heads/main`), `--source-ref refs/heads/main`, `--deny-self-hosted-runners`, atomic `--` + `-` dual-subject binding, signed `bottle-lineage/v1` SBOM digests, and Sigstore `cosign` v3 bundles:
-
-```sh
-# Online check for one formula or all bottled formulae across all bottle tags:
-./scripts/verify-provenance.sh --all-tags ripwire
-./scripts/verify-provenance.sh --all --all-tags --require-cosign --homebrew
-
-# Save bundles + trusted root once, then verify strictly offline (air-gapped):
-./scripts/verify-provenance.sh --save-bundles ./bundles ripwire
-./scripts/verify-provenance.sh --offline \
-  --bundle-dir ./bundles \
-  --trusted-root ./bundles/trusted_root.jsonl \
-  --require-cosign \
-  ripwire
-```
-
-### 3. Direct CLI verification (`gh` and `cosign`)
-
-```sh
-# GitHub CLI (SLSA v1 provenance, ref-bound to sign-bottles.yml@refs/heads/main):
-gh attestation verify ripwire-0.6.10.arm64_tahoe.bottle.tar.gz \
-  --repo artagon/homebrew-aitools \
-  --cert-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
-  --source-ref "refs/heads/main" \
-  --deny-self-hosted-runners
-
-# Sigstore cosign v3 (blob signature + SPDX attestation):
-cosign verify-blob \
-  --bundle ripwire-0.6.10.arm64_tahoe.bottle.tar.gz.sigstore.json \
-  --certificate-identity "https://github.com/artagon/homebrew-aitools/.github/workflows/sign-bottles.yml@refs/heads/main" \
-  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-  ripwire-0.6.10.arm64_tahoe.bottle.tar.gz
-```
+</details>
 
 **Scope & SBOM coverage notes**:
-- Source-built formulae (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `basic-memory`, `hindsight`, `qmd`, `squeez`, `adrkit`, `nats`, `skillfile`, `skillprism`, `waza`, `skillopt`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; upstream-binary formulae (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest bottle packaging of the SHA-256-pinned upstream release asset.
-- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `waza`), Python wheel metadata (`basic-memory`, `skillopt`), Node `package.json` inventories (`hindsight`, `qmd`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit metadata and `adrkit` (`bun` single-file JS bundle) expose bottle archive and manifest files only.
+- **21 source-built formulae** (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `basic-memory`, `hindsight`, `qmd`, `squeez`, `adrkit`, `nats`, `skillfile`, `skillprism`, `waza`, `skillopt`, `magpie`, `mlflow`, `inspect-ai`, `langfuse-cli`, `phoenix-cli`, `arize-phoenix`, `openlit`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **11 upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives.
+- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node `package.json` inventories (`hindsight`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables and single-file `bun` bundles (`adrkit`) expose bottle archive and manifest files only.
 
-## Validation
+---
 
-See [integration and provenance tests](tests/README.md) for isolated `bats-core` 1.14+ checks under stock macOS `/bin/bash` 3.2 and modern Bash 5+:
-- [`tests/integration_agent_install.bats`](tests/integration_agent_install.bats) exercises both Ripwire activation entrypoints and opt-in hook registration against the real bundled payload in temporary agent homes.
-- [`tests/verify_provenance.bats`](tests/verify_provenance.bats) exercises `scripts/verify-provenance.sh`, `scripts/update-readme-bottles.sh`, and `scripts/ci/*` across all bottled formulae, online and air-gapped offline bundles, tamper rejection, and isolated `--homebrew` verification without touching live user state.
+## Publishing & Automatic Updates
+
+- **Publishing bottles (`publish.yml`)**: Every pull request runs [`tests.yml`](.github/workflows/tests.yml) across `macos-26`, `ubuntu-24.04`, and `ubuntu-24.04-arm`. Do **not** merge formula pull requests directly; publish from `main` so bottles, SBOMs, and attestations land atomically:
+  ```sh
+  gh workflow run publish.yml -f pull_request=<number> \
+    -f head_sha="$(gh pr view <number> --json headRefOid --jq .headRefOid)"
+  ```
+- **Provenance backfill (`attest.yml`)**: Refresh sidecars on already-published releases from `main` with `gh workflow run attest.yml` (or `-f formulae="ripwire ast-grep-valhalla"`).
+- **Daily livecheck (`autobump.yml`)**: Runs [`scripts/autobump.sh`](scripts/autobump.sh) daily to open one PR per new upstream release and dispatch `tests.yml` (cascading `revision` bumps to `ast-grep-valhalla` and `ripwire` when `tree-sitter-java-valhalla` updates).
+- **Local validation suites**: See [`tests/README.md`](tests/README.md), [`docs/ast-grep.md`](docs/ast-grep.md), [`TOOLS.md`](TOOLS.md), and [`docs/agent-context.md`](docs/agent-context.md):
+  ```sh
+  ast-grep test --config sgconfig.yml
+  ast-grep scan --config sgconfig.yml . .github/workflows
+  BATS_BASH32=/bin/bash BATS_MODERN_BASH=/opt/homebrew/bin/bash bats --tap tests/*.bats
+  ```
+
+---
+
+## Troubleshooting & FAQ
+
+| Symptom | Cause | Fix |
+| :--- | :--- | :--- |
+| `Cannot install ... conflicting formulae are installed` | Core `ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `pixie`, `px`, `cln`, or `pi-coding-agent` owns the same binary name | Run `brew unlink <conflicting-formula>`, then `brew install artagon/aitools/<formula>` |
+| `brew install tgrep` (or `nats` / `herdr`) installs core formula | Unqualified name resolves to `homebrew/core` first | Use `brew install artagon/aitools/tgrep` (`nats`, `herdr`) |
+| Homebrew ignores tap formulae (`Tap-Trust`) | Homebrew 7+ requires explicit tap trust | Run `brew trust --tap artagon/aitools` |
+| `HOMEBREW_VERIFY_ATTESTATIONS=1` fails with GitHub auth error | `gh` is unauthenticated and `HOMEBREW_GITHUB_API_TOKEN` is unset | Run `gh auth login` or export `HOMEBREW_GITHUB_API_TOKEN` |
+| `<tool> update` or `px self update` exits `2` | In-place self-updaters are blocked so binaries stay managed by Homebrew | Upgrade with `brew upgrade artagon/aitools/<formula>` |
+| `hindsight-mcp` exits with `HINDSIGHT_MCP_HARNESS must be set` | Harness identity is required on stdio launch | Pass `HINDSIGHT_MCP_HARNESS=claude-code` (`codex`, `antigravity-cli`) in MCP `env` |
+| `ck` fails to install on older Linux distros | Upstream `ck` Linux binary requires `glibc >= 2.39` | Run on Ubuntu 24.04+ or Debian Trixie+ (`glibc 2.39+`) |
