@@ -1,0 +1,82 @@
+id: bash-no-bash4-features
+snapshots:
+  "builtin declare -A sneaky_map=()\n":
+    labels:
+    - source: builtin declare -A sneaky_map=
+      style: primary
+      start: 0
+      end: 30
+    - source: -A
+      style: secondary
+      start: 16
+      end: 18
+  "command local -n sneaky_cmd_ref=\"$1\"\n":
+    labels:
+    - source: command local -n sneaky_cmd_ref="$1"
+      style: primary
+      start: 0
+      end: 36
+    - source: -n
+      style: secondary
+      start: 14
+      end: 16
+  "declare -A seen=()\n":
+    labels:
+    - source: declare -A seen=()
+      style: primary
+      start: 0
+      end: 18
+    - source: -A
+      style: secondary
+      start: 8
+      end: 10
+  "declare -c cap_var=\"hello\"\n":
+    labels:
+    - source: declare -c cap_var="hello"
+      style: primary
+      start: 0
+      end: 26
+    - source: -c
+      style: secondary
+      start: 8
+      end: 10
+  "f() {\n  declare -g GLOBAL_STATE=\"1\"\n}\n":
+    labels:
+    - source: declare -g GLOBAL_STATE="1"
+      style: primary
+      start: 8
+      end: 35
+    - source: -g
+      style: secondary
+      start: 16
+      end: 18
+  "f() {\n  local -n out_ref=\"$1\"\n  out_ref=\"bad\"\n}\n":
+    labels:
+    - source: local -n out_ref="$1"
+      style: primary
+      start: 8
+      end: 29
+    - source: -n
+      style: secondary
+      start: 14
+      end: 16
+  "local +n sneaky_ref=\"x\"\n":
+    labels:
+    - source: local +n sneaky_ref="x"
+      style: primary
+      start: 0
+      end: 23
+    - source: +n
+      style: secondary
+      start: 6
+      end: 8
+  "typeset -rA TABLE=([k]=\"v\")\n":
+    labels:
+    - source: typeset -rA TABLE=([k]="v")
+      style: primary
+      start: 0
+      end: 27
+    - source: -rA
+      style: secondary
+      start: 8
+      end: 11

@@ -1,0 +1,28 @@
+id: formula-conflicts-same-name
+valid:
+  - |
+    class AstGrepValhalla < Formula
+      conflicts_with "ast-grep", because: "both install `ast-grep` and `sg` binaries"
+    end
+  - |
+    class PhoenixCli < Formula
+      conflicts_with "pixie", because: "both install `px` binaries"
+      conflicts_with "px", because: "both install `px` binaries"
+    end
+  - |
+    class Tgrep < Formula
+      desc "Trigram-indexed search"
+    end
+invalid:
+  - |
+    class Tgrep < Formula
+      conflicts_with "tgrep", because: "same name in core"
+    end
+  - |
+    class Nats < Formula
+      conflicts_with "nats"
+    end
+  - |
+    class Herdr < Formula
+      conflicts_with "herdr", because: "same name in core"
+    end

@@ -1,0 +1,39 @@
+id: workflow-no-dangerous-triggers
+valid:
+  - |
+    name: CI
+    on:
+      push:
+        branches: [main]
+      pull_request:
+  - |
+    name: Publish
+    on:
+      workflow_dispatch:
+  - |
+    name: Reusable
+    on:
+      workflow_call:
+invalid:
+  - |
+    name: Unsafe PR
+    on:
+      pull_request_target:
+        types: [opened]
+  - |
+    name: Unsafe Followup
+    on:
+      workflow_run:
+        workflows: [CI]
+        types: [completed]
+  - |
+    name: Unsafe Array
+    on: [push, pull_request_target]
+  - |
+    name: Unsafe Quoted Trigger
+    'on':
+      "pull_request_target":
+        types: [opened]
+  - |
+    name: Unsafe Flow Trigger
+    { "on": "workflow_run" }

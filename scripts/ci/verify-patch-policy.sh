@@ -18,7 +18,7 @@ source "${CI_DIR}/common.sh"
 readonly BEGIN_MARKER="<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->"
 readonly END_MARKER="<!-- END BOTTLE_PROVENANCE_TABLE -->"
 readonly FORMULA_REL_RE='^Formula/[a-z0-9][a-z0-9@._+-]*\.rb$'
-readonly ROOT_URL_STMT_RE='^    root_url "https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/releases/download/[A-Za-z0-9@.%_+-]+"$'
+readonly ROOT_URL_STMT_RE='^    root_url "https://github\.com/artagon/homebrew-aitools/releases/download/[A-Za-z0-9@.%_+-]+"$'
 readonly REBUILD_STMT_RE='^    rebuild [0-9]+$'
 readonly SHA256_STMT_RE='^    sha256 +(cellar: (:any|:any_skip_relocation|"/[A-Za-z0-9_./+-]+"), +)?[a-z0-9_]+: +"[0-9a-f]{64}"$'
 
@@ -134,10 +134,19 @@ cmd_verify_readme_git() {
   cmp -s "${work_dir}/before.stripped" "${work_dir}/after.stripped"
 }
 
+readonly FORMULA_BODY_STOP_RE='^  (def (install|caveats|post_install)|test [d]o)$|^__END__$'
+
 count_and_extract_bottle() {
   local formula_file="$1"
   local inner_out="$2"
-  awk -v inner="${inner_out}" '
+  awk -v inner="${inner_out}" -v stop_re="${FORMULA_BODY_STOP_RE}" '
+    $0 ~ stop_re && in_bottle {
+      bad = 1
+      exit 1
+    }
+    $0 ~ stop_re {
+      exit 0
+    }
     /^  bottle do$/ && in_bottle {
       bad = 1
       exit 1
@@ -170,16 +179,20 @@ count_and_extract_bottle() {
 strip_single_bottle_block() {
   local formula_file="$1"
   local out_file="$2"
-  awk '
+  awk -v stop_re="${FORMULA_BODY_STOP_RE}" '
     {
       lines[NR] = $0
     }
-    $0 == "  bottle do" && b_start == 0 {
+    !stopped && ($0 ~ stop_re) {
+      stopped = 1
+      next
+    }
+    !stopped && $0 == "  bottle do" && b_start == 0 {
       b_start = NR
       in_bottle = 1
       next
     }
-    in_bottle && $0 == "  end" {
+    !stopped && in_bottle && $0 == "  end" {
       b_end = NR
       in_bottle = 0
     }

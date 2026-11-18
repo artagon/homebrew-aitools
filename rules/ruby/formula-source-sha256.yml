@@ -1,0 +1,20 @@
+id: formula-source-sha256
+language: Ruby
+severity: error
+message: Use a double-quoted, literal 64-character lowercase SHA-256 for the source archive.
+note: scripts/autobump.sh expects this checksum syntax. Bottle keyword checksums use a separate format.
+files:
+  - Formula/*.rb
+rule:
+  pattern: sha256 $HASH
+  not:
+    inside:
+      pattern: |
+        bottle do
+          $$$BODY
+        end
+      stopBy: end
+constraints:
+  HASH:
+    not:
+      regex: '^"[0-9a-f]{64}"$'

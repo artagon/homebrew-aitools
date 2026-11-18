@@ -1,0 +1,76 @@
+id: workflow-no-run-interpolation
+snapshots:
+  "jobs:\n  bad1:\n    steps:\n      - run: echo \"${{ inputs.pull_request }}\"\n":
+    labels:
+    - source: "run: echo \"${{ inputs.pull_request }}\""
+      style: primary
+      start: 33
+      end: 71
+    - source: echo "${{ inputs.pull_request }}"
+      style: secondary
+      start: 38
+      end: 71
+    - source: run
+      style: secondary
+      start: 33
+      end: 36
+  "jobs:\n  bad2:\n    steps:\n      - run: |\n          git checkout ${{ github.head_ref }}\n":
+    labels:
+    - source: |
+        run: |
+                  git checkout ${{ github.head_ref }}
+      style: primary
+      start: 33
+      end: 86
+    - source: |
+        |
+                  git checkout ${{ github.head_ref }}
+      style: secondary
+      start: 38
+      end: 86
+    - source: run
+      style: secondary
+      start: 33
+      end: 36
+  "jobs:\n  bad3:\n    steps:\n      - run: ./scripts/deploy.sh \"${{ github.event.pull_request.title }}\"\n":
+    labels:
+    - source: "run: ./scripts/deploy.sh \"${{ github.event.pull_request.title }}\""
+      style: primary
+      start: 33
+      end: 98
+    - source: ./scripts/deploy.sh "${{ github.event.pull_request.title }}"
+      style: secondary
+      start: 38
+      end: 98
+    - source: run
+      style: secondary
+      start: 33
+      end: 36
+  "jobs:\n  bad4:\n    steps:\n      - \"run\": echo \"${{ inputs.pull_request }}\"\n":
+    labels:
+    - source: "\"run\": echo \"${{ inputs.pull_request }}\""
+      style: primary
+      start: 33
+      end: 73
+    - source: echo "${{ inputs.pull_request }}"
+      style: secondary
+      start: 40
+      end: 73
+    - source: "\"run\""
+      style: secondary
+      start: 33
+      end: 38
+  "jobs:\n  bad5:\n    steps: [ { 'run': 'echo ${{ github.head_ref }}' } ]\n":
+    labels:
+    - source: "'run': 'echo ${{ github.head_ref }}'"
+      style: primary
+      start: 29
+      end: 65
+    - source: "'echo ${{ github.head_ref }}'"
+      style: secondary
+      start: 36
+      end: 65
+    - source: "'run'"
+      style: secondary
+      start: 29
+      end: 34

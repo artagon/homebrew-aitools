@@ -1,0 +1,32 @@
+id: formula-no-interpolated-url
+valid:
+  - |
+    url "https://example.org/releases/v1.2.3/tool.tar.gz"
+  - |
+    livecheck do
+      url :stable
+    end
+  - |
+    resource "license" do
+      url "https://example.org/v1.2.3/LICENSE"
+    end
+  - |
+    root_url "https://example.org/bottles/tool-#{version}"
+  - |
+    # url "https://example.org/#{version}.tar.gz"
+    system "echo", "#{version}"
+invalid:
+  - |
+    url "https://example.org/v#{version}.tar.gz"
+  - |
+    on_macos do
+      on_arm do
+        url "https://example.org/v#{version}/tool-arm64.tar.gz"
+      end
+    end
+  - |
+    resource "license" do
+      url "https://example.org/#{version}/LICENSE"
+    end
+  - |
+    url "https://example.org/#{release_tag}.tar.gz"

@@ -1,0 +1,27 @@
+id: formula-livecheck
+language: Ruby
+severity: error
+message: Declare a livecheck block in the formula class body.
+note: scripts/autobump.sh uses each formula's livecheck block to find upstream releases.
+files:
+  - Formula/*.rb
+rule:
+  kind: class
+  has:
+    field: superclass
+    kind: superclass
+    regex: '^<\s*Formula$'
+    stopBy: neighbor
+  not:
+    has:
+      field: body
+      kind: body_statement
+      stopBy: neighbor
+      has:
+        pattern: |
+          livecheck do
+            $$$CHECK
+          end
+        # Only a direct class-body declaration counts. A block inside install
+        # or a resource does not configure the formula's livecheck.
+        stopBy: neighbor

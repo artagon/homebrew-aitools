@@ -1,0 +1,3 @@
+# Root ShellCheck configuration for Bats suites and helpers.
+# Keep enable=all scoped to scripts/.shellcheckrc so Bats test files match CI (`tests.yml`).
+external-sources=true

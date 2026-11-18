@@ -47,8 +47,9 @@ Options:
   --file PATH             Verify a local bottle tarball (single formula only)
   --bundle-dir DIR        Read detached sidecar bundles and SBOMs from DIR
   --save-bundles DIR      Save downloaded sidecars and trusted_root.jsonl to DIR
-  --offline               Verify strictly offline (requires --bundle-dir and trusted root)
+  --offline               Verify strictly offline (requires --bundle-dir and external --trusted-root)
   --trusted-root PATH     Path to trusted_root.jsonl from 'gh attestation trusted-root'
+  --trusted-root-sha256 H Expected 64-hex SHA-256 digest of --trusted-root file
   --require-cosign        Fail instead of skipping when cosign is not installed
   --homebrew              Also run isolated 'brew verify' for each formula
   --bottle-tag TAG        Bottle tag to verify (default: arm64_tahoe; 'all' = all tags)
@@ -62,7 +63,7 @@ Examples:
   $(basename "$0") ripwire
   $(basename "$0") --all --require-cosign --homebrew
   $(basename "$0") --save-bundles ./bundles ripwire
-  $(basename "$0") --offline --bundle-dir ./bundles --trusted-root ./bundles/trusted_root.jsonl ripwire
+  $(basename "$0") --offline --bundle-dir ./bundles --trusted-root /path/to/verified/trusted_root.jsonl ripwire
 EOF
 }
 
@@ -91,6 +92,27 @@ sha256_file() {
   fi
 }
 
+resolve_physical_file() {
+  local p="$1"
+  local d=""
+  local b=""
+  local target=""
+  while [[ -L "${p}" ]]
+  do
+    d="$(cd "$(dirname "${p}")" && pwd -P)"
+    target="$(readlink "${p}")"
+    if [[ "${target}" == /* ]]
+    then
+      p="${target}"
+    else
+      p="${d}/${target}"
+    fi
+  done
+  d="$(cd "$(dirname "${p}")" && pwd -P)"
+  b="$(basename "${p}")"
+  printf '%s/%s\n' "${d}" "${b}"
+}
+
 # Extract upstream version from a literal formula URL.
 extract_version_from_url() {
   local formula="$1"
@@ -109,7 +131,11 @@ extract_version_from_url() {
 
   if [[ -n "${tag_part}" ]]
   then
-    if [[ "${tag_part}" == "${formula}-"* ]]
+    local scoped_ver_re='(@|%40)([vV]?[0-9][0-9A-Za-z.+_-]*)$'
+    if [[ "${tag_part}" =~ ${scoped_ver_re} ]]
+    then
+      tag_part="${BASH_REMATCH[2]}"
+    elif [[ "${tag_part}" == "${formula}-"* ]]
     then
       tag_part="${tag_part#"${formula}-"}"
     fi
@@ -414,6 +440,7 @@ verify_one_formula() {
   local spdx_pkg_count=0
   local cdx_comp_count=0
   local actual_bottle_sha=""
+  local lineage_status=""
   local err_msg=""
 
   emit_result() {
@@ -431,6 +458,7 @@ verify_one_formula() {
       --arg release_filename "${parsed_release_filename}" \
       --arg expected_sha256 "${parsed_bottle_sha256}" \
       --arg actual_sha256 "${actual_bottle_sha}" \
+      --arg lineage_status "${lineage_status}" \
       --arg st_metadata "${st_metadata}" \
       --arg st_sha256 "${st_sha256}" \
       --arg st_sha256_sidecar "${st_sha256_sidecar}" \
@@ -457,6 +485,7 @@ verify_one_formula() {
         release_filename: $release_filename,
         expected_sha256: $expected_sha256,
         actual_sha256: $actual_sha256,
+        lineage_status: (if $lineage_status == "" then null else $lineage_status end),
         spdx_packages: $spdx_packages,
         cyclonedx_components: $cdx_components,
         checks: {
@@ -749,7 +778,34 @@ verify_one_formula() {
     return 1
   fi
   st_lineage="passed"
-  log_info "  [OK] Signed bottle-lineage/v1 verified (SPDX + CycloneDX digests authenticated)"
+  lineage_status="$(jq -r \
+    --arg san "${CERT_IDENTITY}" \
+    --arg formula "${formula}" \
+    --arg brew_fn "${parsed_brew_filename}" \
+    --arg rel_fn "${parsed_release_filename}" \
+    --arg sha "${actual_bottle_sha}" \
+    --arg spdx_sha "${actual_spdx_sha}" \
+    --arg cdx_sha "${actual_cdx_sha}" '
+    [ .[] | select(
+      .verificationResult.signature.certificate.subjectAlternativeName == $san
+      and .verificationResult.statement.predicateType == "https://github.com/artagon/homebrew-aitools/bottle-lineage/v1"
+      and (
+        .verificationResult.statement.subject as $s
+        | ($s | type == "array")
+        and any($s[]; .name == $brew_fn and .digest.sha256 == $sha)
+        and any($s[]; .name == $rel_fn and .digest.sha256 == $sha)
+      )
+      and any(.verificationResult.statement.predicate.bottles[];
+        .formula == $formula
+        and .release_filename == $rel_fn
+        and .bottle_sha256 == $sha
+        and .spdx_sha256 == $spdx_sha
+        and .cdx_sha256 == $cdx_sha
+      )
+    ) ][0]
+    | .verificationResult.statement.predicate.lineage_status // "unknown"
+  ' "${lineage_out}" 2>/dev/null || printf 'unknown')"
+  log_info "  [OK] Signed bottle-lineage/v1 verified (status: ${lineage_status}, SPDX + CycloneDX digests authenticated)"
 
   # 4. Verify Sigstore cosign v3 blob signature and SPDX DSSE bundle.
   local sig_bundle="${f_work}/sidecars/${parsed_release_filename}.sigstore.json"
@@ -972,6 +1028,7 @@ bundle_dir=""
 save_bundles_dir=""
 offline_mode=0
 trusted_root_arg=""
+trusted_root_sha256_arg=""
 require_cosign=0
 homebrew_mode=0
 bottle_tag="arm64_tahoe"
@@ -1010,6 +1067,11 @@ do
     --trusted-root)
       [[ $# -ge 2 ]] || usage_error "--trusted-root requires a PATH argument"
       trusted_root_arg="$2"
+      shift
+      ;;
+    --trusted-root-sha256)
+      [[ $# -ge 2 ]] || usage_error "--trusted-root-sha256 requires a 64-hex SHA-256 argument"
+      trusted_root_sha256_arg="$2"
       shift
       ;;
     --require-cosign)
@@ -1096,19 +1158,41 @@ then
 elif [[ -n "${PROVENANCE_TRUSTED_ROOT:-}" ]]
 then
   effective_trusted_root="${PROVENANCE_TRUSTED_ROOT}"
-elif [[ "${offline_mode}" -eq 1 ]] && [[ -n "${bundle_dir}" ]] && [[ -f "${bundle_dir}/trusted_root.jsonl" ]]
-then
-  effective_trusted_root="${bundle_dir}/trusted_root.jsonl"
 fi
 
 if [[ "${offline_mode}" -eq 1 ]] && [[ -z "${effective_trusted_root}" ]]
 then
-  usage_error "--offline requires --trusted-root PATH (or trusted_root.jsonl in --bundle-dir)"
+  usage_error "--offline requires explicit --trusted-root PATH outside --bundle-dir"
 fi
 
 if [[ -n "${effective_trusted_root}" ]] && [[ ! -f "${effective_trusted_root}" ]]
 then
   usage_error "Trusted root file not found: ${effective_trusted_root}"
+fi
+
+if [[ "${offline_mode}" -eq 1 ]] && [[ -n "${bundle_dir}" ]] && [[ -n "${effective_trusted_root}" ]]
+then
+  bundle_real="$(cd "${bundle_dir}" && pwd -P)"
+  bundle_real="${bundle_real%/}"
+  tr_file_real="$(resolve_physical_file "${effective_trusted_root}")"
+  if [[ "${tr_file_real}" == "${bundle_real}/"* ]]
+  then
+    usage_error "--offline requires --trusted-root outside --bundle-dir (${effective_trusted_root})"
+  fi
+fi
+
+if [[ -n "${trusted_root_sha256_arg}" ]]
+then
+  [[ "${trusted_root_sha256_arg}" =~ ^[0-9a-f]{64}$ ]] ||
+    usage_error "Invalid --trusted-root-sha256 (expected 64 lowercase hex characters): ${trusted_root_sha256_arg}"
+  [[ -n "${effective_trusted_root}" ]] ||
+    usage_error "--trusted-root-sha256 requires --trusted-root PATH"
+  actual_tr_sha="$(sha256_file "${effective_trusted_root}" || true)"
+  [[ "${actual_tr_sha}" == "${trusted_root_sha256_arg}" ]] ||
+    usage_error "Trusted root SHA-256 mismatch: expected ${trusted_root_sha256_arg}, got ${actual_tr_sha:-missing}"
+elif [[ "${offline_mode}" -eq 1 ]]
+then
+  log_info "[WARN] --offline without --trusted-root-sha256: supply --trusted-root-sha256 <64-hex> to pin the offline trust anchor"
 fi
 
 if ! command -v jq >/dev/null 2>&1

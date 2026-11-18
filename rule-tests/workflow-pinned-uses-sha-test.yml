@@ -1,0 +1,41 @@
+id: workflow-pinned-uses-sha
+valid:
+  - |
+    jobs:
+      build:
+        steps:
+          - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  - |
+    jobs:
+      setup:
+        steps:
+          - uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+  - |
+    jobs:
+      sign:
+        uses: ./.github/workflows/sign-bottles.yml
+invalid:
+  - |
+    jobs:
+      build:
+        steps:
+          - uses: actions/checkout@v6
+  - |
+    jobs:
+      build:
+        steps:
+          - uses: actions/upload-artifact@main
+  - |
+    jobs:
+      build:
+        steps:
+          - uses: sigstore/cosign-installer@756fe2d2
+  - |
+    jobs:
+      build:
+        steps:
+          - 'uses': actions/checkout@v6
+  - |
+    jobs:
+      build:
+        steps: [ { "uses": "actions/upload-artifact@main" } ]

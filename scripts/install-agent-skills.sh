@@ -48,15 +48,24 @@ find_pkgshare() {
   return 1
 }
 
-PKGSHARE="$(find_pkgshare || true)"
-if [[ -z "${PKGSHARE}" ]] || [[ ! -f "${PKGSHARE}/skills/install.sh" ]]
+if [[ -n "${RIPWIRE_INSTALLER:-}" ]]
 then
-  echo "Error: Could not locate Ripwire's bundled skills/install.sh." >&2
-  echo "Ensure 'ripwire' is installed (brew install artagon/aitools/ripwire) or set RIPWIRE_PKGSHARE." >&2
-  exit 1
+  if [[ ! -f "${RIPWIRE_INSTALLER}" ]]
+  then
+    echo "Error: Ripwire installer not found at ${RIPWIRE_INSTALLER}" >&2
+    exit 1
+  fi
+  INSTALLER="${RIPWIRE_INSTALLER}"
+else
+  PKGSHARE="$(find_pkgshare || true)"
+  if [[ -z "${PKGSHARE}" ]] || [[ ! -f "${PKGSHARE}/skills/install.sh" ]]
+  then
+    echo "Error: Could not locate Ripwire's bundled skills/install.sh." >&2
+    echo "Ensure 'ripwire' is installed (brew install artagon/aitools/ripwire) or set RIPWIRE_PKGSHARE." >&2
+    exit 1
+  fi
+  INSTALLER="${PKGSHARE}/skills/install.sh"
 fi
-
-INSTALLER="${PKGSHARE}/skills/install.sh"
 
 # ── Agent Detection ──────────────────────────────────────────────────────────
 detect_claude() {

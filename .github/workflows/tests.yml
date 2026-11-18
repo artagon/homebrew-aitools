@@ -65,13 +65,18 @@ jobs:
       - run: brew test-bot --only-tap-syntax
 
       - name: Install test prerequisites
-        run: brew install bash bats-core jq shellcheck shfmt
+        run: brew install ast-grep bash bats-core jq shellcheck shfmt
 
       - name: Lint Bats suites and helpers
         run: |
           shellcheck --shell=bash --severity=info -x tests/helpers/*.bash
           shellcheck --shell=bats --severity=info -x tests/*.bats
           shfmt -ln bats -i 2 -d tests/*.bats
+
+      - name: Run ast-grep structural rule tests and repository scan
+        run: |
+          ast-grep test --config sgconfig.yml
+          ast-grep scan --config sgconfig.yml . .github/workflows
 
       - name: Run provenance verifier Bats suite across Bash 3.2 and Bash 5+
         run: |
@@ -115,7 +120,7 @@ jobs:
         if: github.event_name != 'push'
         run: |
           if ! brew list --formula ripwire >/dev/null 2>&1; then
-            git fetch --no-tags --depth=50 origin main || true
+            git fetch --no-tags --depth=50 origin main
             if git diff --name-only origin/main...HEAD -- \
               scripts/install-agent-skills.sh tests/integration_agent_install.bats tests/helpers/agent_install_helper.bash | grep -q .; then
               host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"

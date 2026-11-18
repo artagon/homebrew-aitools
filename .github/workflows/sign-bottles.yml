@@ -42,6 +42,10 @@ on:
         required: false
         default: false
         type: boolean
+    outputs:
+      created_draft_ids:
+        description: Comma-separated numeric IDs of draft GitHub Releases created by this run
+        value: ${{ jobs.sign.outputs.created_draft_ids }}
 
 permissions: {}
 
@@ -59,10 +63,25 @@ jobs:
       attestations: write # store SLSA v1 and bottle-lineage/v1 attestations
       contents: write # upload bottles (publish draft) and provenance sidecars
       id-token: write # request OIDC tokens for GitHub Attestations and Sigstore Fulcio
+    outputs:
+      created_draft_ids: ${{ steps.upload.outputs.created_draft_ids }}
     steps:
+      - name: Enforce repository and main-branch signing boundary
+        env:
+          ACTUAL_REF: ${{ github.ref }}
+          ACTUAL_REPO: ${{ github.repository }}
+          EXPECTED_REF: refs/heads/main
+          EXPECTED_REPO: artagon/homebrew-aitools
+        run: |
+          if [[ "${ACTUAL_REPO}" != "${EXPECTED_REPO}" || "${ACTUAL_REF}" != "${EXPECTED_REF}" ]]; then
+            echo "::error::sign-bottles.yml must execute only on ${EXPECTED_REPO}@${EXPECTED_REF} (got ${ACTUAL_REPO}@${ACTUAL_REF})"
+            exit 1
+          fi
+
       - name: Check out trusted main scripts
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          repository: artagon/homebrew-aitools
           ref: ${{ github.sha }}
           persist-credentials: false
 
@@ -109,6 +128,7 @@ jobs:
         run: ./scripts/ci/sign-and-attest.sh sign-and-verify
 
       - name: Upload signed assets to GitHub Releases
+        id: upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}

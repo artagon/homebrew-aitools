@@ -1,0 +1,25 @@
+id: bash-no-mapfile-readarray
+language: Bash
+severity: error
+message: Use a read loop compatible with macOS Bash 3.2 instead of mapfile or readarray.
+note: The tap's scripts must run on /bin/bash 3.2, which does not provide these builtins.
+files:
+  - scripts/**/*.sh
+  - tests/helpers/**/*.bash
+  - tests/**/*.bats
+rule:
+  any:
+    - kind: command
+      has:
+        field: name
+        kind: command_name
+        regex: '^(mapfile|readarray)$'
+        stopBy: neighbor
+    - pattern: builtin mapfile $$$ARGS
+    - pattern: builtin readarray $$$ARGS
+    - pattern: builtin mapfile
+    - pattern: builtin readarray
+    - pattern: command mapfile $$$ARGS
+    - pattern: command readarray $$$ARGS
+    - pattern: command mapfile
+    - pattern: command readarray

@@ -1,0 +1,72 @@
+id: workflow-pinned-uses-sha
+snapshots:
+  "jobs:\n  build:\n    steps:\n      - 'uses': actions/checkout@v6\n":
+    labels:
+    - source: "'uses': actions/checkout@v6"
+      style: primary
+      start: 34
+      end: 61
+    - source: actions/checkout@v6
+      style: secondary
+      start: 42
+      end: 61
+    - source: "'uses'"
+      style: secondary
+      start: 34
+      end: 40
+  "jobs:\n  build:\n    steps:\n      - uses: actions/checkout@v6\n":
+    labels:
+    - source: "uses: actions/checkout@v6"
+      style: primary
+      start: 34
+      end: 59
+    - source: actions/checkout@v6
+      style: secondary
+      start: 40
+      end: 59
+    - source: uses
+      style: secondary
+      start: 34
+      end: 38
+  "jobs:\n  build:\n    steps:\n      - uses: actions/upload-artifact@main\n":
+    labels:
+    - source: "uses: actions/upload-artifact@main"
+      style: primary
+      start: 34
+      end: 68
+    - source: actions/upload-artifact@main
+      style: secondary
+      start: 40
+      end: 68
+    - source: uses
+      style: secondary
+      start: 34
+      end: 38
+  "jobs:\n  build:\n    steps:\n      - uses: sigstore/cosign-installer@756fe2d2\n":
+    labels:
+    - source: "uses: sigstore/cosign-installer@756fe2d2"
+      style: primary
+      start: 34
+      end: 74
+    - source: sigstore/cosign-installer@756fe2d2
+      style: secondary
+      start: 40
+      end: 74
+    - source: uses
+      style: secondary
+      start: 34
+      end: 38
+  "jobs:\n  build:\n    steps: [ { \"uses\": \"actions/upload-artifact@main\" } ]\n":
+    labels:
+    - source: "\"uses\": \"actions/upload-artifact@main\""
+      style: primary
+      start: 30
+      end: 68
+    - source: "\"actions/upload-artifact@main\""
+      style: secondary
+      start: 38
+      end: 68
+    - source: "\"uses\""
+      style: secondary
+      start: 30
+      end: 36

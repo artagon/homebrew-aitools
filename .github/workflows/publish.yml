@@ -22,7 +22,7 @@ on:
         default: false
         type: boolean
       allow_workflow_changes:
-        description: Allow publishing a PR that also modifies .github/workflows/ or scripts/ci/
+        description: Allow publishing a PR that also modifies .github/ or scripts/
         required: false
         default: false
         type: boolean
@@ -51,6 +51,7 @@ jobs:
       pull-requests: read # validate pull request state and head commit
     outputs:
       base_main_sha: ${{ steps.stage.outputs.base_main_sha }}
+      commits_mbox_sha256: ${{ steps.stage.outputs.commits_mbox_sha256 }}
       release_map_sha256: ${{ steps.stage.outputs.release_map_sha256 }}
       test_run_id: ${{ steps.validate.outputs.test_run_id }}
     steps:
@@ -162,7 +163,9 @@ jobs:
 
       - name: Verify staged patch policy and apply commits
         env:
+          ALLOW_WORKFLOW_CHANGES: ${{ inputs.allow_workflow_changes }}
           BASE_MAIN_SHA: ${{ needs.stage-bottles.outputs.base_main_sha }}
+          COMMITS_MBOX_SHA256: ${{ needs.stage-bottles.outputs.commits_mbox_sha256 }}
           HEAD_SHA: ${{ inputs.head_sha }}
           RELEASE_MAP_SHA256: ${{ needs.stage-bottles.outputs.release_map_sha256 }}
         run: bash "${RUNNER_TEMP}/trusted-scripts/ci/publish-bottles.sh" verify-patch-policy
@@ -185,6 +188,7 @@ jobs:
       - name: Clean up unshipped draft releases on push failure
         if: failure() && steps.push.outcome != 'success'
         env:
+          CREATED_DRAFT_IDS: ${{ needs.sign-bottles.outputs.created_draft_ids }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash "${RUNNER_TEMP}/trusted-scripts/ci/publish-bottles.sh" cleanup-drafts
 

@@ -1,0 +1,31 @@
+id: workflow-no-run-interpolation
+language: YAML
+severity: error
+message: Pass GitHub Actions ${{ ... }} expressions via env instead of interpolating them directly inside run scripts.
+note: Direct ${{ ... }} expansion inside run blocks creates shell command-injection vectors; pass values through env and validate them in Bash.
+files:
+  - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+rule:
+  any:
+    - kind: block_mapping_pair
+    - kind: flow_pair
+  has:
+    field: key
+    regex: '^(run|''run''|"run")$'
+    stopBy: neighbor
+  all:
+    - not:
+        inside:
+          any:
+            - kind: block_mapping_pair
+            - kind: flow_pair
+          has:
+            field: key
+            regex: '^(defaults|''defaults''|"defaults")$'
+            stopBy: neighbor
+          stopBy: end
+    - has:
+        field: value
+        regex: '\$\{\{'
+        stopBy: neighbor

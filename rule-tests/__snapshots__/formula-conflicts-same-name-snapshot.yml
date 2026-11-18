@@ -1,0 +1,20 @@
+id: formula-conflicts-same-name
+snapshots:
+  "class Herdr < Formula\n  conflicts_with \"herdr\", because: \"same name in core\"\nend\n":
+    labels:
+    - source: "conflicts_with \"herdr\", because: \"same name in core\""
+      style: primary
+      start: 24
+      end: 76
+  "class Nats < Formula\n  conflicts_with \"nats\"\nend\n":
+    labels:
+    - source: conflicts_with "nats"
+      style: primary
+      start: 23
+      end: 44
+  "class Tgrep < Formula\n  conflicts_with \"tgrep\", because: \"same name in core\"\nend\n":
+    labels:
+    - source: "conflicts_with \"tgrep\", because: \"same name in core\""
+      style: primary
+      start: 24
+      end: 76

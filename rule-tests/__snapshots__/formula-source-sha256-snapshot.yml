@@ -1,0 +1,50 @@
+id: formula-source-sha256
+snapshots:
+  "on_linux do\n  on_arm do\n    sha256 \"bad\"\n  end\nend\n":
+    labels:
+    - source: sha256 "bad"
+      style: primary
+      start: 28
+      end: 40
+  "resource \"license\" do\n  sha256 \"bad\"\nend\n":
+    labels:
+    - source: sha256 "bad"
+      style: primary
+      start: 24
+      end: 36
+  "sha256 \"#{archive_checksum}\"\n":
+    labels:
+    - source: sha256 "#{archive_checksum}"
+      style: primary
+      start: 0
+      end: 28
+  "sha256 \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0\"\n":
+    labels:
+    - source: sha256 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
+      style: primary
+      start: 0
+      end: 74
+  "sha256 \"ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789\"\n":
+    labels:
+    - source: sha256 "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789"
+      style: primary
+      start: 0
+      end: 73
+  "sha256 \"abc123\"\n":
+    labels:
+    - source: sha256 "abc123"
+      style: primary
+      start: 0
+      end: 15
+  "sha256 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'\n":
+    labels:
+    - source: sha256 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      style: primary
+      start: 0
+      end: 73
+  "sha256 :no_check\n":
+    labels:
+    - source: sha256 :no_check
+      style: primary
+      start: 0
+      end: 16

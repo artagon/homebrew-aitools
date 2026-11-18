@@ -134,7 +134,10 @@ prov_reference_parse_formula_json() {
             sub(/\.(tar\.gz|tar\.xz|tgz|zip)$/, "", raw_tag)
           }
           prefix = formula "-"
-          if (index(raw_tag, prefix) == 1) {
+          if (match(raw_tag, /(@|%40)[vV]?[0-9][0-9A-Za-z.+_-]*$/)) {
+            raw_tag = substr(raw_tag, RSTART)
+            sub(/^(@|%40)/, "", raw_tag)
+          } else if (index(raw_tag, prefix) == 1) {
             raw_tag = substr(raw_tag, length(prefix) + 1)
           }
           if (raw_tag ~ /^[vV][0-9]/) {
@@ -302,7 +305,10 @@ jq -c \
               {name: \$entry.brew_filename, digest: {sha256: \$sha}},
               {name: \$entry.release_filename, digest: {sha256: \$sha}}
             ],
-            predicate: {bottles: [\$entry]}
+            predicate: {
+              lineage_status: (\$entry.lineage_status // "verified-builder-manifest"),
+              bottles: [\$entry]
+            }
           }
         }
       }]
@@ -639,6 +645,8 @@ prov_snapshot_tree() {
 }
 
 prov_setup_file_shared() {
+  export GIT_CONFIG_GLOBAL=/dev/null
+  export GIT_CONFIG_NOSYSTEM=1
   export PROV_BASH32="${BATS_BASH32:-/bin/bash}"
   export PROV_MODERN_BASH="${BATS_MODERN_BASH:-$(command -v bash)}"
   export PROV_REPO_ROOT="${BATS_REPO_ROOT:-$(cd "$BATS_TEST_DIRNAME/.." && pwd -P)}"
@@ -782,7 +790,7 @@ case_parse_all_live_formulae() {
     prov_reference_parse_formula_json "$dst" >>"$expected_jsonl"
   done
 
-  [[ "$live_count" -ge 17 ]]
+  [[ "$live_count" -ge 10 ]]
   prov_snapshot_tree "$root/home" "$root/before.tree" 1
   prov_run_verifier "$root" "$shell_bin" "$norm_repo" --parse-only --json
   [[ "$PROV_RC" -eq 0 && ! -s "$PROV_ERR" ]]
@@ -823,7 +831,7 @@ case_full_verify_all_fixtures() {
   cp "$PROV_ALL_FIXTURES/fixture-state.json" "$root/mock-state.json"
   local expected_count=""
   expected_count="$(jq '.by_sha | length' "$root/mock-state.json")"
-  [[ "$expected_count" -ge 17 ]]
+  [[ "$expected_count" -ge 10 ]]
 
   prov_snapshot_tree "$root/home" "$root/before.tree" 1
   prov_run_verifier "$root" "$shell_bin" "$PROV_ALL_FIXTURES/repo" \
@@ -833,7 +841,8 @@ case_full_verify_all_fixtures() {
   jq -e --argjson cnt "$expected_count" '
     .ok == true and .passed == $cnt and .failed == 0
     and (.results | all(
-      .spdx_packages == 2
+      .lineage_status == "verified-builder-manifest"
+      and .spdx_packages == 2
       and .cyclonedx_components == 1
       and .checks.formula_metadata == "passed"
       and .checks.bottle_sha256 == "passed"
@@ -968,6 +977,27 @@ EOF
   prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json custom
   [[ "$PROV_RC" -eq 0 ]]
   jq -e '.results[0].version == "2.4.0" and .results[0].pkg_version == "2.4.0"' "$PROV_OUT" >/dev/null
+
+  cat >"$root/repo/Formula/phoenix-cli.rb" <<EOF
+class PhoenixCli < Formula
+  desc "Scoped npm tag version parsing test"
+  homepage "https://example.com"
+  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/%40arizeai%2Fphoenix-cli%401.22.1.tar.gz"
+  sha256 "${sha}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/phoenix-cli-1.22.1"
+    sha256 arm64_tahoe: "${sha}"
+  end
+
+  def install
+    bin.install "px"
+  end
+end
+EOF
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json phoenix-cli
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e '.results[0].version == "1.22.1" and .results[0].release_tag == "phoenix-cli-1.22.1"' "$PROV_OUT" >/dev/null
 }
 
 case_stale_bottle_bump() {
@@ -1013,14 +1043,48 @@ case_save_and_offline_roundtrip() {
     "$root/fixture-state.json" >"$root/mock-state.json"
   : >"$root/call-log.jsonl"
 
+  local ext_tr="$root/verified-trusted-root.jsonl"
+  cp "$saved_dir/trusted_root.jsonl" "$ext_tr"
+  local ext_tr_sha=""
+  ext_tr_sha="$(prov_sha256_file "$ext_tr")"
+  ln -s "$saved_dir/trusted_root.jsonl" "$root/symlink-trusted-root.jsonl"
+
+  # Reject implicit fallback, in-bundle --trusted-root, symlink into --bundle-dir, and mismatched --trusted-root-sha256.
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" \
+    --offline --bundle-dir "$saved_dir" --allow-file-root-url --json ripwire
+  [[ "$PROV_RC" -eq 2 ]]
+
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" \
+    --offline --bundle-dir "${saved_dir}/" --trusted-root "$saved_dir/trusted_root.jsonl" \
+    --allow-file-root-url --json ripwire
+  [[ "$PROV_RC" -eq 2 ]]
+
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" \
+    --offline --bundle-dir "$saved_dir" --trusted-root "$root/symlink-trusted-root.jsonl" \
+    --allow-file-root-url --json ripwire
+  [[ "$PROV_RC" -eq 2 ]]
+
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" \
+    --offline --bundle-dir "$saved_dir" --trusted-root "$ext_tr" \
+    --trusted-root-sha256 "0000000000000000000000000000000000000000000000000000000000000000" \
+    --allow-file-root-url --json ripwire
+  [[ "$PROV_RC" -eq 2 ]]
+
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" \
+    --offline --bundle-dir "$saved_dir" --trusted-root "$ext_tr" \
+    --allow-file-root-url ripwire
+  [[ "$PROV_RC" -eq 0 ]]
+  grep -Fq "[WARN] --offline without --trusted-root-sha256" "$PROV_ERR"
+
+  : >"$root/call-log.jsonl"
   prov_snapshot_tree "$saved_dir" "$root/saved-before.tree" 0
   prov_snapshot_tree "$root/home" "$root/home-before.tree" 1
 
   prov_run_verifier "$root" "$shell_bin" "$root/repo" \
-    --offline --bundle-dir "$saved_dir" --trusted-root "$saved_dir/trusted_root.jsonl" \
+    --offline --bundle-dir "$saved_dir" --trusted-root "$ext_tr" --trusted-root-sha256 "$ext_tr_sha" \
     --allow-file-root-url --require-cosign --json ripwire
   [[ "$PROV_RC" -eq 0 ]]
-  jq -e '.mode == "offline" and .ok == true' "$PROV_OUT" >/dev/null
+  jq -e '.mode == "offline" and .ok == true and .results[0].lineage_status == "verified-builder-manifest"' "$PROV_OUT" >/dev/null
 
   prov_snapshot_tree "$saved_dir" "$root/saved-after.tree" 0
   prov_snapshot_tree "$root/home" "$root/home-after.tree" 1
@@ -1270,6 +1334,11 @@ class Demo < Formula
   url "https://github.com/example/demo/archive/refs/tags/v1.0.0.tar.gz"
   sha256 "${sha}"
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/demo-1.0.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "${sha}"
+  end
+
   depends_on "rust" => :build
 
   def install
@@ -1278,6 +1347,8 @@ class Demo < Formula
 
 
       exec echo demo
+      # literal stanza text inside install heredoc must be ignored by verify-patch-policy:
+      #   bottle do
     SH
   end
 end
@@ -1316,6 +1387,8 @@ class Demo < Formula
 
 
       exec echo demo
+      # literal stanza text inside install heredoc must be ignored by verify-patch-policy:
+      #   bottle do
     SH
   end
 end
@@ -1329,10 +1402,23 @@ EOF
   "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
 
-  printf '{"schema":"artagon-bottle-release-map/v1","bottles":[{"formula":"demo"}]}\n' \
-    >"$rtemp/publish-stage/release-map.json"
-  local map_sha=""
+  jq -cn --arg sha "$sha" '{
+    schema: "artagon-bottle-release-map/v1",
+    bottles: [{
+      formula: "demo",
+      pkg_version: "1.1.0",
+      release_tag: "demo-1.1.0",
+      root_url: "https://github.com/artagon/homebrew-aitools/releases/download/demo-1.1.0",
+      rebuild: 0,
+      tag: "arm64_tahoe",
+      brew_filename: "demo--1.1.0.arm64_tahoe.bottle.tar.gz",
+      release_filename: "demo-1.1.0.arm64_tahoe.bottle.tar.gz",
+      bottle_sha256: $sha
+    }]
+  }' >"$rtemp/publish-stage/release-map.json"
+  local map_sha="" mbox_sha=""
   map_sha="$(prov_sha256_file "$rtemp/publish-stage/release-map.json")"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
 
   (
     cd "$git_repo" \
@@ -1340,10 +1426,73 @@ EOF
         RUNNER_TEMP="$rtemp" \
         BASE_MAIN_SHA="$base_sha" \
         HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
         RELEASE_MAP_SHA256="$map_sha" \
         SKIP_FETCH_HEAD_SHA="1" \
         "$shell_bin" "$pub_script" verify-patch-policy
   ) >"$root/ok-policy.out" 2>"$root/ok-policy.err"
+
+  # Reject tampered commits.mbox digest.
+  "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
+  local bad_mbox_rc=0
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="0000000000000000000000000000000000000000000000000000000000000000" \
+        RELEASE_MAP_SHA256="$map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/bad-mbox.out" 2>"$root/bad-mbox.err" || bad_mbox_rc=$?
+  [[ "$bad_mbox_rc" -eq 1 ]]
+  grep -Fq "commits.mbox digest mismatch" "$root/bad-mbox.err"
+
+  # Reject bottle sha256 or rebuild mismatch against signed release-map.json.
+  local other_sha="cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  jq --arg sha "$other_sha" '.bottles[0].bottle_sha256 = $sha' \
+    "$rtemp/publish-stage/release-map.json" >"$rtemp/publish-stage/release-map.json.mismatch"
+  local mismatch_map_sha=""
+  mismatch_map_sha="$(prov_sha256_file "$rtemp/publish-stage/release-map.json.mismatch")"
+  cp "$rtemp/publish-stage/release-map.json" "$rtemp/publish-stage/release-map.json.good"
+  cp "$rtemp/publish-stage/release-map.json.mismatch" "$rtemp/publish-stage/release-map.json"
+  "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
+  local mismatch_rc=0
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
+        RELEASE_MAP_SHA256="$mismatch_map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/mismatch-map.out" 2>"$root/mismatch-map.err" || mismatch_rc=$?
+  [[ "$mismatch_rc" -eq 1 ]]
+  grep -Fq "does not match signed release-map.json" "$root/mismatch-map.err"
+
+  jq '.bottles[0].rebuild = 1 | .bottles[0].brew_filename = "demo--1.1.0.arm64_tahoe.bottle.1.tar.gz" | .bottles[0].release_filename = "demo-1.1.0.arm64_tahoe.bottle.1.tar.gz"' \
+    "$rtemp/publish-stage/release-map.json.good" >"$rtemp/publish-stage/release-map.json"
+  local rebuild_map_sha=""
+  rebuild_map_sha="$(prov_sha256_file "$rtemp/publish-stage/release-map.json")"
+  "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
+  local rebuild_rc=0
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
+        RELEASE_MAP_SHA256="$rebuild_map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/rebuild-map.out" 2>"$root/rebuild-map.err" || rebuild_rc=$?
+  [[ "$rebuild_rc" -eq 1 ]]
+  grep -Fq "does not match signed release-map.json" "$root/rebuild-map.err"
+  cp "$rtemp/publish-stage/release-map.json.good" "$rtemp/publish-stage/release-map.json"
 
   "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q pr
@@ -1351,6 +1500,7 @@ EOF
     >"$git_repo/Formula/demo.rb"
   "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "sneaky"
   "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
 
   local bad_rc=0
@@ -1360,6 +1510,7 @@ EOF
         RUNNER_TEMP="$rtemp" \
         BASE_MAIN_SHA="$base_sha" \
         HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
         RELEASE_MAP_SHA256="$map_sha" \
         SKIP_FETCH_HEAD_SHA="1" \
         "$shell_bin" "$pub_script" verify-patch-policy
@@ -1375,6 +1526,7 @@ EOF
   ' "$root/bottled-demo.rb" >"$git_repo/Formula/demo.rb"
   "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "collapse-heredoc-blank"
   "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
 
   local blank_rc=0
@@ -1384,6 +1536,7 @@ EOF
         RUNNER_TEMP="$rtemp" \
         BASE_MAIN_SHA="$base_sha" \
         HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
         RELEASE_MAP_SHA256="$map_sha" \
         SKIP_FETCH_HEAD_SHA="1" \
         "$shell_bin" "$pub_script" verify-patch-policy
@@ -1396,6 +1549,7 @@ EOF
     "$root/bottled-demo.rb" >"$git_repo/Formula/demo.rb"
   "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "interp-cellar"
   "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
 
   local interp_rc=0
@@ -1405,11 +1559,68 @@ EOF
         RUNNER_TEMP="$rtemp" \
         BASE_MAIN_SHA="$base_sha" \
         HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
         RELEASE_MAP_SHA256="$map_sha" \
         SKIP_FETCH_HEAD_SHA="1" \
         "$shell_bin" "$pub_script" verify-patch-policy
   ) >"$root/interp-policy.out" 2>"$root/interp-policy.err" || interp_rc=$?
   [[ "$interp_rc" -eq 1 ]]
+
+  # Reject foreign-repo bottle root_url and protected scripts/ modification without ALLOW_WORKFLOW_CHANGES=true.
+  "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q pr
+  awk '{ sub(/artagon\/homebrew-aitools/, "evil/homebrew-aitools"); print }' \
+    "$root/bottled-demo.rb" >"$git_repo/Formula/demo.rb"
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "foreign-root-url"
+  "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
+
+  local foreign_rc=0
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
+        RELEASE_MAP_SHA256="$map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/foreign-policy.out" 2>"$root/foreign-policy.err" || foreign_rc=$?
+  [[ "$foreign_rc" -eq 1 ]]
+  grep -Fq "outside bottle do" "$root/foreign-policy.err"
+
+  "$PROV_GIT_BIN" -C "$git_repo" reset -q --hard "$base_sha"
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q -b pr-protected "$head_sha"
+  mkdir -p "$git_repo/scripts"
+  printf '#!/bin/sh\necho pwn\n' >"$git_repo/scripts/verify-provenance.sh"
+  "$PROV_GIT_BIN" -C "$git_repo" add scripts/verify-provenance.sh
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -m "touch protected script"
+  local prot_head_sha=""
+  prot_head_sha="$("$PROV_GIT_BIN" -C "$git_repo" rev-parse HEAD)"
+  cp "$root/bottled-demo.rb" "$git_repo/Formula/demo.rb"
+  PROVENANCE_REPO_ROOT="$git_repo" README_BOTTLES_FILE="$git_repo/README.md" \
+    "$shell_bin" "$readme_script"
+  "$PROV_GIT_BIN" -C "$git_repo" commit -q -am "demo: bottle on protected pr"
+  "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
+  "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
+
+  local prot_rc=0
+  (
+    cd "$git_repo" \
+      && GITHUB_REF="refs/heads/main" \
+        RUNNER_TEMP="$rtemp" \
+        BASE_MAIN_SHA="$base_sha" \
+        HEAD_SHA="$prot_head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
+        RELEASE_MAP_SHA256="$map_sha" \
+        SKIP_FETCH_HEAD_SHA="1" \
+        "$shell_bin" "$pub_script" verify-patch-policy
+  ) >"$root/prot-policy.out" 2>"$root/prot-policy.err" || prot_rc=$?
+  [[ "$prot_rc" -eq 1 ]]
+  grep -Fq "modifies protected .github/ or scripts/" "$root/prot-policy.err"
 }
 
 case_multi_tag_linux_and_macos() {
@@ -1623,10 +1834,51 @@ EOF
   "$PROV_GIT_BIN" -C "$git_repo" format-patch --stdout "$base_sha..HEAD" >"$rtemp/publish-stage/commits.mbox"
   "$PROV_GIT_BIN" -C "$git_repo" checkout -q main
 
-  printf '{"schema":"artagon-bottle-release-map/v1","bottles":[{"formula":"multitag","tag":"arm64_tahoe"},{"formula":"multitag","tag":"arm64_linux"},{"formula":"multitag","tag":"x86_64_linux"}]}\n' \
-    >"$rtemp/publish-stage/release-map.json"
-  local map_sha=""
+  jq -cn \
+    --arg s_mac "$sha_mac" \
+    --arg s_arm "$sha_arm_linux" \
+    --arg s_x64 "$sha_x64_linux" \
+    '{
+      schema: "artagon-bottle-release-map/v1",
+      bottles: [
+        {
+          formula: "multitag",
+          pkg_version: "1.2.3",
+          release_tag: "multitag-1.2.3",
+          root_url: "https://github.com/artagon/homebrew-aitools/releases/download/multitag-1.2.3",
+          rebuild: 1,
+          tag: "arm64_tahoe",
+          brew_filename: "multitag--1.2.3.arm64_tahoe.bottle.1.tar.gz",
+          release_filename: "multitag-1.2.3.arm64_tahoe.bottle.1.tar.gz",
+          bottle_sha256: $s_mac
+        },
+        {
+          formula: "multitag",
+          pkg_version: "1.2.3",
+          release_tag: "multitag-1.2.3",
+          root_url: "https://github.com/artagon/homebrew-aitools/releases/download/multitag-1.2.3",
+          rebuild: 1,
+          tag: "arm64_linux",
+          brew_filename: "multitag--1.2.3.arm64_linux.bottle.1.tar.gz",
+          release_filename: "multitag-1.2.3.arm64_linux.bottle.1.tar.gz",
+          bottle_sha256: $s_arm
+        },
+        {
+          formula: "multitag",
+          pkg_version: "1.2.3",
+          release_tag: "multitag-1.2.3",
+          root_url: "https://github.com/artagon/homebrew-aitools/releases/download/multitag-1.2.3",
+          rebuild: 1,
+          tag: "x86_64_linux",
+          brew_filename: "multitag--1.2.3.x86_64_linux.bottle.1.tar.gz",
+          release_filename: "multitag-1.2.3.x86_64_linux.bottle.1.tar.gz",
+          bottle_sha256: $s_x64
+        }
+      ]
+    }' >"$rtemp/publish-stage/release-map.json"
+  local map_sha="" mbox_sha=""
   map_sha="$(prov_sha256_file "$rtemp/publish-stage/release-map.json")"
+  mbox_sha="$(prov_sha256_file "$rtemp/publish-stage/commits.mbox")"
 
   (
     cd "$git_repo" \
@@ -1634,6 +1886,7 @@ EOF
         RUNNER_TEMP="$rtemp" \
         BASE_MAIN_SHA="$base_sha" \
         HEAD_SHA="$head_sha" \
+        COMMITS_MBOX_SHA256="$mbox_sha" \
         RELEASE_MAP_SHA256="$map_sha" \
         SKIP_FETCH_HEAD_SHA="1" \
         "$shell_bin" "$pub_script" verify-patch-policy

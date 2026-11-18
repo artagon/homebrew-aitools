@@ -1,0 +1,10 @@
+ruleDirs:
+  - rules
+testConfigs:
+  - testDir: rule-tests
+languageGlobs:
+  # These are basename globs, not project-relative paths. Ruby, YAML, and
+  # *.sh already have built-in mappings; include Bats suites and Bash helpers.
+  Bash:
+    - '*.bash'
+    - '*.bats'

@@ -1,0 +1,22 @@
+id: workflow-pinned-uses-sha
+language: YAML
+severity: error
+message: Pin every external GitHub Action uses reference to a full 40-character lowercase commit SHA.
+note: Only local reusable workflows (./.github/workflows/...) may omit a 40-hex commit SHA.
+files:
+  - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+rule:
+  any:
+    - kind: block_mapping_pair
+    - kind: flow_pair
+  has:
+    field: key
+    regex: '^(uses|''uses''|"uses")$'
+    stopBy: neighbor
+  all:
+    - has:
+        field: value
+        not:
+          regex: '^[''"]?(\./\.github/workflows/[A-Za-z0-9._/-]+\.ya?ml|[A-Za-z0-9._-]+/[A-Za-z0-9._/-]+@[0-9a-f]{40})[''"]?$'
+        stopBy: neighbor
