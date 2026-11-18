@@ -4,6 +4,7 @@ class Hashline < Formula
   url "https://github.com/quangdang46/hashline/archive/refs/tags/v0.9.24.tar.gz"
   sha256 "46474cafe9281e305603f5b75659c3c98832645893bfa610d699f492c5ea7197"
   license any_of: ["MIT", "Apache-2.0"]
+  revision 1
   head "https://github.com/quangdang46/hashline.git", branch: "main"
 
   livecheck do
