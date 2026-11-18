@@ -1,23 +1,24 @@
 # Maintenance context
 
-The tap maintains 23 formulae split between upstream release binaries and source
-builds. Nine formulae package pinned upstream release binaries or archives:
+The tap maintains 26 formulae split between upstream release binaries and source
+builds. Eleven formulae package pinned upstream release binaries or archives:
 `tgrep`, `ck`, `fff-mcp`, `agent-mail` (`mcp-agent-mail` and `am`), `br`, `bd`,
-`bv`, `herdr`, and `agentsync` (`ck` and `fff-mcp` skills and agent installers are
-planned in the `artagon-scripts` change `add-artagon-ck-fff-search-plugins`).
-Fourteen formulae build from source: `tree-sitter-java-valhalla` (a patched
+`bv`, `herdr`, `agentsync`, `omp`, and `pi-agent-rust` (`pi` and `rpi`; `ck` and
+`fff-mcp` skills and agent installers are planned in the `artagon-scripts` change
+`add-artagon-ck-fff-search-plugins`).
+Fifteen formulae build from source: `tree-sitter-java-valhalla` (a patched
 `tree-sitter-java` 0.23.5 that parses JDK 28 Valhalla `javac` syntax),
 `ast-grep-valhalla` and `ripwire` (compiled against `tree-sitter-java-valhalla`),
 `hashline`, `skillfile`, `skillprism`, and `squeez` (Rust), `hindsight` (Rust CLI
-plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` (Go), `waza` (Go CLI
-plus embedded Vite/React dashboard), `adrkit` (`bun` build targeting the `node`
+plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` and `magpie` (Go),
+`waza` (Go CLI plus embedded Vite/React dashboard), `adrkit` (`bun` build targeting the `node`
 runtime), `qmd` (TypeScript/Node with native `better-sqlite3`, `sqlite-vec`, and
 `node-llama-cpp`), and `basic-memory` and `skillopt` (`uv` Python 3.13 builds from
 source). CI builds and publishes Apple Silicon (`arm64_tahoe`) and Linux
 (`arm64_linux`, `x86_64_linux`) bottles across the tap.
 
-`ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, `qmd`, `waza`, and
-`skillopt` bundle agent skills or plugins under `pkgshare`. Homebrew install,
+`ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, `qmd`, `waza`,
+`skillopt`, and `pi-agent-rust` bundle agent skills or plugins under `pkgshare`. Homebrew install,
 upgrade, and uninstall must not activate agent integrations or modify live agent
 configuration files. Ripwire activation is explicit through the formula-generated
 `ripwire-agent-install` or `scripts/install-agent-skills.sh`. Where upstream tools
@@ -29,12 +30,14 @@ builds and wrappers harden them (`HASHLINE_NO_UPDATE_CHECK=1`,
 blocked; `hindsight` restricted to loopback `127.0.0.1`/`::1`/`localhost` with
 `cloud` and `autoUpdate` disabled; `squeez` defaulting to `auto_compress_md=false`,
 `persona=off`, and `wrap_bash=false`; `skillopt-sleep` defaulting to `--backend mock`
-with human review before `adopt`), and formula `caveats` warn against in-place
+with human review before `adopt`; `magpie`, `omp`, and `pi-agent-rust` enforcing
+CLI-subscription-only mode with API-key providers, paid extra-usage credits, and
+ambient `*_API_KEY` env vars disabled by default), and formula `caveats` warn against in-place
 self-updaters (`hashline update`, `am self-update`, `br upgrade`, `bv --update`,
 `herdr update`, `basic-memory update`, `hindsight-coding-agents update`,
-`squeez update`, `waza update`).
+`squeez update`, `waza update`, `magpie update`, `omp update`, `pi self-update`).
 
-`agent-mail`, `br`, and `bv` use the `MIT License with OpenAI/Anthropic Rider`.
+`agent-mail`, `br`, `bv`, and `pi-agent-rust` use the `MIT License with OpenAI/Anthropic Rider`.
 Because SPDX has no identifier for custom riders, those formulae declare
 `license :cannot_represent` and install the full upstream `LICENSE` into `prefix`.
 
@@ -51,8 +54,9 @@ also contains same-named `tgrep`, `nats`, and `herdr` formulae and differently
 named formulae with overlapping binaries. Declare `conflicts_with` only when a
 differently named formula installs conflicting executables: `ast-grep-valhalla`
 (`ast-grep`, installing `ast-grep` and `sg`), `bd` (`beads`, installing `bd`),
-`bv` (`beads_viewer`, installing `bv`), and `adrkit` (`adr-tools`, installing
-`adr`). Same-named formulae across taps (`tgrep`, `nats`, `herdr`) do not declare
+`bv` (`beads_viewer`, installing `bv`), `adrkit` (`adr-tools`, installing
+`adr`), and `pi-agent-rust` (`cln` and `pi-coding-agent`, installing `pi`).
+Same-named formulae across taps (`tgrep`, `nats`, `herdr`) do not declare
 `conflicts_with`.
 
 ## Java grammar patch
@@ -213,7 +217,7 @@ differently named formula installs conflicting executables: `ast-grep-valhalla`
      `sign-bottles.yml@refs/heads/main` SAN, `--source-ref refs/heads/main`,
      `--deny-self-hosted-runners`, and atomic dual-subject checks.
   2. Formulae packaging upstream prebuilt release binaries (`tgrep`, `ck`, `fff-mcp`,
-     `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`) attest that this tap's
+     `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest that this tap's
      CI fetched the SHA-256-pinned upstream binary and packaged the bottle, not
      that upstream compiled the binary reproducibly from source.
   3. `tests/helpers/agent_install_helper.bash` pins Ripwire's installer SHA-256 but
