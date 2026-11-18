@@ -9,6 +9,13 @@ class PiAgentRust < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/pi-agent-rust-0.8.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "dd8d8e2e36948a2f3b8d309553942e5dadefe40bb73f929ca19bff8f458aaa8c"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "f44a133dc5cd6667a1e8632dcac3f60ca8d038ff81a7686e973214078a5b0ea6"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "226e8e5c4c7b373d08f33a6a44dfeea2bbe930449c900768af2ae242b63ad5b3"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.8.0/pi-darwin-arm64.tar.xz"
