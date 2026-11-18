@@ -11,18 +11,12 @@ class Hindsight < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/hindsight-1.2.1"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "08cac7e08ebbbda7c8d8498f6e4fc64598de0ba2997b0f2b512a674a121f3221"
-  end
-
   depends_on "rust" => :build
   depends_on "node"
 
   on_linux do
     depends_on "pkgconf" => :build
-    depends_on "openssl@3"
+    depends_on "openssl@4"
   end
 
   def install
