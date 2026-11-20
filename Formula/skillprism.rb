@@ -1,8 +1,8 @@
 class Skillprism < Formula
   desc "Template compiler for multi-harness AI coding agent skills"
   homepage "https://github.com/Tuvren/skillprism"
-  url "https://github.com/Tuvren/skillprism/archive/refs/tags/v0.5.0.tar.gz"
-  sha256 "a9f5e67b6f6ce344eca2a7cbf3c7958f5b76a129bf8bfc9b4e33dd81113c0b05"
+  url "https://github.com/Tuvren/skillprism/archive/refs/tags/v0.6.0.tar.gz"
+  sha256 "0cd443b4589e7e73e15319da498fd812f9a42de190a0418d0fd714454e63df63"
   license "Apache-2.0"
   head "https://github.com/Tuvren/skillprism.git", branch: "main"
 
