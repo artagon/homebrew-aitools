@@ -1,10 +1,9 @@
 class Hindsight < Formula
   desc "Semantic agent memory CLI and local MCP server"
   homepage "https://github.com/vectorize-io/hindsight"
-  url "https://github.com/vectorize-io/hindsight/archive/refs/tags/v1.2.1.tar.gz"
-  sha256 "b5534491251f89cb93cf3b4bc2062f16ed3384058c641b674e4844b446a5e8c9"
+  url "https://github.com/vectorize-io/hindsight/archive/refs/tags/v1.2.3.tar.gz"
+  sha256 "fc2d0c800199dd34d27249e56615c118b854e0a6a44dc2a7ed1ca43df0e5ccf8"
   license "MIT"
-  revision 1
   head "https://github.com/vectorize-io/hindsight.git", branch: "main"
 
   livecheck do
