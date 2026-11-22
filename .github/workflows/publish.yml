@@ -1,5 +1,5 @@
 # Publishes the bottles that tests.yml built for a pull request, attests and
-# signs them in an isolated OIDC job, pushes bottle + README provenance commits
+# signs them in an isolated OIDC job, pushes bottle + README/ABOUT doc commits
 # to main, publishes the draft releases, and verifies Homebrew attestations.
 # Review the pull request first, then run from main:
 #   gh workflow run publish.yml -f pull_request=<number> -f head_sha=<reviewed commit>
@@ -93,7 +93,7 @@ jobs:
         with:
           syft-version: v1.56.0
 
-      - name: Prepare bottle commits, README provenance table, and stage map
+      - name: Prepare bottle commits, README/ABOUT inventories, and stage map
         id: stage
         env:
           HEAD_SHA: ${{ inputs.head_sha }}

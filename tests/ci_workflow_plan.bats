@@ -202,6 +202,7 @@ case_docs_only_pr() {
   assert_output_eq "$out" changed_style_files_json "[]"
   assert_output_eq "$out" needs_homebrew_in_lint "false"
   assert_output_eq "$out" run_readme_check "true"
+  assert_output_eq "$out" run_tap_docs_check "true"
   assert_output_eq "$out" run_lint_job "true"
   assert_output_eq "$out" run_brew_style "false"
   assert_output_eq "$out" run_brew_readall "false"
@@ -212,7 +213,7 @@ case_docs_only_pr() {
   assert_output_eq "$out" run_cask_bats "false"
   assert_output_eq "$out" run_installer_bats_standalone "false"
 
-  # Non-README doc change skips the entire lint job as well.
+  # ABOUT.md change runs tap-docs check without Homebrew or bottle provenance checks.
   local out_about="$BATS_TEST_TMPDIR/out-about.txt"
   git -C "$repo" checkout -q -b about-pr "$base_sha"
   printf '\nUpdated ABOUT.\n' >>"$repo/ABOUT.md"
@@ -224,9 +225,28 @@ case_docs_only_pr() {
     EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
 
   assert_output_eq "$out_about" has_formulae "false"
-  assert_output_eq "$out_about" run_lint_job "false"
+  assert_output_eq "$out_about" run_lint_job "true"
   assert_output_eq "$out_about" needs_homebrew_in_lint "false"
   assert_output_eq "$out_about" run_readme_check "false"
+  assert_output_eq "$out_about" run_tap_docs_check "true"
+
+  # Non-inventory doc change skips the entire lint job as well.
+  local out_other_doc="$BATS_TEST_TMPDIR/out-other-doc.txt"
+  git -C "$repo" checkout -q -b other-doc-pr "$base_sha"
+  mkdir -p "$repo/docs"
+  printf '# Notes\n' >"$repo/docs/notes.md"
+  git -C "$repo" add docs/notes.md
+  git -C "$repo" commit -q -m "docs: add notes"
+  head_sha="$(git -C "$repo" rev-parse HEAD)"
+
+  run_plan_in_repo "$shell_bin" "$repo" "$out_other_doc" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
+
+  assert_output_eq "$out_other_doc" has_formulae "false"
+  assert_output_eq "$out_other_doc" run_lint_job "false"
+  assert_output_eq "$out_other_doc" needs_homebrew_in_lint "false"
+  assert_output_eq "$out_other_doc" run_readme_check "false"
+  assert_output_eq "$out_other_doc" run_tap_docs_check "false"
 }
 
 case_single_formula_pr_and_validation() {
@@ -262,6 +282,7 @@ case_single_formula_pr_and_validation() {
   assert_output_eq "$out" run_cask_bats "false"
   assert_output_eq "$out" run_installer_bats_standalone "false"
   assert_output_eq "$out" run_readme_check "false"
+  assert_output_eq "$out" run_tap_docs_check "false"
   assert_output_eq "$out" needs_homebrew_in_lint "true"
   assert_output_eq "$out" run_lint_job "true"
 
@@ -477,6 +498,7 @@ case_intra_tap_dep_grouping() {
   assert_output_eq "$out_cask" run_cask_bats "true"
   assert_output_eq "$out_cask" run_brew_style "true"
   assert_output_eq "$out_cask" run_brew_readall "true"
+  assert_output_eq "$out_cask" run_tap_docs_check "true"
   assert_output_eq "$out_cask" needs_homebrew_in_lint "true"
   assert_output_eq "$out_cask" include_macos "false"
 }
@@ -625,6 +647,7 @@ case_push_to_main() {
   assert_output_eq "$out_formula" run_provenance_bats "true"
   assert_output_eq "$out_formula" run_cask_bats "true"
   assert_output_eq "$out_formula" run_readme_check "true"
+  assert_output_eq "$out_formula" run_tap_docs_check "true"
   assert_output_eq "$out_formula" run_installer_bats_standalone "false"
 
   # Push modifying scripts/ runs full Linux lint/Bats with zero macOS runners (also test all-zero PUSH_BEFORE fallback).

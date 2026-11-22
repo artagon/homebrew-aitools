@@ -3,8 +3,11 @@
 [![brew test-bot](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml/badge.svg)](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml)
 [![Provenance: SLSA v1 + Sigstore](https://img.shields.io/badge/provenance-SLSA%20v1%20%2B%20Sigstore-2ea44f)](https://github.com/artagon/homebrew-aitools/attestations)
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
-[![Formulae: 39](https://img.shields.io/badge/formulae-39-8250df)](#formula-catalog-by-domain)
-[![macOS Casks: 3](https://img.shields.io/badge/macOS%20casks-3-bf8700)](#7-macos-native-desktop-casks)
+<!-- BEGIN TAP_BADGES -->
+<!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
+[![Formulae: 39](https://img.shields.io/badge/formulae-39-8250df)](#complete-formula--cask-inventory)
+[![Casks: 3](https://img.shields.io/badge/casks-3-bf3989)](#complete-formula--cask-inventory)
+<!-- END TAP_BADGES -->
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
 
 Curated developer CLIs, local MCP servers, memory graphs, cross-agent hook runners, build caches, evaluation harnesses, OpenTelemetry collectors, subscription-only AI routing & coding agents, JDK 28 Valhalla-aware AST analyzers, and macOS desktop automation casks for AI coding agents.
@@ -15,7 +18,7 @@ Curated developer CLIs, local MCP servers, memory graphs, cross-agent hook runne
 > - **Hardened local-first defaults**: Wrappers disable startup update checks, telemetry, and unsolicited cloud routing, default local services to `127.0.0.1`, and block or warn against in-place self-updaters.
 > - **Cryptographic provenance**: Published bottles carry ref-bound SLSA v1 attestations, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
 
-[Quick Start](#quick-start) · [Formula Catalog](#formula-catalog-by-domain) · [MCP Server Reference](#mcp-server-reference) · [Bundled Agent Skills](#bundled-agent-skills--plugins) · [Provenance & Verification](#build-provenance--verification) · [Publishing & Autobump](#publishing--automatic-updates) · [Troubleshooting](#troubleshooting--faq)
+[Quick Start](#quick-start) · [Formula Catalog](#formula-catalog-by-domain) · [Complete Inventory](#complete-formula--cask-inventory) · [MCP Server Reference](#mcp-server-reference) · [Bundled Agent Skills](#bundled-agent-skills--plugins) · [Provenance & Verification](#build-provenance--verification) · [Publishing & Autobump](#publishing--automatic-updates) · [Troubleshooting](#troubleshooting--faq)
 
 ---
 
@@ -226,9 +229,71 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 
 ---
 
+## Complete Formula & Cask Inventory
+
+<!-- BEGIN TAP_INVENTORY -->
+<!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
+
+Total packaged tools: **42** (**39** formulae: **16** bottled, **23** source-only; **3** macOS casks).
+
+### Formulae (39)
+
+| Formula | Version | License | Bottles | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| [`adrkit`](Formula/adrkit.rb) | `0.20.0_1` | `Apache-2.0` | source | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) — Architecture governance CLI and MCP server for AI coding agents |
+| [`agent-mail`](Formula/agent-mail.rb) | `0.3.40` | Custom (`LICENSE`) | `arm64_tahoe` | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) — Asynchronous coordination MCP server and CLI for AI coding agents |
+| [`agenthooks`](Formula/agenthooks.rb) | `0.7.7` | `MIT` | source | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) — Cross-agent hook Go library and credential-scanning hook runner |
+| [`agentsync`](Formula/agentsync.rb) | `1.53.1` | `MIT` | `arm64_tahoe` | [dallay/agentsync](https://github.com/dallay/agentsync) — Sync AI agent configurations and MCP servers via symbolic links |
+| [`arize-phoenix`](Formula/arize-phoenix.rb) | `21.1.0` | `Elastic-2.0` | source | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
+| [`ast-grep-valhalla`](Formula/ast-grep-valhalla.rb) | `0.51.3` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [ast-grep.github.io](https://ast-grep.github.io/) — Code searching, linting, rewriting with a Valhalla-aware Java grammar |
+| [`autoswarm`](Formula/autoswarm.rb) | `0.1.1` | `MIT` | source | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) — Coordinate installed coding agents from one conversation |
+| [`basic-memory`](Formula/basic-memory.rb) | `1.0.0` | `AGPL-3.0-or-later` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) — Local-first knowledge graph and stdio MCP server for AI agents |
+| [`bd`](Formula/bd.rb) | `1.3.4_1` | `MIT` | source | [gastownhall/beads](https://github.com/gastownhall/beads) — Git-backed graph issue tracker for AI coding agents |
+| [`br`](Formula/br.rb) | `0.7.6` | Custom (`LICENSE`) | `arm64_tahoe` | [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) — Local-first issue tracker for AI coding agents |
+| [`bv`](Formula/bv.rb) | `0.26.0` | Custom (`LICENSE`) | `arm64_tahoe` | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) — Graph-aware terminal viewer and triage engine for Beads projects |
+| [`cairn`](Formula/cairn.rb) | `0.2.1` | `AGPL-3.0-only` | source | [oritera/Cairn](https://github.com/oritera/Cairn) — Blackboard fact-intent graph server and dispatcher for AI agents |
+| [`ck`](Formula/ck.rb) | `0.8.1` | `MIT OR Apache-2.0` | `arm64_tahoe` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
+| [`claude-mem`](Formula/claude-mem.rb) | `16.0.2` | `Apache-2.0` | source | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
+| [`codesearch`](Formula/codesearch.rb) | `1.8.11` | `Apache-2.0` | source | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
+| [`fff-mcp`](Formula/fff-mcp.rb) | `0.11.0_1` | `MIT` | source | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
+| [`hashline`](Formula/hashline.rb) | `0.9.24_1` | `MIT OR Apache-2.0` | source | [quangdang46/hashline](https://github.com/quangdang46/hashline) — Hash-anchored line editing for AI coding agents |
+| [`herdr`](Formula/herdr.rb) | `0.9.5` | `Apache-2.0` | `arm64_tahoe` | [herdrdev/herdr](https://github.com/herdrdev/herdr) — Multiplexed terminal manager for AI coding agent sessions |
+| [`hindsight`](Formula/hindsight.rb) | `1.2.1_1` | `MIT` | source | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) — Semantic agent memory CLI and local MCP server |
+| [`hyperfine`](Formula/hyperfine.rb) | `2.0.0` | `MIT OR Apache-2.0` | source | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) — Command-line benchmarking tool |
+| [`inspect-ai`](Formula/inspect-ai.rb) | `0.3.290` | `MIT` | source | [inspect.aisi.org.uk](https://inspect.aisi.org.uk/) — Agentic LLM evaluation harness bundling Inspect SWE and MLflow hooks |
+| [`kache`](Formula/kache.rb) | `2.2.0` | `Apache-2.0` | source | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) — Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA |
+| [`langfuse-cli`](Formula/langfuse-cli.rb) | `1.3.1` | `MIT` | source | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) — Command-line client for Langfuse API and versioned agent skills |
+| [`magpie`](Formula/magpie.rb) | `0.1.4435` | `MIT` | source | [usemagpie.ai](https://usemagpie.ai) — Subscription-first local gateway and router for AI coding agents |
+| [`mlflow`](Formula/mlflow.rb) | `3.18.0` | `Apache-2.0` | source | [mlflow.org](https://mlflow.org) — AI evaluation, trace, dataset, and skill registry platform with agent CLIs |
+| [`nats`](Formula/nats.rb) | `0.5.1` | `Apache-2.0` | `arm64_tahoe` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
+| [`omp`](Formula/omp.rb) | `18.22.2` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
+| [`openlit`](Formula/openlit.rb) | `2.1.1` | `Apache-2.0` | source | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
+| [`phoenix-cli`](Formula/phoenix-cli.rb) | `1.22.1` | `Apache-2.0` | source | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
+| [`pi-agent-rust`](Formula/pi-agent-rust.rb) | `0.8.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
+| [`qmd`](Formula/qmd.rb) | `2.9.0` | `MIT` | source | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
+| [`ripwire`](Formula/ripwire.rb) | `0.6.10` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) — Codebase symbol maps and call graphs for AI agents |
+| [`skillfile`](Formula/skillfile.rb) | `1.9.2_1` | `Apache-2.0` | source | [eljulians/skillfile](https://github.com/eljulians/skillfile) — Declarative package manager for AI coding agent skills |
+| [`skillopt`](Formula/skillopt.rb) | `0.2.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) — Text-space optimizer and offline sleep consolidation for AI agent skills |
+| [`skillprism`](Formula/skillprism.rb) | `0.5.0` | `Apache-2.0` | `arm64_tahoe` | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) — Template compiler for multi-harness AI coding agent skills |
+| [`squeez`](Formula/squeez.rb) | `1.49.3_1` | `Apache-2.0` | source | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) — Token compressor and stdio MCP server for AI coding agents |
+| [`tgrep`](Formula/tgrep.rb) | `1.2.7` | `MIT` | `arm64_tahoe` | [microsoft/tgrep](https://github.com/microsoft/tgrep) — Trigram-indexed grep for fast regex search in large codebases |
+| [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | `0.23.5` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) — Tree-sitter Java grammar with JDK 28 Valhalla value classes and records |
+| [`waza`](Formula/waza.rb) | `0.41.0_1` | `MIT` | source | [microsoft.github.io/waza](https://microsoft.github.io/waza/) — Evaluate and benchmark AI agent workflows, custom agents, and skills |
+
+### macOS Casks (3)
+
+| Cask | Version | Description |
+| :--- | :--- | :--- |
+| [`ghostty`](Casks/ghostty.rb) | `1.4.0` | [ghostty.org](https://ghostty.org/) — Terminal emulator that uses platform-native UI and GPU acceleration |
+| [`hammerspoon`](Casks/hammerspoon.rb) | `1.1.1` | [www.hammerspoon.org](https://www.hammerspoon.org/) — Desktop automation application |
+| [`markdown-preview`](Casks/markdown-preview.rb) | `0.0.74` | [markdownpreview.app](https://markdownpreview.app/) — Markdown previewer with bundled Quick Look extension |
+<!-- END TAP_INVENTORY -->
+
+---
+
 ## MCP Server Reference
 
-Fifteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/homebrew` on Apple Silicon or `/home/linuxbrew/.linuxbrew` on Linux; for `ast-grep` MCP, point `ast-grep-mcp` at `AST_GREP_BINARY="$PREFIX/opt/ast-grep-valhalla/bin/ast-grep"`):
+Formulae shipping local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/homebrew` on Apple Silicon or `/home/linuxbrew/.linuxbrew` on Linux; for `ast-grep` MCP, point `ast-grep-mcp` at `AST_GREP_BINARY="$PREFIX/opt/ast-grep-valhalla/bin/ast-grep"`):
 
 | Formula | Transport | Stable Entrypoint & Arguments | Required Env / Notes |
 | :--- | :--- | :--- | :--- |
@@ -265,7 +330,7 @@ agy mcp add hashline --command "$(brew --prefix)/opt/hashline/bin/hashline" --ar
 
 ## Bundled Agent Skills & Plugins
 
-Eighteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie`, `omp`, `kache`, and `agenthooks` also stage local-first config templates, JSON schemas, or Go hook modules under `share/<formula>/`):
+Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie`, `omp`, `kache`, and `agenthooks` also stage local-first config templates, JSON schemas, or Go hook modules under `share/<formula>/`):
 
 | Formula | Installed Asset Path (`$(brew --prefix <formula>)/share/<formula>/...`) | Opt-In Activation |
 | :--- | :--- | :--- |
@@ -405,7 +470,7 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 </details>
 
 **Scope & SBOM coverage notes**:
-- **28 source-built formulae** (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `codesearch`, `hashline`, `basic-memory`, `hindsight`, `claude-mem`, `qmd`, `squeez`, `autoswarm`, `cairn`, `adrkit`, `nats`, `agenthooks`, `skillfile`, `skillprism`, `waza`, `skillopt`, `hyperfine`, `kache`, `magpie`, `mlflow`, `inspect-ai`, `langfuse-cli`, `phoenix-cli`, `arize-phoenix`, `openlit`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **11 upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives; and **3 macOS casks** (`ghostty`, `hammerspoon`, `markdown-preview`) verify upstream release archives by pinned `sha256` checksums.
+- **Source-built formulae** attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives; and **macOS casks** (`ghostty`, `hammerspoon`, `markdown-preview`) verify upstream release archives by pinned `sha256` checksums.
 - Go binaries (`bd`, `bv`, `nats`, `tgrep`, `agenthooks`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `autoswarm`, `cairn`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node/Bun `package.json` inventories (`hindsight`, `claude-mem`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables and single-file `bun` bundles (`adrkit`) expose bottle archive and manifest files only.
 
 ---
@@ -420,8 +485,11 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
   ```
 - **Provenance backfill (`attest.yml`)**: Refresh sidecars on already-published releases from `main` with `gh workflow run attest.yml` (or `-f formulae="ripwire ast-grep-valhalla"`).
 - **Daily livecheck (`autobump.yml`)**: Runs [`scripts/autobump.sh`](scripts/autobump.sh) daily to open one PR per new upstream release and dispatch `tests.yml` (cascading `revision` bumps to `ast-grep-valhalla` and `ripwire` when `tree-sitter-java-valhalla` updates).
+- **Automated `README.md` & `ABOUT.md` inventories**: [`scripts/update-tap-docs.sh`](scripts/update-tap-docs.sh) deterministically syncs the badge counts and full Formula & Cask inventories in `README.md` and `ABOUT.md` directly from `Formula/*.rb` and `Casks/*.rb` (refreshed automatically by `publish.yml` and enforced by `tests.yml` via `./scripts/update-tap-docs.sh --check`).
 - **Local validation suites**: See [`tests/README.md`](tests/README.md), [`docs/ast-grep.md`](docs/ast-grep.md), [`TOOLS.md`](TOOLS.md), and [`docs/agent-context.md`](docs/agent-context.md):
   ```sh
+  ./scripts/update-tap-docs.sh --check
+  ./scripts/update-readme-bottles.sh --check
   ast-grep test --config sgconfig.yml
   ast-grep scan --config sgconfig.yml . .github/workflows
   BATS_BASH32=/bin/bash BATS_MODERN_BASH=/opt/homebrew/bin/bash bats --tap tests/*.bats

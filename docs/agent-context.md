@@ -280,9 +280,11 @@ version numbers so parallel formula pull requests do not conflict.
   every modified `Formula/*.rb` covered across all three target platforms; and
   verified `bottles_<os>` + `provenance_<os>` ZIP digests (`allow_missing_manifest=true`
   is an audited break-glass flag only for pre-provenance PRs).
-- `publish.yml` runs `scripts/update-readme-bottles.sh` after merging `bottle do`
-  blocks so `README.md`'s fenced `BOTTLE_PROVENANCE_TABLE` stays synchronized with
-  `Formula/*.rb` without creating merge conflicts across parallel formula PRs.
+- `publish.yml` runs `scripts/update-readme-bottles.sh` and `scripts/update-tap-docs.sh` after merging `bottle do`
+  blocks so `README.md`'s fenced `TAP_BADGES`, `TAP_INVENTORY`, and `BOTTLE_PROVENANCE_TABLE` blocks and `ABOUT.md`'s
+  fenced `ABOUT_INVENTORY` block stay synchronized with `Formula/*.rb` and `Casks/*.rb` without creating merge conflicts
+  across parallel formula PRs. `tests.yml` verifies `./scripts/update-tap-docs.sh --check` on pushes to `main` and on PRs
+  touching `README.md`, `ABOUT.md`, `Casks/*`, or the doc-updater scripts.
 - Multi-step CI logic lives in `scripts/ci/` (`common.sh` non-executable sourced
   `ci::*` library, `build-provenance-manifest.sh`, `stage-backfill.sh`,
   `sign-and-attest.sh`, `publish-bottles.sh`, and `verify-patch-policy.sh`) with
