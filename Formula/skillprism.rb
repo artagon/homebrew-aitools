@@ -12,8 +12,10 @@ class Skillprism < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillprism-0.5.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "bc2d0a11595523e14ffd7ae94202485d47ba5199355f9febfb3f32a68c24fd56"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillprism-0.6.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "19472306c82c1f4d974126d52a20cb16ae8b621600f921bfc0bda3abca6c4a27"
+    sha256 cellar: :any,                 arm64_linux:  "559b63a32cf92265e144d16128dcc7856f4ca611afa1a763ffdb4f2cf470bed3"
+    sha256 cellar: :any,                 x86_64_linux: "d223b348e4fdefcb0846c8368988e7c0074001865d326dc10162c2714f9f8cc7"
   end
 
   depends_on "rust" => :build
