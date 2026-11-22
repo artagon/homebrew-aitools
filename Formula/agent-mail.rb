@@ -10,8 +10,10 @@ class AgentMail < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-mail-0.3.40"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "2dcff69a3a2ac74e215f4f74bec75ad93e4124ce0e99f8de213abbb85721179f"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-mail-0.3.41"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "6473e005db9dc41f9fba49de6774d2e970ceac14444580f837a32f1974f9d194"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "d1837e257efca7f3a655902ae16f589a3cc6baaad61009daba1a78ca34030810"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "885a0c7bcf5db4a47577993b4ba4aa6b0905399fb031d4e658fd7e1f9953a802"
   end
 
   on_macos do
