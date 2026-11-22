@@ -1,5 +1,6 @@
-# Builds, tests, and bottles changed formulae. Adapted from `brew tap-new`.
-# brew pr-pull (publish.yml) stages and signs the bottle and provenance artifacts.
+# Plans scoped lint/test work and dependency-aware formula shards, builds and
+# bottles changed formulae, and packages flat per-OS bottle + provenance
+# artifacts consumed by `publish.yml` (`brew pr-pull`) and `sign-bottles.yml`.
 name: brew test-bot
 
 on:
@@ -26,8 +27,201 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
+  plan:
+    name: Plan CI scope and shards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      changed_style_files_json: ${{ steps.plan.outputs.changed_style_files_json }}
+      deleted_formulae: ${{ steps.plan.outputs.deleted_formulae }}
+      has_formulae: ${{ steps.plan.outputs.has_formulae }}
+      has_intra_tap_runtime_deps: ${{ steps.plan.outputs.has_intra_tap_runtime_deps }}
+      needs_homebrew_in_lint: ${{ steps.plan.outputs.needs_homebrew_in_lint }}
+      run_ast_grep: ${{ steps.plan.outputs.run_ast_grep }}
+      run_bats_lint: ${{ steps.plan.outputs.run_bats_lint }}
+      run_brew_audit_tap: ${{ steps.plan.outputs.run_brew_audit_tap }}
+      run_brew_readall: ${{ steps.plan.outputs.run_brew_readall }}
+      run_brew_style: ${{ steps.plan.outputs.run_brew_style }}
+      run_installer_bats_standalone: ${{ steps.plan.outputs.run_installer_bats_standalone }}
+      run_lint_job: ${{ steps.plan.outputs.run_lint_job }}
+      run_provenance_bats: ${{ steps.plan.outputs.run_provenance_bats }}
+      run_provenance_bats_macos: ${{ steps.plan.outputs.run_provenance_bats_macos }}
+      run_readme_check: ${{ steps.plan.outputs.run_readme_check }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
+      shards_json: ${{ steps.plan.outputs.shards_json }}
+      use_merge: ${{ steps.plan.outputs.use_merge }}
+    steps:
+      - name: Check out tap history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute CI plan and formula shards
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          INPUT_FORMULAE: ${{ inputs.formulae }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: ./scripts/ci/plan-ci.sh
+
+  lint:
+    name: Lint, structural rules, and Linux Bats
+    needs: plan
+    if: needs.plan.outputs.run_lint_job == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tap without Homebrew
+        if: needs.plan.outputs.needs_homebrew_in_lint != 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      # No `token:` input: the tap is public, and setup-homebrew would store the
+      # token in the global Git config.
+      - name: Set up Homebrew
+        if: needs.plan.outputs.needs_homebrew_in_lint == 'true'
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+
+      - name: Trust this tap
+        if: needs.plan.outputs.needs_homebrew_in_lint == 'true'
+        run: brew trust --tap artagon/aitools
+
+      - name: Install required lint and test tools
+        if: needs.plan.outputs.needs_homebrew_in_lint == 'true'
+        env:
+          RUN_AST_GREP: ${{ needs.plan.outputs.run_ast_grep }}
+          RUN_BATS_LINT: ${{ needs.plan.outputs.run_bats_lint }}
+          RUN_INSTALLER_BATS_STANDALONE: ${{ needs.plan.outputs.run_installer_bats_standalone }}
+          RUN_PROVENANCE_BATS: ${{ needs.plan.outputs.run_provenance_bats }}
+        run: |
+          pkgs=()
+          if [[ "${RUN_AST_GREP}" = "true" ]]; then
+            pkgs+=(ast-grep)
+          fi
+          if [[ "${RUN_BATS_LINT}" = "true" ]]; then
+            pkgs+=(shellcheck shfmt)
+          fi
+          if [[ "${RUN_PROVENANCE_BATS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
+            pkgs+=(bats-core)
+            command -v jq >/dev/null 2>&1 || pkgs+=(jq)
+          fi
+          if [[ "${#pkgs[@]}" -gt 0 ]]; then
+            brew install "${pkgs[@]}"
+          fi
+
+      - name: Run brew style
+        if: needs.plan.outputs.run_brew_style == 'true'
+        env:
+          CHANGED_STYLE_FILES_JSON: ${{ needs.plan.outputs.changed_style_files_json }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "${EVENT_NAME}" = "push" ]]; then
+            brew style artagon/aitools
+          else
+            style_files=()
+            while IFS= read -r path; do
+              [[ -n "${path}" && -f "${path}" ]] && style_files+=("${path}")
+            done < <(jq -r '.[]' <<<"${CHANGED_STYLE_FILES_JSON}")
+            if [[ "${#style_files[@]}" -gt 0 ]]; then
+              brew style "${style_files[@]}"
+            fi
+          fi
+
+      - name: Run brew readall
+        if: needs.plan.outputs.run_brew_readall == 'true'
+        run: env -u HOMEBREW_SORBET_RECURSIVE brew readall --aliases --os=all --arch=all artagon/aitools
+
+      - name: Run full-tap brew audit on main
+        if: needs.plan.outputs.run_brew_audit_tap == 'true'
+        run: env -u HOMEBREW_SORBET_RECURSIVE brew audit --except=installed --tap=artagon/aitools
+
+      - name: Lint Bats suites and helpers
+        if: needs.plan.outputs.run_bats_lint == 'true'
+        run: |
+          shellcheck --shell=bash --severity=info -x tests/helpers/*.bash
+          shellcheck --shell=bats --severity=info -x tests/*.bats
+          shfmt -ln bats -i 2 -d tests/*.bats
+
+      - name: Run ast-grep structural rule tests and repository scan
+        if: needs.plan.outputs.run_ast_grep == 'true'
+        run: |
+          ast-grep test --config sgconfig.yml
+          ast-grep scan --config sgconfig.yml . .github/workflows
+
+      - name: Run provenance and CI planner Bats suites
+        if: needs.plan.outputs.run_provenance_bats == 'true'
+        run: |
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
+            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats
+
+      - name: Run standalone Ripwire installer Bats suite
+        if: needs.plan.outputs.run_installer_bats_standalone == 'true'
+        run: |
+          host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"
+          if brew info --json=v2 artagon/aitools/ripwire | jq -e --arg t "${host_tag}" '.formulae[0].bottle.stable.files | (has($t) or has("all"))' >/dev/null; then
+            brew install --force-bottle artagon/aitools/ripwire
+          else
+            echo "::notice::No published ${host_tag} bottle for artagon/aitools/ripwire yet; installer suite runs on bottled platforms"
+            exit 0
+          fi
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
+            BATS_RIPWIRE_PKGSHARE="$(brew --prefix ripwire)/share/ripwire" \
+            bats --tap tests/integration_agent_install.bats
+
+      - name: Verify README bottle provenance table
+        if: needs.plan.outputs.run_readme_check == 'true'
+        run: ./scripts/update-readme-bottles.sh --check
+
+  shell-compat-macos:
+    name: macOS Bash 3.2 and 5+ compatibility
+    needs: plan
+    if: needs.plan.outputs.run_provenance_bats_macos == 'true' || needs.plan.outputs.run_installer_bats_standalone == 'true'
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+
+      - name: Trust this tap
+        run: brew trust --tap artagon/aitools
+
+      - name: Install macOS Bats prerequisites
+        run: brew install bash bats-core jq
+
+      - name: Run provenance and CI planner Bats suites across Bash 3.2 and Bash 5+
+        if: needs.plan.outputs.run_provenance_bats_macos == 'true'
+        run: |
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
+            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats
+
+      - name: Run standalone Ripwire installer Bats suite across Bash 3.2 and Bash 5+
+        if: needs.plan.outputs.run_installer_bats_standalone == 'true'
+        run: |
+          host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"
+          if brew info --json=v2 artagon/aitools/ripwire | jq -e --arg t "${host_tag}" '.formulae[0].bottle.stable.files | (has($t) or has("all"))' >/dev/null; then
+            brew install --force-bottle artagon/aitools/ripwire
+          else
+            echo "::error::Missing published ${host_tag} bottle for artagon/aitools/ripwire"
+            exit 1
+          fi
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
+            BATS_RIPWIRE_PKGSHARE="$(brew --prefix ripwire)/share/ripwire" \
+            bats --tap tests/integration_agent_install.bats
+
   test-bot:
-    name: Build, test, and bottle (${{ matrix.os }})
+    name: Build, test, and bottle (${{ matrix.os }}, ${{ matrix.shard.id }})
+    needs: plan
+    if: needs.plan.outputs.has_formulae == 'true' && github.event_name != 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +231,7 @@ jobs:
           - macos-26
           - ubuntu-24.04
           - ubuntu-24.04-arm
+        shard: ${{ fromJSON(needs.plan.outputs.shards_json) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     # Read-only token: pull requests from forks run here with no secrets.
@@ -62,48 +257,52 @@ jobs:
 
       - run: brew test-bot --only-setup
 
-      - run: brew test-bot --only-tap-syntax
-
-      - name: Install test prerequisites
-        run: brew install ast-grep bash bats-core jq shellcheck shfmt
-
-      - name: Lint Bats suites and helpers
-        run: |
-          shellcheck --shell=bash --severity=info -x tests/helpers/*.bash
-          shellcheck --shell=bats --severity=info -x tests/*.bats
-          shfmt -ln bats -i 2 -d tests/*.bats
-
-      - name: Run ast-grep structural rule tests and repository scan
-        run: |
-          ast-grep test --config sgconfig.yml
-          ast-grep scan --config sgconfig.yml . .github/workflows
-
-      - name: Run provenance verifier Bats suite across Bash 3.2 and Bash 5+
-        run: |
-          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
-            bats --tap tests/verify_provenance.bats
-
-      - name: Verify README bottle provenance table on main
-        if: github.event_name == 'push'
-        run: ./scripts/update-readme-bottles.sh --check
-
       - name: Build, test, and bottle formulae
         id: formulae
-        if: github.event_name != 'push'
         env:
-          FORMULAE: ${{ inputs.formulae }}
+          ADDED_FORMULAE: ${{ matrix.shard.added }}
+          DELETED_FORMULAE: ${{ needs.plan.outputs.deleted_formulae }}
+          HAS_INTRA_TAP_RUNTIME_DEPS: ${{ needs.plan.outputs.has_intra_tap_runtime_deps }}
+          SHARD_FORMULAE: ${{ matrix.shard.formulae }}
         run: |
-          read -r -a formulae <<< "${FORMULAE}"
-          for formula in ${formulae[@]+"${formulae[@]}"}; do
-            if [[ ! "${formula}" =~ ^artagon/aitools/[a-z0-9][a-z0-9@._+-]*$ ]]; then
+          IFS=',' read -r -a formulae <<<"${SHARD_FORMULAE}"
+          if [[ "${#formulae[@]}" -eq 0 ]]; then
+            echo "::error::Empty shard formulae list"
+            exit 1
+          fi
+          for formula in "${formulae[@]}"; do
+            if [[ ! "${formula}" =~ ^artagon/aitools/[a-z0-9][a-z0-9@._+-]*$ || "${formula}" == *".."* ]]; then
               echo "::error::Not a formula of this tap: ${formula}"
               exit 1
             fi
           done
-          brew test-bot --only-formulae ${formulae[@]+"${formulae[@]}"}
+          test_bot_args=(--only-formulae "--testing-formulae=${SHARD_FORMULAE}")
+          if [[ -n "${ADDED_FORMULAE}" ]]; then
+            IFS=',' read -r -a added <<<"${ADDED_FORMULAE}"
+            for formula in ${added[@]+"${added[@]}"}; do
+              if [[ ! "${formula}" =~ ^artagon/aitools/[a-z0-9][a-z0-9@._+-]*$ || "${formula}" == *".."* ]]; then
+                echo "::error::Not a formula of this tap in added_formulae: ${formula}"
+                exit 1
+              fi
+            done
+            test_bot_args+=("--added-formulae=${ADDED_FORMULAE}")
+          fi
+          if [[ -n "${DELETED_FORMULAE}" ]]; then
+            IFS=',' read -r -a deleted <<<"${DELETED_FORMULAE}"
+            for formula in ${deleted[@]+"${deleted[@]}"}; do
+              if [[ ! "${formula}" =~ ^artagon/aitools/[a-z0-9][a-z0-9@._+-]*$ || "${formula}" == *".."* ]]; then
+                echo "::error::Not a formula of this tap in deleted_formulae: ${formula}"
+                exit 1
+              fi
+            done
+            test_bot_args+=("--deleted-formulae=${DELETED_FORMULAE}")
+          fi
+          if [[ "${HAS_INTRA_TAP_RUNTIME_DEPS}" = "false" ]]; then
+            test_bot_args+=(--skip-dependents)
+          fi
+          brew test-bot "${test_bot_args[@]}"
 
       - name: Fail if brew test-bot skipped or failed any formula
-        if: github.event_name != 'push'
         env:
           MATRIX_OS: ${{ matrix.os }}
           SKIPPED_OR_FAILED: ${{ steps.formulae.outputs.skipped_or_failed_formulae }}
@@ -114,30 +313,9 @@ jobs:
           fi
 
       # test-bot leaves each tested formula installed from its new bottle.
-      # If installer/test files changed without rebuilding ripwire, pour the published
-      # ripwire bottle so both installer entrypoints are still exercised.
-      - name: Run installer integration Bats suite
-        if: github.event_name != 'push'
+      - name: Run installer integration Bats suite against freshly built ripwire
+        if: matrix.shard.has_ripwire
         run: |
-          if ! brew list --formula ripwire >/dev/null 2>&1; then
-            git fetch --no-tags --depth=50 origin main
-            if git diff --name-only origin/main...HEAD -- \
-              scripts/install-agent-skills.sh tests/integration_agent_install.bats tests/helpers/agent_install_helper.bash | grep -q .; then
-              host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"
-              if brew info --json=v2 artagon/aitools/ripwire | jq -e --arg t "${host_tag}" '.formulae[0].bottle.stable.files | (has($t) or has("all"))' >/dev/null; then
-                brew install --force-bottle artagon/aitools/ripwire
-              elif [[ "${RUNNER_OS:-}" == "macOS" ]]; then
-                echo "::error::Missing published ${host_tag} bottle for artagon/aitools/ripwire"
-                exit 1
-              else
-                echo "::notice::No published ${host_tag} bottle for artagon/aitools/ripwire yet; installer suite ran on bottled platforms"
-                exit 0
-              fi
-            else
-              echo "ripwire and installer files were not modified in this run"
-              exit 0
-            fi
-          fi
           command -v bats >/dev/null 2>&1 || brew install bats-core
           [[ -x "$(brew --prefix)/bin/bash" ]] || brew install bash
           command -v jq >/dev/null 2>&1 || brew install jq
@@ -146,30 +324,176 @@ jobs:
             bats --tap tests/integration_agent_install.bats
 
       - name: Install Anchore syft for bottle SBOMs
-        if: success() && github.event_name != 'push'
+        if: success()
         uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
           syft-version: v1.56.0
 
       - name: Generate bottle SBOMs and build lineage manifest
-        if: success() && github.event_name != 'push'
+        if: success()
         env:
           MATRIX_OS: ${{ matrix.os }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: ./scripts/ci/build-provenance-manifest.sh
+        run: |
+          command -v jq >/dev/null 2>&1 || brew install jq
+          ./scripts/ci/build-provenance-manifest.sh
 
+      # Single-shard fast path: upload flat bottles_* and provenance_* directly.
       # Only a passing run uploads bottles: brew pr-pull checks that the run
       # completed, not that it passed.
       - name: Upload bottles as artifact
-        if: success() && github.event_name != 'push'
+        if: success() && needs.plan.outputs.use_merge == 'false'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
 
       - name: Upload provenance manifest and SBOMs
-        if: success() && github.event_name != 'push'
+        if: success() && needs.plan.outputs.use_merge == 'false'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: provenance_${{ matrix.os }}
           path: ${{ runner.temp }}/provenance/*
+
+      # Multi-shard path: stage per-shard bottles + provenance for package-artifacts.
+      - name: Stage shard bottles and provenance
+        if: success() && needs.plan.outputs.use_merge == 'true'
+        run: |
+          shard_out="${RUNNER_TEMP}/shard-out"
+          rm -rf -- "${shard_out}"
+          mkdir -p -- "${shard_out}/bottles" "${shard_out}/provenance"
+          shopt -s nullglob
+          bottle_files=(./*.bottle.*)
+          shopt -u nullglob
+          if [[ "${#bottle_files[@]}" -eq 0 ]]; then
+            echo "::error::No *.bottle.* files produced by shard"
+            exit 1
+          fi
+          cp -- "${bottle_files[@]}" "${shard_out}/bottles/"
+          cp -- "${RUNNER_TEMP}/provenance/"* "${shard_out}/provenance/"
+
+      - name: Upload shard bottles and provenance
+        if: success() && needs.plan.outputs.use_merge == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: shard_${{ matrix.os }}_${{ matrix.shard.id }}
+          path: ${{ runner.temp }}/shard-out
+          retention-days: 1
+
+  package-artifacts:
+    name: Merge bottle shards (${{ matrix.os }})
+    needs:
+      - plan
+      - test-bot
+    if: needs.plan.outputs.has_formulae == 'true' && needs.plan.outputs.use_merge == 'true' && github.event_name != 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-26
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # No dependency cache: this job merges bottle and provenance artifacts
+      # consumed by publish.yml and sign-bottles.yml.
+      - name: Check out merge script
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Download shard artifacts for OS
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: shard_${{ matrix.os }}_*
+          path: ${{ runner.temp }}/shards
+
+      - name: Verify and merge shard bottles and provenance
+        env:
+          EXPECTED_SHARD_COUNT: ${{ needs.plan.outputs.shard_count }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          MATRIX_OS: ${{ matrix.os }}
+          OUT_DIR: ${{ runner.temp }}/merged
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+          SHARDS_DIR: ${{ runner.temp }}/shards
+        run: ./scripts/ci/merge-provenance-shards.sh
+
+      - name: Upload merged bottles as artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bottles_${{ matrix.os }}
+          path: ${{ runner.temp }}/merged/bottles/*
+
+      - name: Upload merged provenance manifest and SBOMs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: provenance_${{ matrix.os }}
+          path: ${{ runner.temp }}/merged/provenance/*
+
+  checks:
+    name: Final CI status gate
+    needs:
+      - plan
+      - lint
+      - shell-compat-macos
+      - test-bot
+      - package-artifacts
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Verify all required CI jobs succeeded
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HAS_FORMULAE: ${{ needs.plan.outputs.has_formulae }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          PACKAGE_RESULT: ${{ needs.package-artifacts.result }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          RUN_INSTALLER_BATS_STANDALONE: ${{ needs.plan.outputs.run_installer_bats_standalone }}
+          RUN_LINT_JOB: ${{ needs.plan.outputs.run_lint_job }}
+          RUN_PROVENANCE_BATS_MACOS: ${{ needs.plan.outputs.run_provenance_bats_macos }}
+          SHELL_MACOS_RESULT: ${{ needs.shell-compat-macos.result }}
+          TEST_BOT_RESULT: ${{ needs.test-bot.result }}
+          USE_MERGE: ${{ needs.plan.outputs.use_merge }}
+        run: |
+          if [[ "${PLAN_RESULT}" != "success" ]]; then
+            echo "::error::plan job did not succeed (result: ${PLAN_RESULT})"
+            exit 1
+          fi
+          for pair in \
+            "lint:${LINT_RESULT}" \
+            "shell-compat-macos:${SHELL_MACOS_RESULT}" \
+            "test-bot:${TEST_BOT_RESULT}" \
+            "package-artifacts:${PACKAGE_RESULT}"; do
+            job="${pair%%:*}"
+            res="${pair#*:}"
+            if [[ "${res}" != "success" && "${res}" != "skipped" ]]; then
+              echo "::error::Upstream job ${job} ended with status: ${res}"
+              exit 1
+            fi
+          done
+          if [[ "${RUN_LINT_JOB}" = "true" && "${LINT_RESULT}" != "success" ]]; then
+            echo "::error::Expected lint job to succeed (got: ${LINT_RESULT})"
+            exit 1
+          fi
+          if [[ "${RUN_PROVENANCE_BATS_MACOS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
+            if [[ "${SHELL_MACOS_RESULT}" != "success" ]]; then
+              echo "::error::Expected shell-compat-macos job to succeed (got: ${SHELL_MACOS_RESULT})"
+              exit 1
+            fi
+          fi
+          if [[ "${HAS_FORMULAE}" = "true" && "${EVENT_NAME}" != "push" ]]; then
+            if [[ "${TEST_BOT_RESULT}" != "success" ]]; then
+              echo "::error::Expected test-bot job to succeed (got: ${TEST_BOT_RESULT})"
+              exit 1
+            fi
+            if [[ "${USE_MERGE}" = "true" && "${PACKAGE_RESULT}" != "success" ]]; then
+              echo "::error::Expected package-artifacts job to succeed (got: ${PACKAGE_RESULT})"
+              exit 1
+            fi
+          fi

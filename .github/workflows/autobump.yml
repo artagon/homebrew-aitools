@@ -20,7 +20,7 @@ defaults:
 jobs:
   autobump:
     name: Open bump pull requests
-    runs-on: macos-26
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       # Pull requests from GITHUB_TOKEN sit in action_required without dispatching tests.yml.
