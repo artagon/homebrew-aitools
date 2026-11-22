@@ -11,6 +11,14 @@ class Kache < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/kache-2.2.0"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "3a66d384ecea5ecbbb5bcabb0aee4fba40dc431b223fd6fe6d00e3b3f921fc30"
+    sha256                               arm64_linux:  "845fafd133b56f61d79f00e351b5d3eff4c762d670d685351b1996d3243d295b"
+    sha256                               x86_64_linux: "bdbb72a490b107601b4de460a850d581d7e0eefe0b53042eb99fca66afe24abb"
+  end
+
   depends_on "rust" => :build
 
   def install
