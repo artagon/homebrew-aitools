@@ -78,7 +78,7 @@ jobs:
     needs:
       - stage-releases
       - sign-bottles
-    runs-on: macos-26
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       actions: read # download attest-stage release map

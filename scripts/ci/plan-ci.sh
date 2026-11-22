@@ -6,7 +6,8 @@
 # requires awk, git, jq, mktemp, sort.
 # Inputs (via environment, never shell-interpolated in YAML):
 #   EVENT_NAME, BASE_SHA, HEAD_SHA, PUSH_BEFORE, INPUT_FORMULAE,
-#   GITHUB_OUTPUT, optional PLAN_MAX_SHARDS (default 5).
+#   INPUT_INCLUDE_MACOS, PR_LABELS_JSON, GITHUB_OUTPUT,
+#   optional PLAN_MAX_SHARDS (default 5).
 # shellcheck disable=SC2310,SC2312
 
 set -euo pipefail
@@ -18,6 +19,9 @@ source "${CI_DIR}/common.sh"
 
 readonly TAP_PREFIX="artagon/aitools"
 readonly ZERO_SHA="0000000000000000000000000000000000000000"
+readonly MACOS_BOTTLE_LABEL="build-macos-bottles"
+readonly LINUX_MATRIX_OSES_JSON='["ubuntu-24.04","ubuntu-24.04-arm"]'
+readonly ALL_MATRIX_OSES_JSON='["macos-26","ubuntu-24.04","ubuntu-24.04-arm"]'
 readonly FORMULA_PATH_RE='^Formula/([a-z0-9][a-z0-9@._+-]*)\.rb$'
 readonly FULL_FORMULA_RE='^artagon/aitools/([a-z0-9][a-z0-9@._+-]*)$'
 readonly STYLE_FILE_RE='^(Formula/[^/]+\.rb|Casks/[^/]+\.rb|scripts/(.+/)?[^/]+\.sh|\.github/workflows/[^/]+\.yml)$'
@@ -203,6 +207,8 @@ main() {
   local head_sha="${HEAD_SHA:-}"
   local push_before="${PUSH_BEFORE:-}"
   local input_formulae="${INPUT_FORMULAE:-}"
+  local input_include_macos="${INPUT_INCLUDE_MACOS:-false}"
+  local pr_labels_json="${PR_LABELS_JSON:-[]}"
   local github_output="${GITHUB_OUTPUT:-}"
   local max_shards="${PLAN_MAX_SHARDS:-5}"
 
@@ -213,6 +219,9 @@ main() {
       ci::fail "Unsupported EVENT_NAME: ${event_name:-<unset>}"
       ;;
   esac
+  ci::require_bool "${input_include_macos}" "INPUT_INCLUDE_MACOS"
+  jq -e 'type == "array" and all(.[]; type == "string")' <<<"${pr_labels_json}" >/dev/null 2>&1 ||
+    ci::fail "PR_LABELS_JSON must be a JSON array of label names"
   ci::require_uint "${max_shards}" "PLAN_MAX_SHARDS"
   [[ "${max_shards}" -ge 1 ]] || ci::fail "PLAN_MAX_SHARDS must be >= 1 (got: ${max_shards})"
 
@@ -459,6 +468,22 @@ main() {
     changed_style_files_json="$(jq -c -R -s 'split("\n") | map(select(length > 0))' "${style_files_file}")"
   fi
 
+  local include_macos="false"
+  if [[ "${event_name}" = "workflow_dispatch" && "${input_include_macos}" = "true" ]]
+  then
+    include_macos="true"
+  elif [[ "${event_name}" = "pull_request" ]] &&
+       jq -e --arg lbl "${MACOS_BOTTLE_LABEL}" 'any(.[]; . == $lbl)' <<<"${pr_labels_json}" >/dev/null
+  then
+    include_macos="true"
+  fi
+
+  local matrix_oses_json="${LINUX_MATRIX_OSES_JSON}"
+  if [[ "${include_macos}" = "true" ]]
+  then
+    matrix_oses_json="${ALL_MATRIX_OSES_JSON}"
+  fi
+
   local is_push="false"
   if [[ "${event_name}" = "push" ]]
   then
@@ -471,7 +496,7 @@ main() {
   local run_ast_grep="false"
   local run_bats_lint="false"
   local run_provenance_bats="false"
-  local run_provenance_bats_macos="false"
+  local run_cask_bats="false"
   local run_installer_bats_standalone="false"
   local run_readme_check="false"
 
@@ -479,7 +504,7 @@ main() {
   local touched_ast_grep="false"
   local touched_tests="false"
   local touched_provenance="false"
-  local touched_macos_shell="false"
+  local touched_cask_bats="false"
   local touched_installer="false"
   local touched_readme="false"
 
@@ -496,20 +521,24 @@ main() {
         ;;
       scripts/*)
         touched_ast_grep="true"
-        touched_macos_shell="true"
         ;;
       tests/*)
         touched_ast_grep="true"
         touched_tests="true"
-        touched_macos_shell="true"
         ;;
       .github/workflows/*)
         touched_ast_grep="true"
         touched_provenance="true"
-        touched_macos_shell="true"
         ;;
       README.md)
         touched_readme="true"
+        ;;
+      *) ;;
+    esac
+
+    case "${path}" in
+      Casks/* | tests/cask_postflight_defaults.bats)
+        touched_cask_bats="true"
         ;;
       *) ;;
     esac
@@ -555,9 +584,9 @@ main() {
   then
     run_provenance_bats="true"
   fi
-  if [[ "${touched_macos_shell}" = "true" ]]
+  if [[ "${is_push}" = "true" || "${touched_cask_bats}" = "true" ]]
   then
-    run_provenance_bats_macos="true"
+    run_cask_bats="true"
   fi
   if [[ "${is_push}" != "true" && "${touched_installer}" = "true" ]] &&
      ! file_has_line "ripwire" "${changed_formulae_file}"
@@ -576,6 +605,7 @@ main() {
      "${run_ast_grep}" = "true" ||
      "${run_bats_lint}" = "true" ||
      "${run_provenance_bats}" = "true" ||
+     "${run_cask_bats}" = "true" ||
      "${run_installer_bats_standalone}" = "true" ]]
   then
     needs_homebrew_in_lint="true"
@@ -592,6 +622,8 @@ main() {
     printf 'shard_count=%d\n' "${shard_count}"
     printf 'has_formulae=%s\n' "${has_formulae}"
     printf 'use_merge=%s\n' "${use_merge}"
+    printf 'include_macos=%s\n' "${include_macos}"
+    printf 'matrix_oses_json=%s\n' "${matrix_oses_json}"
     printf 'deleted_formulae=%s\n' "${deleted_formulae_csv}"
     printf 'has_intra_tap_runtime_deps=%s\n' "${has_intra_tap_runtime_deps}"
     printf 'changed_style_files_json=%s\n' "${changed_style_files_json}"
@@ -601,7 +633,7 @@ main() {
     printf 'run_ast_grep=%s\n' "${run_ast_grep}"
     printf 'run_bats_lint=%s\n' "${run_bats_lint}"
     printf 'run_provenance_bats=%s\n' "${run_provenance_bats}"
-    printf 'run_provenance_bats_macos=%s\n' "${run_provenance_bats_macos}"
+    printf 'run_cask_bats=%s\n' "${run_cask_bats}"
     printf 'run_installer_bats_standalone=%s\n' "${run_installer_bats_standalone}"
     printf 'run_readme_check=%s\n' "${run_readme_check}"
     printf 'run_lint_job=%s\n' "${run_lint_job}"

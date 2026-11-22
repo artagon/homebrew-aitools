@@ -8,19 +8,31 @@ on:
     branches:
       - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
   # scripts/autobump.sh dispatches this on bump branches, because pull requests
-  # opened with GITHUB_TOKEN start no pull_request run.
+  # opened with GITHUB_TOKEN start no pull_request run. Pass include_macos=true
+  # (or apply the `build-macos-bottles` PR label) before running publish.yml.
   workflow_dispatch:
     inputs:
       formulae:
         description: Formulae to build, test, and bottle, separated by spaces
         required: false
+      include_macos:
+        description: Also build macOS (arm64_tahoe) bottles on macos-26
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: >-
+    tests-${{ github.ref }}${{ (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name != 'build-macos-bottles') && '-unrelated-label' || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'build-macos-bottles') }}
 
 defaults:
   run:
@@ -29,6 +41,10 @@ defaults:
 jobs:
   plan:
     name: Plan CI scope and shards
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'build-macos-bottles'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -38,16 +54,18 @@ jobs:
       deleted_formulae: ${{ steps.plan.outputs.deleted_formulae }}
       has_formulae: ${{ steps.plan.outputs.has_formulae }}
       has_intra_tap_runtime_deps: ${{ steps.plan.outputs.has_intra_tap_runtime_deps }}
+      include_macos: ${{ steps.plan.outputs.include_macos }}
+      matrix_oses_json: ${{ steps.plan.outputs.matrix_oses_json }}
       needs_homebrew_in_lint: ${{ steps.plan.outputs.needs_homebrew_in_lint }}
       run_ast_grep: ${{ steps.plan.outputs.run_ast_grep }}
       run_bats_lint: ${{ steps.plan.outputs.run_bats_lint }}
       run_brew_audit_tap: ${{ steps.plan.outputs.run_brew_audit_tap }}
       run_brew_readall: ${{ steps.plan.outputs.run_brew_readall }}
       run_brew_style: ${{ steps.plan.outputs.run_brew_style }}
+      run_cask_bats: ${{ steps.plan.outputs.run_cask_bats }}
       run_installer_bats_standalone: ${{ steps.plan.outputs.run_installer_bats_standalone }}
       run_lint_job: ${{ steps.plan.outputs.run_lint_job }}
       run_provenance_bats: ${{ steps.plan.outputs.run_provenance_bats }}
-      run_provenance_bats_macos: ${{ steps.plan.outputs.run_provenance_bats_macos }}
       run_readme_check: ${{ steps.plan.outputs.run_readme_check }}
       shard_count: ${{ steps.plan.outputs.shard_count }}
       shards_json: ${{ steps.plan.outputs.shards_json }}
@@ -66,6 +84,8 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           INPUT_FORMULAE: ${{ inputs.formulae }}
+          INPUT_INCLUDE_MACOS: ${{ inputs.include_macos }}
+          PR_LABELS_JSON: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '[]' }}
           PUSH_BEFORE: ${{ github.event.before }}
         run: ./scripts/ci/plan-ci.sh
 
@@ -99,6 +119,7 @@ jobs:
         env:
           RUN_AST_GREP: ${{ needs.plan.outputs.run_ast_grep }}
           RUN_BATS_LINT: ${{ needs.plan.outputs.run_bats_lint }}
+          RUN_CASK_BATS: ${{ needs.plan.outputs.run_cask_bats }}
           RUN_INSTALLER_BATS_STANDALONE: ${{ needs.plan.outputs.run_installer_bats_standalone }}
           RUN_PROVENANCE_BATS: ${{ needs.plan.outputs.run_provenance_bats }}
         run: |
@@ -109,7 +130,7 @@ jobs:
           if [[ "${RUN_BATS_LINT}" = "true" ]]; then
             pkgs+=(shellcheck shfmt)
           fi
-          if [[ "${RUN_PROVENANCE_BATS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
+          if [[ "${RUN_PROVENANCE_BATS}" = "true" || "${RUN_CASK_BATS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
             pkgs+=(bats-core)
             command -v jq >/dev/null 2>&1 || pkgs+=(jq)
           fi
@@ -162,6 +183,12 @@ jobs:
           BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
             bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats
 
+      - name: Run cask postflight defaults Bats suite
+        if: needs.plan.outputs.run_cask_bats == 'true'
+        run: |
+          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
+            bats --tap tests/cask_postflight_defaults.bats
+
       - name: Run standalone Ripwire installer Bats suite
         if: needs.plan.outputs.run_installer_bats_standalone == 'true'
         run: |
@@ -180,57 +207,25 @@ jobs:
         if: needs.plan.outputs.run_readme_check == 'true'
         run: ./scripts/update-readme-bottles.sh --check
 
-  shell-compat-macos:
-    name: macOS Bash 3.2 and 5+ compatibility
-    needs: plan
-    if: needs.plan.outputs.run_provenance_bats_macos == 'true' || needs.plan.outputs.run_installer_bats_standalone == 'true'
-    runs-on: macos-26
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
-
-      - name: Trust this tap
-        run: brew trust --tap artagon/aitools
-
-      - name: Install macOS Bats prerequisites
-        run: brew install bash bats-core jq
-
-      - name: Run provenance and CI planner Bats suites across Bash 3.2 and Bash 5+
-        if: needs.plan.outputs.run_provenance_bats_macos == 'true'
-        run: |
-          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
-            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats
-
-      - name: Run standalone Ripwire installer Bats suite across Bash 3.2 and Bash 5+
-        if: needs.plan.outputs.run_installer_bats_standalone == 'true'
-        run: |
-          host_tag="$(brew ruby -e 'puts Utils::Bottles.tag')"
-          if brew info --json=v2 artagon/aitools/ripwire | jq -e --arg t "${host_tag}" '.formulae[0].bottle.stable.files | (has($t) or has("all"))' >/dev/null; then
-            brew install --force-bottle artagon/aitools/ripwire
-          else
-            echo "::error::Missing published ${host_tag} bottle for artagon/aitools/ripwire"
-            exit 1
-          fi
-          BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(brew --prefix)/bin/bash" \
-            BATS_RIPWIRE_PKGSHARE="$(brew --prefix ripwire)/share/ripwire" \
-            bats --tap tests/integration_agent_install.bats
-
   test-bot:
     name: Build, test, and bottle (${{ matrix.os }}, ${{ matrix.shard.id }})
-    needs: plan
-    if: needs.plan.outputs.has_formulae == 'true' && github.event_name != 'push'
+    needs:
+      - plan
+      - lint
+    if: >-
+      !cancelled() &&
+      needs.plan.result == 'success' &&
+      (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+      needs.plan.outputs.has_formulae == 'true' &&
+      github.event_name != 'push'
     strategy:
       fail-fast: false
       matrix:
-        # macos-26: arm64_tahoe; ubuntu-24.04: x86_64_linux; ubuntu-24.04-arm: arm64_linux.
-        # Ubuntu 24.04 LTS supplies glibc 2.39 (required by ck) without --privileged containers.
-        os:
-          - macos-26
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
+        # Default PRs and autobumps build Linux only (ubuntu-24.04: x86_64_linux,
+        # ubuntu-24.04-arm: arm64_linux). Opt into macos-26 (arm64_tahoe) via
+        # workflow_dispatch input `include_macos=true` or the PR label
+        # `build-macos-bottles` before publishing.
+        os: ${{ fromJSON(needs.plan.outputs.matrix_oses_json) }}
         shard: ${{ fromJSON(needs.plan.outputs.shards_json) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
@@ -389,10 +384,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-26
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
+        os: ${{ fromJSON(needs.plan.outputs.matrix_oses_json) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -439,10 +431,13 @@ jobs:
     needs:
       - plan
       - lint
-      - shell-compat-macos
       - test-bot
       - package-artifacts
-    if: always()
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'build-macos-bottles')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -454,10 +449,7 @@ jobs:
           LINT_RESULT: ${{ needs.lint.result }}
           PACKAGE_RESULT: ${{ needs.package-artifacts.result }}
           PLAN_RESULT: ${{ needs.plan.result }}
-          RUN_INSTALLER_BATS_STANDALONE: ${{ needs.plan.outputs.run_installer_bats_standalone }}
           RUN_LINT_JOB: ${{ needs.plan.outputs.run_lint_job }}
-          RUN_PROVENANCE_BATS_MACOS: ${{ needs.plan.outputs.run_provenance_bats_macos }}
-          SHELL_MACOS_RESULT: ${{ needs.shell-compat-macos.result }}
           TEST_BOT_RESULT: ${{ needs.test-bot.result }}
           USE_MERGE: ${{ needs.plan.outputs.use_merge }}
         run: |
@@ -467,7 +459,6 @@ jobs:
           fi
           for pair in \
             "lint:${LINT_RESULT}" \
-            "shell-compat-macos:${SHELL_MACOS_RESULT}" \
             "test-bot:${TEST_BOT_RESULT}" \
             "package-artifacts:${PACKAGE_RESULT}"; do
             job="${pair%%:*}"
@@ -480,12 +471,6 @@ jobs:
           if [[ "${RUN_LINT_JOB}" = "true" && "${LINT_RESULT}" != "success" ]]; then
             echo "::error::Expected lint job to succeed (got: ${LINT_RESULT})"
             exit 1
-          fi
-          if [[ "${RUN_PROVENANCE_BATS_MACOS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
-            if [[ "${SHELL_MACOS_RESULT}" != "success" ]]; then
-              echo "::error::Expected shell-compat-macos job to succeed (got: ${SHELL_MACOS_RESULT})"
-              exit 1
-            fi
           fi
           if [[ "${HAS_FORMULAE}" = "true" && "${EVENT_NAME}" != "push" ]]; then
             if [[ "${TEST_BOT_RESULT}" != "success" ]]; then

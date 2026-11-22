@@ -41,10 +41,15 @@ setup_file() {
   fi
   export CASK_MODERN_BASH
 
-  command -v ruby >/dev/null 2>&1 || {
+  CASK_RUBY_BIN="$(command -v ruby || true)"
+  if [[ -z "${CASK_RUBY_BIN}" ]] && command -v brew >/dev/null 2>&1; then
+    CASK_RUBY_BIN="$(brew --repo)/Library/Homebrew/vendor/portable-ruby/current/bin/ruby"
+  fi
+  if [[ -z "${CASK_RUBY_BIN}" ]] || [[ ! -x "${CASK_RUBY_BIN}" ]]; then
     echo "ruby is required to extract cask postflight_steps scripts" >&2
     return 1
-  }
+  fi
+  export CASK_RUBY_BIN
 }
 
 setup() {
@@ -97,7 +102,7 @@ EOF
 extract_cask_script() {
   local cask_name="$1"
   local out_file="$2"
-  ruby - "${REPO_ROOT}/Casks/${cask_name}.rb" "${out_file}" "${FAKE_DEFAULTS}" "${BATS_TEST_TMPDIR}/missing" <<'RUBY'
+  "${CASK_RUBY_BIN}" - "${REPO_ROOT}/Casks/${cask_name}.rb" "${out_file}" "${FAKE_DEFAULTS}" "${BATS_TEST_TMPDIR}/missing" <<'RUBY'
 require "shellwords"
 
 cask_path, out_path, fake_defaults, missing_prefix = ARGV
@@ -106,7 +111,7 @@ unless source.include?('"-euo", "pipefail", "-c"') && source.include?("must_succ
   abort("Missing expected postflight_steps invocation options in #{cask_path}")
 end
 
-match = source.match(/postflight_steps\s+do.*?<<~'SH',\n(.*?)\n\s*SH\n/m)
+match = source.match(/postflight_steps\s+do.*?<<~'SH',?\n(.*?)\n\s*SH\n/m)
 abort("Could not extract postflight_steps script from #{cask_path}") unless match
 
 lines = match[1].lines
