@@ -10,8 +10,10 @@ class Bv < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bv-0.26.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "949c3e637953729383216d0af65738b4918120332f1190caf0c321c4e81d6eb3"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bv-0.27.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "196bcbe461fe47862144f65bcdb930e03413e8ec62cb39ca8f11a9d8ab76294e"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "6822e2627419957d1344a4786404f9ed3e0470000afbe8b11bc9ab5e65c7e5ec"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "bd3f2bc52adc67f97a2e891985299bea502a9a92eb31bb4e436d94f0c554cd01"
   end
 
   on_macos do
