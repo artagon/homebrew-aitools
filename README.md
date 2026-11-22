@@ -399,8 +399,9 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 
 ## Publishing & Automatic Updates
 
-- **Publishing bottles (`publish.yml`)**: Every pull request runs [`tests.yml`](.github/workflows/tests.yml) across `macos-26`, `ubuntu-24.04`, and `ubuntu-24.04-arm`. Do **not** merge formula pull requests directly; publish from `main` so bottles, SBOMs, and attestations land atomically:
+- **Publishing bottles (`publish.yml`)**: Pull requests and `autobump.yml` dispatches run [`tests.yml`](.github/workflows/tests.yml) on Linux only (`ubuntu-24.04` and `ubuntu-24.04-arm`, gated on `lint`) by default. Before publishing, opt into `macos-26` (`arm64_tahoe`) bottles once on the reviewed commit via the `build-macos-bottles` PR label or `gh workflow run tests.yml --ref <branch> -f include_macos=true`, then publish from `main` (do **not** merge formula pull requests directly) so bottles, SBOMs, and attestations land atomically:
   ```sh
+  gh workflow run tests.yml --ref <branch> -f include_macos=true
   gh workflow run publish.yml -f pull_request=<number> \
     -f head_sha="$(gh pr view <number> --json headRefOid --jq .headRefOid)"
   ```

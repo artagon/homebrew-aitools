@@ -24,7 +24,7 @@ Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, a
 
 ## Pipeline & Verification
 
-- **Continuous verification**: Pull requests build, test, bottle, and generate SBOMs across `macos-26`, `ubuntu-24.04`, and `ubuntu-24.04-arm` via [`.github/workflows/tests.yml`](.github/workflows/tests.yml), gated by structural `ast-grep` rules ([`sgconfig.yml`](sgconfig.yml)) and isolated `bats-core` suites across `/bin/bash` 3.2 and Bash 5+.
+- **Continuous verification**: Pull requests run `lint` (`ubuntu-24.04`), structural `ast-grep` rules ([`sgconfig.yml`](sgconfig.yml)), isolated `bats-core` suites, and Linux `brew test-bot` builds (`ubuntu-24.04`, `ubuntu-24.04-arm`) via [`.github/workflows/tests.yml`](.github/workflows/tests.yml), opting into `macos-26` (`arm64_tahoe`) bottle builds via `include_macos=true` or the `build-macos-bottles` PR label before publishing.
 - **Automated publishing & daily livecheck**: Bottles are attested via [`.github/workflows/sign-bottles.yml`](.github/workflows/sign-bottles.yml), published atomically through [`.github/workflows/publish.yml`](.github/workflows/publish.yml) (with backfill via [`.github/workflows/attest.yml`](.github/workflows/attest.yml)), and checked daily for upstream releases via [`.github/workflows/autobump.yml`](.github/workflows/autobump.yml).
 
 ## Quick Links

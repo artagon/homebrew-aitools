@@ -84,7 +84,7 @@ case "${subcmd}" in
           [.workflow_runs[]
             | select(.head_repository.full_name == $repo and (.event == "pull_request" or .event == "workflow_dispatch"))
           ] as $runs
-          | ([$runs[] | select(.conclusion != "action_required")] | if length > 0 then . else $runs end)
+          | ([$runs[] | select(.conclusion != "action_required" and .conclusion != "skipped")] | if length > 0 then . else $runs end)
           | sort_by(.created_at, .id)
           | last // empty
         '
@@ -117,8 +117,14 @@ case "${subcmd}" in
         printf '%s\n' "${arts_json}" |
           jq -c --arg n "${bottles_art_name}" '[.artifacts[] | select(.name == $n and .expired == false)] | first // empty'
       )"
-      [[ -n "${bottles_art}" ]] ||
+      if [[ -z "${bottles_art}" ]]
+      then
+        if [[ "${matrix_os}" = "macos-26" ]]
+        then
+          ci::fail "Run ${test_run_id} has no active ${bottles_art_name} artifact (dispatch tests.yml with -f include_macos=true or apply the 'build-macos-bottles' PR label first)"
+        fi
         ci::fail "Run ${test_run_id} has no active ${bottles_art_name} artifact"
+      fi
 
       bottles_id="$(printf '%s\n' "${bottles_art}" | jq -r '.id | tostring')"
       ci::require_uint "${bottles_id}" "${bottles_art_name} artifact id"

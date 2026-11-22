@@ -184,10 +184,18 @@ version numbers so parallel formula pull requests do not conflict.
 
 ## Bottles
 
-- `tests.yml` runs `brew test-bot` across `macos-26` (`arm64_tahoe`),
-  `ubuntu-24.04` (`x86_64_linux`), and `ubuntu-24.04-arm` (`arm64_linux`), failing
-  the job immediately if `skipped_or_failed_formulae` is non-empty. Ubuntu 24.04 LTS
-  supplies `glibc 2.39` directly on hosted runners without `--privileged` containers.
+- `tests.yml` gates `test-bot` on `lint` (`ubuntu-24.04`, which also runs
+  `tests/verify_provenance.bats`, `tests/ci_workflow_plan.bats`, and
+  `tests/cask_postflight_defaults.bats` with zero macOS runners) and defaults
+  pull requests and `autobump.yml` dispatches to Linux bottle builders
+  (`ubuntu-24.04` for `x86_64_linux`, `ubuntu-24.04-arm` for `arm64_linux`),
+  failing immediately if `skipped_or_failed_formulae` is non-empty. Opt into
+  `macos-26` (`arm64_tahoe`) bottle builds once on the reviewed head via
+  `gh workflow run tests.yml --ref <branch> -f include_macos=true` or by
+  applying the `build-macos-bottles` PR label before running `publish.yml`.
+  Ubuntu 24.04 LTS supplies `glibc 2.39` directly on hosted runners without
+  `--privileged` containers. `attest.yml`'s `verify-homebrew` job likewise runs
+  on `ubuntu-24.04`.
 - `tests.yml` sets each bottle's `root_url` to
   `<tap remote>/releases/download/<formula>-<pkg_version>` (`<pkg_version>` is
   `<version>` or `<version>_<revision>`). Do not pass `--root-url` or enable

@@ -4,7 +4,7 @@ Reference marker: `artagon-aitools/provenance-and-ci/v1`.
 
 ## Publishing Flow (Never Direct-Merge Formula PRs)
 
-1. Open a pull request targeting `main`. `.github/workflows/tests.yml` runs `brew test-bot` across `macos-26` (`arm64_tahoe`), `ubuntu-24.04` (`x86_64_linux`), and `ubuntu-24.04-arm` (`arm64_linux`), scans bottles with `syft`, and uploads `bottles_<os>` + `provenance_<os>` (`publish-bottles.sh` automatically ignores inert 0-job `action_required` bot runs when `autobump.yml` dispatches `tests.yml`).
+1. Open a pull request targeting `main`. `.github/workflows/tests.yml` gates `test-bot` on `lint` (`ubuntu-24.04`) and defaults pull requests and `autobump.yml` dispatches to Linux-only builders (`ubuntu-24.04` for `x86_64_linux`, `ubuntu-24.04-arm` for `arm64_linux`). Once Linux CI passes on the reviewed head, opt into `macos-26` (`arm64_tahoe`) bottles once by applying the `build-macos-bottles` PR label or dispatching `gh workflow run tests.yml --ref <branch> -f include_macos=true` (`publish-bottles.sh` automatically ignores inert `action_required` and unrelated-label `skipped` runs).
 2. Ensure the PR branch has `behind_by == 0` relative to `main` (`publish.yml` refuses out-of-date branches).
 3. Dispatch `publish.yml` from `main`:
    ```sh

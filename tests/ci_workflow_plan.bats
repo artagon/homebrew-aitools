@@ -196,6 +196,8 @@ case_docs_only_pr() {
   assert_output_eq "$out" has_formulae "false"
   assert_output_eq "$out" shard_count "0"
   assert_output_eq "$out" use_merge "false"
+  assert_output_eq "$out" include_macos "false"
+  assert_output_eq "$out" matrix_oses_json '["ubuntu-24.04","ubuntu-24.04-arm"]'
   assert_output_eq "$out" shards_json "[]"
   assert_output_eq "$out" changed_style_files_json "[]"
   assert_output_eq "$out" needs_homebrew_in_lint "false"
@@ -207,7 +209,7 @@ case_docs_only_pr() {
   assert_output_eq "$out" run_ast_grep "false"
   assert_output_eq "$out" run_bats_lint "false"
   assert_output_eq "$out" run_provenance_bats "false"
-  assert_output_eq "$out" run_provenance_bats_macos "false"
+  assert_output_eq "$out" run_cask_bats "false"
   assert_output_eq "$out" run_installer_bats_standalone "false"
 
   # Non-README doc change skips the entire lint job as well.
@@ -246,6 +248,8 @@ case_single_formula_pr_and_validation() {
   assert_output_eq "$out" has_formulae "true"
   assert_output_eq "$out" shard_count "1"
   assert_output_eq "$out" use_merge "false"
+  assert_output_eq "$out" include_macos "false"
+  assert_output_eq "$out" matrix_oses_json '["ubuntu-24.04","ubuntu-24.04-arm"]'
   assert_output_eq "$out" has_intra_tap_runtime_deps "false"
   assert_output_eq "$out" deleted_formulae ""
   assert_output_eq "$out" changed_style_files_json '["Formula/foo.rb"]'
@@ -255,11 +259,36 @@ case_single_formula_pr_and_validation() {
   assert_output_eq "$out" run_ast_grep "true"
   assert_output_eq "$out" run_bats_lint "false"
   assert_output_eq "$out" run_provenance_bats "true"
-  assert_output_eq "$out" run_provenance_bats_macos "false"
+  assert_output_eq "$out" run_cask_bats "false"
   assert_output_eq "$out" run_installer_bats_standalone "false"
   assert_output_eq "$out" run_readme_check "false"
   assert_output_eq "$out" needs_homebrew_in_lint "true"
   assert_output_eq "$out" run_lint_job "true"
+
+  # Opting into macOS bottles via the PR label adds macos-26 to matrix_oses_json.
+  local out_macos_lbl="$BATS_TEST_TMPDIR/out-single-macos-lbl.txt"
+  run_plan_in_repo "$shell_bin" "$repo" "$out_macos_lbl" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha" \
+    PR_LABELS_JSON='["enhancement","build-macos-bottles"]'
+  assert_output_eq "$out_macos_lbl" include_macos "true"
+  assert_output_eq "$out_macos_lbl" matrix_oses_json '["macos-26","ubuntu-24.04","ubuntu-24.04-arm"]'
+
+  # Unrelated PR labels keep Linux-only matrix.
+  local out_other_lbl="$BATS_TEST_TMPDIR/out-single-other-lbl.txt"
+  run_plan_in_repo "$shell_bin" "$repo" "$out_other_lbl" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha" \
+    PR_LABELS_JSON='["documentation"]'
+  assert_output_eq "$out_other_lbl" include_macos "false"
+  assert_output_eq "$out_other_lbl" matrix_oses_json '["ubuntu-24.04","ubuntu-24.04-arm"]'
+
+  # Malformed PR_LABELS_JSON fails closed.
+  local out_bad_lbl="$BATS_TEST_TMPDIR/out-bad-lbl.txt"
+  if run_plan_in_repo "$shell_bin" "$repo" "$out_bad_lbl" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha" \
+    PR_LABELS_JSON='{"not":"an-array"}' 2>/dev/null; then
+    printf 'Expected failure on non-array PR_LABELS_JSON\n' >&2
+    return 1
+  fi
 
   local shards=""
   shards="$(get_output_value "$out" shards_json)"
@@ -417,9 +446,9 @@ case_intra_tap_dep_grouping() {
   run_plan_in_repo "$shell_bin" "$repo" "$out_with_rw" \
     EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
   assert_output_eq "$out_with_rw" run_installer_bats_standalone "false"
-  assert_output_eq "$out_with_rw" run_provenance_bats_macos "true"
+  assert_output_eq "$out_with_rw" include_macos "false"
 
-  # Touching install-agent-skills.sh WITHOUT ripwire enables standalone=true.
+  # Touching install-agent-skills.sh WITHOUT ripwire enables standalone=true on Linux lint.
   git -C "$repo" checkout -q -b installer-only "$base_sha"
   printf '# standalone installer fix\n' >>"$repo/scripts/install-agent-skills.sh"
   git -C "$repo" add scripts/install-agent-skills.sh
@@ -431,7 +460,25 @@ case_intra_tap_dep_grouping() {
     EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
   assert_output_eq "$out_standalone" has_formulae "false"
   assert_output_eq "$out_standalone" run_installer_bats_standalone "true"
-  assert_output_eq "$out_standalone" run_provenance_bats_macos "true"
+  assert_output_eq "$out_standalone" include_macos "false"
+
+  # Touching a cask enables run_cask_bats without enabling macOS runners.
+  git -C "$repo" checkout -q -b cask-only "$base_sha"
+  mkdir -p "$repo/Casks"
+  printf 'cask "demo" do\nend\n' >"$repo/Casks/demo.rb"
+  git -C "$repo" add Casks/demo.rb
+  git -C "$repo" commit -q -m "add demo cask"
+  head_sha="$(git -C "$repo" rev-parse HEAD)"
+
+  local out_cask="$BATS_TEST_TMPDIR/out-cask-only.txt"
+  run_plan_in_repo "$shell_bin" "$repo" "$out_cask" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
+  assert_output_eq "$out_cask" has_formulae "false"
+  assert_output_eq "$out_cask" run_cask_bats "true"
+  assert_output_eq "$out_cask" run_brew_style "true"
+  assert_output_eq "$out_cask" run_brew_readall "true"
+  assert_output_eq "$out_cask" needs_homebrew_in_lint "true"
+  assert_output_eq "$out_cask" include_macos "false"
 }
 
 case_runtime_dep_detection() {
@@ -506,7 +553,8 @@ case_workflow_dispatch() {
   assert_output_eq "$out_multi" has_formulae "true"
   assert_output_eq "$out_multi" shard_count "2"
   assert_output_eq "$out_multi" use_merge "true"
-  assert_output_eq "$out_multi" run_provenance_bats_macos "true"
+  assert_output_eq "$out_multi" include_macos "false"
+  assert_output_eq "$out_multi" matrix_oses_json '["ubuntu-24.04","ubuntu-24.04-arm"]'
   assert_output_eq "$out_multi" run_brew_style "true"
   local shards=""
   shards="$(get_output_value "$out_multi" shards_json)"
@@ -514,6 +562,23 @@ case_workflow_dispatch() {
     length == 2
     and ([.[].formulae] | sort == ["artagon/aitools/base","artagon/aitools/foo"])
   ' <<<"$shards" >/dev/null
+
+  # Explicit INPUT_INCLUDE_MACOS=true enables macos-26 in matrix_oses_json.
+  local out_wd_macos="$BATS_TEST_TMPDIR/out-wd-macos.txt"
+  run_plan_in_repo "$shell_bin" "$repo" "$out_wd_macos" \
+    EVENT_NAME=workflow_dispatch \
+    INPUT_FORMULAE="artagon/aitools/base" \
+    INPUT_INCLUDE_MACOS="true"
+  assert_output_eq "$out_wd_macos" include_macos "true"
+  assert_output_eq "$out_wd_macos" matrix_oses_json '["macos-26","ubuntu-24.04","ubuntu-24.04-arm"]'
+
+  # Invalid INPUT_INCLUDE_MACOS fails closed.
+  local out_bad_macos="$BATS_TEST_TMPDIR/out-wd-bad-macos.txt"
+  if run_plan_in_repo "$shell_bin" "$repo" "$out_bad_macos" \
+    EVENT_NAME=workflow_dispatch INPUT_INCLUDE_MACOS="yes" 2>/dev/null; then
+    printf 'Expected failure on invalid INPUT_INCLUDE_MACOS=yes\n' >&2
+    return 1
+  fi
 
   # Foreign tap, traversal, nonexistent formula, and shell metacharacters fail closed.
   local bad_token="" out_bad="$BATS_TEST_TMPDIR/out-wd-bad.txt"
@@ -550,17 +615,19 @@ case_push_to_main() {
   assert_output_eq "$out_formula" has_formulae "false"
   assert_output_eq "$out_formula" shard_count "0"
   assert_output_eq "$out_formula" use_merge "false"
+  assert_output_eq "$out_formula" include_macos "false"
+  assert_output_eq "$out_formula" matrix_oses_json '["ubuntu-24.04","ubuntu-24.04-arm"]'
   assert_output_eq "$out_formula" run_brew_style "true"
   assert_output_eq "$out_formula" run_brew_readall "true"
   assert_output_eq "$out_formula" run_brew_audit_tap "true"
   assert_output_eq "$out_formula" run_ast_grep "true"
   assert_output_eq "$out_formula" run_bats_lint "true"
   assert_output_eq "$out_formula" run_provenance_bats "true"
+  assert_output_eq "$out_formula" run_cask_bats "true"
   assert_output_eq "$out_formula" run_readme_check "true"
-  assert_output_eq "$out_formula" run_provenance_bats_macos "false"
   assert_output_eq "$out_formula" run_installer_bats_standalone "false"
 
-  # Push modifying scripts/ enables run_provenance_bats_macos=true (also test all-zero PUSH_BEFORE fallback).
+  # Push modifying scripts/ runs full Linux lint/Bats with zero macOS runners (also test all-zero PUSH_BEFORE fallback).
   before_sha="$(git -C "$repo" rev-parse HEAD)"
   printf '# script edit\n' >>"$repo/scripts/ci/plan-ci.sh"
   git -C "$repo" add scripts/ci/plan-ci.sh
@@ -571,9 +638,10 @@ case_push_to_main() {
     EVENT_NAME=push PUSH_BEFORE="0000000000000000000000000000000000000000"
 
   assert_output_eq "$out_script" has_formulae "false"
+  assert_output_eq "$out_script" include_macos "false"
   assert_output_eq "$out_script" run_brew_audit_tap "true"
+  assert_output_eq "$out_script" run_cask_bats "true"
   assert_output_eq "$out_script" run_readme_check "true"
-  assert_output_eq "$out_script" run_provenance_bats_macos "true"
 }
 
 write_fake_shard() {
@@ -838,7 +906,7 @@ case_merge_provenance_shards() {
   [ "$status" -eq 0 ]
 }
 
-@test "bash 3.2: push to main runs full tap audit and scopes macOS Bats to script/test/workflow changes" {
+@test "bash 3.2: push to main runs full Linux audit and Bats suites with zero macOS runners" {
   run case_push_to_main "$PLAN_BASH32"
   [ "$status" -eq 0 ]
 }
@@ -878,7 +946,7 @@ case_merge_provenance_shards() {
   [ "$status" -eq 0 ]
 }
 
-@test "bash 5+: push to main runs full tap audit and scopes macOS Bats to script/test/workflow changes" {
+@test "bash 5+: push to main runs full Linux audit and Bats suites with zero macOS runners" {
   run case_push_to_main "$PLAN_MODERN_BASH"
   [ "$status" -eq 0 ]
 }
