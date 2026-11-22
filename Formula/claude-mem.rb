@@ -313,7 +313,9 @@ class ClaudeMem < Formula
     # Prune foreign-OS/CPU prebuilt Node addons (and unused N-API prebuilds in
     # tree-sitter-* grammar packages, whose upstream linux-arm64 tarballs ship
     # mislabeled x86_64 ELF binaries) so bottles hold only host-native binaries.
-    native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
+    os_tag = OS.mac? ? "darwin" : "linux"
+    arch_tag = Hardware::CPU.arm? ? "arm64" : "x64"
+    native_tag = "#{os_tag}-#{arch_tag}"
     pkg_root.glob("**/prebuilds", File::FNM_DOTMATCH).each do |prebuilds_dir|
       next if prebuilds_dir.symlink? || !prebuilds_dir.directory?
 
