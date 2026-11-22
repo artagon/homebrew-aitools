@@ -82,7 +82,9 @@ class PhoenixCli < Formula
     JSON
 
     # Prune any foreign-OS/CPU prebuilds inside installed Node dependencies.
-    native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
+    os_tag = OS.mac? ? "darwin" : "linux"
+    arch_tag = Hardware::CPU.arm? ? "arm64" : "x64"
+    native_tag = "#{os_tag}-#{arch_tag}"
     (libexec/"node_modules").glob("**/prebuilds").each do |prebuilds_dir|
       next unless prebuilds_dir.directory?
 

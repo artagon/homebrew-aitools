@@ -132,13 +132,16 @@ class InspectAi < Formula
   end
 
   def caveats
+    inspect_swe_version = resource("inspect-swe").version
+    inspect_mlflow_version = resource("inspect-mlflow").version
+
     <<~EOS
       Homebrew manages upgrades via:
         brew upgrade artagon/aitools/inspect-ai
 
       `inspect` runs in an isolated `uv` tool environment pre-bundled with:
-        - `inspect-swe` #{resource("inspect-swe").version} (`claude_code`, `codex_cli`, `antigravity`, `gemini_cli`, `kimi_code`)
-        - `inspect-mlflow` #{resource("inspect-mlflow").version} (`MLFLOW_INSPECT_TRACING=true` tracking/tracing hooks)
+        - `inspect-swe` #{inspect_swe_version} (`claude_code`, `codex_cli`, `antigravity`, `gemini_cli`, `kimi_code`)
+        - `inspect-mlflow` #{inspect_mlflow_version} (`MLFLOW_INSPECT_TRACING=true` tracking/tracing hooks)
         - `mcp`, `anthropic`, `openai`, and `google-genai` model providers
 
       Note: Inspect AI is a Python evaluation framework. For evaluation suites that
