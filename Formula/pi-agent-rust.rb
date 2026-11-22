@@ -10,10 +10,10 @@ class PiAgentRust < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/pi-agent-rust-0.8.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "dd8d8e2e36948a2f3b8d309553942e5dadefe40bb73f929ca19bff8f458aaa8c"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "f44a133dc5cd6667a1e8632dcac3f60ca8d038ff81a7686e973214078a5b0ea6"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "226e8e5c4c7b373d08f33a6a44dfeea2bbe930449c900768af2ae242b63ad5b3"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/pi-agent-rust-0.9.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "65f8aa8965ae285a5ddfca42da1325314d6c3ab375b9666d0821093f9112b934"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "06ec2955483f2e2ddd7ef6aa37767f8cd8ea9e6a926132d13a0b12f37f2c0eb1"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "178b5c19641317c4dd834832d25fecf13299cd1c7fc02b5108c115d303a55dc3"
   end
 
   on_macos do
