@@ -12,8 +12,10 @@ class Nats < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/nats-0.5.1"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "7b52481a53a5987e4b68941e3c3d27afe9f7f1d51fc4294e67c473a72b740fa1"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/nats-0.5.2"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "719eda37b610596650add8435f1efea9c50687fd02e785405bf1312d02747f4a"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "c101c4a5fe304b2aa9d21abf18bd26fe50755f4e825a5cb02786e84bd430ee54"
+    sha256 cellar: :any,                 x86_64_linux: "e6ca22d84886abacbcbc40845487ddac6f3613bc7ec9a63ef44079bbea97b318"
   end
 
   depends_on "go" => :build
