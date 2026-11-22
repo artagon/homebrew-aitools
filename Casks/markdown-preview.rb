@@ -123,7 +123,7 @@ cask "markdown-preview" do
             exit "${rc}"
           SH
           "_",
-          "{{HOMEBREW_PREFIX}}",
+          "{{HOMEBREW_PREFIX}}"
         ],
         writable_paths: [
           "Library/Preferences",
