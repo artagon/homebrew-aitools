@@ -16,23 +16,23 @@ class AgentMail < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.40/mcp-agent-mail-aarch64-apple-darwin.tar.xz"
-      sha256 "9b410ac2ee38e25754efdf246cec69ea46ab9b88ea73aac01267ad38bf73a066"
+      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-aarch64-apple-darwin.tar.xz"
+      sha256 "1fa85ffa1578b5979d250f2ef3ae4b2fc6ae730cd50c84815755edd87b81ad4d"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.40/mcp-agent-mail-x86_64-apple-darwin.tar.xz"
-      sha256 "62a869ddde88adb51c7b65bb8185095a8a5bf01d097c66d30d0f327e0a8247dd"
+      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-x86_64-apple-darwin.tar.xz"
+      sha256 "0743ca92e0a1ee938bed7d750fc7516ab4323a51ee0fb511881dcce01fc93c4a"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.40/mcp-agent-mail-aarch64-unknown-linux-gnu.tar.xz"
-      sha256 "f8381f01927805427b8f9f40b9033c7e4a2a68853b22bc258035a2b6392b9780"
+      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-aarch64-unknown-linux-gnu.tar.xz"
+      sha256 "5e0106db798433e153eb28e4abca16dcebcdb998e6069ba87b6fa2aa5d7c9d93"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.40/mcp-agent-mail-x86_64-unknown-linux-musl.tar.xz"
-      sha256 "cd7784066ced9e53f52d20cd5785f5c785c05cd5a2d214a3165348eb67703c56"
+      url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-x86_64-unknown-linux-musl.tar.xz"
+      sha256 "30b3866304b26d14428ce0f85d34e422aca699519f1196ec2f58fbdcdb9e7ccd"
     end
   end
 
