@@ -18,23 +18,23 @@ class PiAgentRust < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.8.0/pi-darwin-arm64.tar.xz"
-      sha256 "9999ee5b05283a79b277162f739df9ff36b2ff0f8dca6cf1d6cc4e1aae5d05d9"
+      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.9.0/pi-darwin-arm64.tar.xz"
+      sha256 "658d391aec82e1ed5b8d8aef457a3243c2bda1e2df0567f00fc2e77a870ebfc4"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.8.0/pi-darwin-amd64.tar.xz"
-      sha256 "758e34ac63f4ba1c70d07609581913861f7d5d1efbf1e9c3be4b9deebb5fcfbd"
+      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.9.0/pi-darwin-amd64.tar.xz"
+      sha256 "d5343c964b29e202018f34b0f9bf8407f9e15de50158d8adb340432f0373ea5d"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.8.0/pi-linux-arm64.tar.xz"
-      sha256 "3276504d19554d7aa8af22703674186b9887c48cffc1cd1238b7bf523100abf9"
+      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.9.0/pi-linux-arm64.tar.xz"
+      sha256 "2f12b7d46a80dc336d14ad28b1dfd2111d12f1fdff749a61dcc9e0aec4afffd2"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.8.0/pi-linux-amd64.tar.xz"
-      sha256 "c04e7f87391becb17cb1ec7544d0fd767231dfb5a8361644ea8870ba3d39056d"
+      url "https://github.com/Dicklesworthstone/pi_agent_rust/releases/download/v0.9.0/pi-linux-amd64.tar.xz"
+      sha256 "813e8503ecea6527ceedf4532b60d99ddfda17a4372b6381a9448ca65d8afebc"
     end
   end
 
@@ -42,17 +42,17 @@ class PiAgentRust < Formula
   conflicts_with "pi-coding-agent", because: "both install `pi` binaries"
 
   resource "skill_main" do
-    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.8.0/.claude/skills/pi-agent-rust/SKILL.md"
+    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.9.0/.claude/skills/pi-agent-rust/SKILL.md"
     sha256 "763fa8138ba6b6e12525325e3dd6a9618bb8657c66f9b96f3749f65bbf644589"
   end
 
   resource "skill_commands" do
-    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.8.0/.claude/skills/pi-agent-rust/references/COMMANDS.md"
+    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.9.0/.claude/skills/pi-agent-rust/references/COMMANDS.md"
     sha256 "3e8917454ed1ae0f56d00857472b98acace83bcfe1d1c427e2e2e62267e8f5fe"
   end
 
   resource "skill_playbooks" do
-    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.8.0/.claude/skills/pi-agent-rust/references/DEBUGGING-PLAYBOOKS.md"
+    url "https://raw.githubusercontent.com/Dicklesworthstone/pi_agent_rust/v0.9.0/.claude/skills/pi-agent-rust/references/DEBUGGING-PLAYBOOKS.md"
     sha256 "9031fa6909b43e683053fe561891364088547548c5f0a10d6b0de533ba6d4b92"
   end
 
