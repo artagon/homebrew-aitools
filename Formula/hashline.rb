@@ -12,6 +12,14 @@ class Hashline < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/hashline-0.9.24_1"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "cf130d135a6f40247826d1d334105b8cb346ef085d355ac29230f383ef004ab6"
+    sha256 cellar: :any,                 arm64_linux:  "677ff498f8eec8f2d87fd16775cfead5000dbeccd035a112eb0124fcb78e13ea"
+    sha256 cellar: :any,                 x86_64_linux: "6e46c81c1c757c38a69403b576c6e48dcac86b741b118128a4f0002cff29bcd4"
+  end
+
   depends_on "rust" => :build
 
   def install
