@@ -11,6 +11,13 @@ class Hindsight < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/hindsight-1.2.3"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "8b770983c934451eff918de1b570c247dc587378c7c7eff1c8db858dd9f6bc0c"
+    sha256 cellar: :any,                 arm64_linux:  "f65f8f76c9e1cb1115a36f076ac7995699b4d14378069e424fd561879c77bb32"
+    sha256 cellar: :any,                 x86_64_linux: "b45f19240819c866a45f791961519092edbdd065635eac9698e7a8654a968e29"
+  end
+
   depends_on "rust" => :build
   depends_on "node"
 
