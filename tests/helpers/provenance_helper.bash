@@ -139,6 +139,8 @@ prov_reference_parse_formula_json() {
             sub(/^(@|%40)/, "", raw_tag)
           } else if (index(raw_tag, prefix) == 1) {
             raw_tag = substr(raw_tag, length(prefix) + 1)
+          } else if (!(raw_tag ~ /^[vV]?[0-9]/) && raw_tag ~ /^[A-Za-z][A-Za-z0-9._-]*-[vV][0-9][0-9A-Za-z.+_-]*$/) {
+            sub(/^[A-Za-z][A-Za-z0-9._-]*-[vV]/, "", raw_tag)
           }
           if (raw_tag ~ /^[vV][0-9]/) {
             raw_tag = substr(raw_tag, 2)
@@ -998,6 +1000,31 @@ EOF
   prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json phoenix-cli
   [[ "$PROV_RC" -eq 0 ]]
   jq -e '.results[0].version == "1.22.1" and .results[0].release_tag == "phoenix-cli-1.22.1"' "$PROV_OUT" >/dev/null
+
+  cat >"$root/repo/Formula/autoswarm.rb" <<EOF
+class Autoswarm < Formula
+  desc "Prefixed tag version parsing test"
+  homepage "https://example.com"
+  url "https://github.com/HKUDS/AutoSwarm/archive/refs/tags/desk-v0.1.1.tar.gz"
+  sha256 "${sha}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/autoswarm-0.1.1"
+    sha256 arm64_tahoe: "${sha}"
+  end
+
+  def install
+    bin.install "autoswarm"
+  end
+end
+EOF
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json autoswarm
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e '.results[0].version == "0.1.1" and .results[0].release_tag == "autoswarm-0.1.1"' "$PROV_OUT" >/dev/null
+
+  local ref_autoswarm=""
+  ref_autoswarm="$(prov_reference_parse_formula_json "$root/repo/Formula/autoswarm.rb")"
+  printf '%s\n' "$ref_autoswarm" | jq -e '.version == "0.1.1" and .release_tag == "autoswarm-0.1.1"' >/dev/null
 }
 
 case_stale_bottle_bump() {

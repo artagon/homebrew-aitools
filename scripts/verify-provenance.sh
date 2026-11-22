@@ -132,12 +132,17 @@ extract_version_from_url() {
   if [[ -n "${tag_part}" ]]
   then
     local scoped_ver_re='(@|%40)([vV]?[0-9][0-9A-Za-z.+_-]*)$'
+    local prefixed_ver_re='^[A-Za-z][A-Za-z0-9._-]*-[vV]([0-9][0-9A-Za-z.+_-]*)$'
+    local plain_ver_re='^[vV]?[0-9]'
     if [[ "${tag_part}" =~ ${scoped_ver_re} ]]
     then
       tag_part="${BASH_REMATCH[2]}"
     elif [[ "${tag_part}" == "${formula}-"* ]]
     then
       tag_part="${tag_part#"${formula}-"}"
+    elif [[ ! "${tag_part}" =~ ${plain_ver_re} ]] && [[ "${tag_part}" =~ ${prefixed_ver_re} ]]
+    then
+      tag_part="${BASH_REMATCH[1]}"
     fi
     if [[ "${tag_part}" =~ ^[vV]([0-9].*)$ ]]
     then
