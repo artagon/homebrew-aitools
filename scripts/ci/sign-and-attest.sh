@@ -21,6 +21,37 @@ list_releases_json() {
   gh api --paginate "repos/${repo_slug}/releases?per_page=100" | jq -s 'add // []'
 }
 
+upload_release_assets() {
+  local repo_slug="$1"
+  local release_tag="$2"
+  local clobber="$3"
+  shift 3
+  local -a args=(release upload "${release_tag}" --repo "${repo_slug}")
+  if [[ "${clobber}" = "true" ]]
+  then
+    args+=(--clobber)
+  fi
+  args+=(-- "$@")
+
+  local attempt=1
+  local max_attempts=6
+  while true
+  do
+    if gh "${args[@]}"
+    then
+      return 0
+    fi
+    if [[ "${attempt}" -ge "${max_attempts}" ]]
+    then
+      return 1
+    fi
+    printf 'Retrying release upload for %s (attempt %d/%d) after eventual-consistency delay...\n' \
+      "${release_tag}" "$((attempt + 1))" "${max_attempts}" >&2
+    sleep 3
+    attempt=$((attempt + 1))
+  done
+}
+
 subcmd="${1:-}"
 [[ -n "${subcmd}" ]] || ci::fail "Usage: sign-and-attest.sh <prepare|sign-and-verify|upload>"
 
@@ -500,19 +531,10 @@ case "${subcmd}" in
       then
         if awk -F '\t' -v t="${release_tag}" '$1 == t { found = 1 } END { exit(found ? 0 : 1) }' "${created_drafts_tsv}"
         then
-          gh release upload "${release_tag}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --clobber \
-            -- \
-            "work/${rel_fn}" \
-            "${sidecars[@]}"
+          upload_release_assets "${GITHUB_REPOSITORY}" "${release_tag}" "true" "work/${rel_fn}" "${sidecars[@]}"
         elif gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${release_tag}" >/dev/null 2>&1
         then
-          gh release upload "${release_tag}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            -- \
-            "work/${rel_fn}" \
-            "${sidecars[@]}"
+          upload_release_assets "${GITHUB_REPOSITORY}" "${release_tag}" "false" "work/${rel_fn}" "${sidecars[@]}"
         else
           existing_draft_id="$(
             list_releases_json "${GITHUB_REPOSITORY}" |
@@ -523,31 +545,21 @@ case "${subcmd}" in
             rm -f -- "${created_drafts_tsv}"
             ci::fail "Refusing to upload to pre-existing draft release ${existing_draft_id} (${release_tag})"
           fi
-          gh release create "${release_tag}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --draft \
-            --title "${release_tag}" \
-            --notes "Homebrew bottle and cryptographic build provenance for ${release_tag}."
           created_id="$(
-            list_releases_json "${GITHUB_REPOSITORY}" |
-              jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" \
+              -f tag_name="${release_tag}" \
+              -f name="${release_tag}" \
+              -f body="Homebrew bottle and cryptographic build provenance for ${release_tag}." \
+              -F draft=true \
+              --jq '.id | tostring'
           )"
           ci::require_uint "${created_id}" "created draft release id"
           printf '%s\t%s\n' "${release_tag}" "${created_id}" >>"${created_drafts_tsv}"
           created_ids_csv="${created_ids_csv:+${created_ids_csv},}${created_id}"
-          gh release upload "${release_tag}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --clobber \
-            -- \
-            "work/${rel_fn}" \
-            "${sidecars[@]}"
+          upload_release_assets "${GITHUB_REPOSITORY}" "${release_tag}" "true" "work/${rel_fn}" "${sidecars[@]}"
         fi
       else
-        gh release upload "${release_tag}" \
-          --repo "${GITHUB_REPOSITORY}" \
-          --clobber \
-          -- \
-          "${sidecars[@]}"
+        upload_release_assets "${GITHUB_REPOSITORY}" "${release_tag}" "true" "${sidecars[@]}"
       fi
       i=$((i + 1))
     done
