@@ -1,45 +1,61 @@
 # Maintenance context
 
-The tap maintains 26 formulae split between upstream release binaries and source
+The tap maintains 32 formulae split between upstream release binaries and source
 builds. Eleven formulae package pinned upstream release binaries or archives:
 `tgrep`, `ck`, `fff-mcp`, `agent-mail` (`mcp-agent-mail` and `am`), `br`, `bd`,
 `bv`, `herdr`, `agentsync`, `omp`, and `pi-agent-rust` (`pi` and `rpi`; `ck` and
 `fff-mcp` skills and agent installers are planned in the `artagon-scripts` change
 `add-artagon-ck-fff-search-plugins`).
-Fifteen formulae build from source: `tree-sitter-java-valhalla` (a patched
+Twenty-one formulae build from source: `tree-sitter-java-valhalla` (a patched
 `tree-sitter-java` 0.23.5 that parses JDK 28 Valhalla `javac` syntax),
 `ast-grep-valhalla` and `ripwire` (compiled against `tree-sitter-java-valhalla`),
 `hashline`, `skillfile`, `skillprism`, and `squeez` (Rust), `hindsight` (Rust CLI
-plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats` and `magpie` (Go),
-`waza` (Go CLI plus embedded Vite/React dashboard), `adrkit` (`bun` build targeting the `node`
-runtime), `qmd` (TypeScript/Node with native `better-sqlite3`, `sqlite-vec`, and
-`node-llama-cpp`), and `basic-memory` and `skillopt` (`uv` Python 3.13 builds from
-source). CI builds and publishes Apple Silicon (`arm64_tahoe`) and Linux
-(`arm64_linux`, `x86_64_linux`) bottles across the tap.
+plus TypeScript/Node `coding-agents` stdio MCP bundle), `nats`, `magpie`, and
+`openlit` (Go), `waza` (Go CLI plus embedded Vite/React dashboard), `adrkit` and
+`langfuse-cli` (`bun` builds targeting the `node` runtime), `phoenix-cli` (`pnpm`
+TypeScript workspace build targeting `node`), `qmd` (TypeScript/Node with native
+`better-sqlite3`, `sqlite-vec`, and `node-llama-cpp`), and `basic-memory`,
+`skillopt`, `inspect-ai` (bundling `inspect-swe` and `inspect-mlflow`), `mlflow`
+(Python `mlflow[mcp]` plus React UI and `@mlflow/codex` / `@mlflow/claude-code`),
+and `arize-phoenix` (`pnpm` React UI plus `uv` Python 3.13 server). CI builds and
+publishes Apple Silicon (`arm64_tahoe`) and Linux (`arm64_linux`, `x86_64_linux`)
+bottles across the tap.
 
 `ripwire`, `hashline`, `adrkit`, `basic-memory`, `hindsight`, `qmd`, `waza`,
-`skillopt`, and `pi-agent-rust` bundle agent skills or plugins under `pkgshare`. Homebrew install,
-upgrade, and uninstall must not activate agent integrations or modify live agent
-configuration files. Ripwire activation is explicit through the formula-generated
-`ripwire-agent-install` or `scripts/install-agent-skills.sh`. Where upstream tools
-run startup update checks, telemetry, cloud routing, or unsafe defaults, Homebrew
-builds and wrappers harden them (`HASHLINE_NO_UPDATE_CHECK=1`,
-`AGENTSYNC_NO_UPDATE_CHECK=1`, `SKILLFILE_NO_UPDATE_NOTIFIER=1`,
-`WAZA_NO_UPDATE_CHECK=1`, `BASIC_MEMORY_AUTO_UPDATE=false`,
+`skillopt`, `pi-agent-rust`, `mlflow`, `langfuse-cli`, `phoenix-cli`,
+`arize-phoenix`, and `openlit` bundle agent skills, guides, or plugins under
+`pkgshare`. Homebrew install, upgrade, and uninstall must not activate agent
+integrations or modify live agent configuration files. Ripwire activation is
+explicit through the formula-generated `ripwire-agent-install` or
+`scripts/install-agent-skills.sh`. Where upstream tools run startup update checks,
+telemetry, cloud routing, or unsafe defaults, Homebrew builds and wrappers harden
+them (`HASHLINE_NO_UPDATE_CHECK=1`, `AGENTSYNC_NO_UPDATE_CHECK=1`,
+`SKILLFILE_NO_UPDATE_NOTIFIER=1`, `WAZA_NO_UPDATE_CHECK=1`, `BD_DISABLE_METRICS=1`,
+`fff-mcp --no-update-check`, `BASIC_MEMORY_AUTO_UPDATE=false`,
 `BASIC_MEMORY_NO_PROMOS=1`, `BASIC_MEMORY_FORCE_LOCAL=true` with HTTP/SSE/`cloud`
 blocked; `hindsight` restricted to loopback `127.0.0.1`/`::1`/`localhost` with
 `cloud` and `autoUpdate` disabled; `squeez` defaulting to `auto_compress_md=false`,
 `persona=off`, and `wrap_bash=false`; `skillopt-sleep` defaulting to `--backend mock`
 with human review before `adopt`; `magpie`, `omp`, and `pi-agent-rust` enforcing
 CLI-subscription-only mode with API-key providers, paid extra-usage credits, and
-ambient `*_API_KEY` env vars disabled by default), and formula `caveats` warn against in-place
+ambient `*_API_KEY` env vars disabled by default; `mlflow` and `inspect-ai`
+exporting `MLFLOW_DISABLE_TELEMETRY=true` and `DO_NOT_TRACK=true`; `langfuse-cli`
+defaulting to loopback `http://127.0.0.1:3000`; `phoenix-cli` disabling startup npm
+checks, exporting `SCARF_NO_ANALYTICS=true`, and blocking `px self update`;
+`arize-phoenix` defaulting to `PHOENIX_HOST=127.0.0.1`,
+`PHOENIX_TELEMETRY_ENABLED=false`, `PHOENIX_ALLOW_EXTERNAL_RESOURCES=false`, and
+`PHOENIX_DISABLE_MODEL_COST_AUTO_UPDATE=true`; `openlit` defaulting to loopback
+`http://127.0.0.1:4318`), and formula `caveats` warn against in-place
 self-updaters (`hashline update`, `am self-update`, `br upgrade`, `bv --update`,
 `herdr update`, `basic-memory update`, `hindsight-coding-agents update`,
-`squeez update`, `waza update`, `magpie update`, `omp update`, `pi self-update`).
+`squeez update`, `waza update`, `magpie update`, `omp update`, `pi self-update`,
+`px self update`).
 
 `agent-mail`, `br`, `bv`, and `pi-agent-rust` use the `MIT License with OpenAI/Anthropic Rider`.
 Because SPDX has no identifier for custom riders, those formulae declare
 `license :cannot_represent` and install the full upstream `LICENSE` into `prefix`.
+`arize-phoenix` uses `Elastic-2.0` and installs `LICENSE` and `IP_NOTICE` into
+`prefix`.
 
 Both entrypoints support stock macOS Bash 3.2. Keep invocation arrays nonempty:
 expanding an empty array under `set -u` aborts Bash 3.2. The installer path is the
@@ -55,7 +71,8 @@ named formulae with overlapping binaries. Declare `conflicts_with` only when a
 differently named formula installs conflicting executables: `ast-grep-valhalla`
 (`ast-grep`, installing `ast-grep` and `sg`), `bd` (`beads`, installing `bd`),
 `bv` (`beads_viewer`, installing `bv`), `adrkit` (`adr-tools`, installing
-`adr`), and `pi-agent-rust` (`cln` and `pi-coding-agent`, installing `pi`).
+`adr`), `pi-agent-rust` (`cln` and `pi-coding-agent`, installing `pi`), and
+`phoenix-cli` (`pixie` and `px`, installing `px`).
 Same-named formulae across taps (`tgrep`, `nats`, `herdr`) do not declare
 `conflicts_with`.
 
