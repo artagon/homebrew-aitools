@@ -11,6 +11,14 @@ class Hyperfine < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/hyperfine-2.0.0"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "7dbe2979e8d01c3099ea6bedc9f4173bf4c7e44103106e534d0b8e919173a516"
+    sha256 cellar: :any,                 arm64_linux:  "8020f6b085723bfb80eda88bea78b5a25f36fbc3e060246083f7068e0195e2ca"
+    sha256 cellar: :any,                 x86_64_linux: "d4a17a730dd19672157408fbadeac0f5a2534434989def0ab5e2ae14bad8c06f"
+  end
+
   depends_on "rust" => :build
 
   def install
