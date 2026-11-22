@@ -34,14 +34,14 @@ Install curated domain bundles with fully qualified `artagon/aitools/<formula>` 
 ```sh
 # Code search, JDK 28 Valhalla Java AST, and hash-anchored editing:
 brew install artagon/aitools/ripwire artagon/aitools/ast-grep-valhalla artagon/aitools/tree-sitter-java-valhalla \
-  artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/fff-mcp artagon/aitools/hashline
+  artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/codesearch artagon/aitools/fff-mcp artagon/aitools/hashline
 
 # Local agent memory, hybrid Markdown search, and token compression:
 brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/qmd artagon/aitools/squeez
 
 # Multi-agent mail, NATS event bus, terminal workspaces, and Beads issue graphs:
 brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
-  artagon/aitools/nats artagon/aitools/herdr
+  artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm
 
 # Architecture decisions, skill lifecycle compilers, and skill optimization:
 brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/skillfile \
@@ -74,6 +74,7 @@ brew install --cask artagon/aitools/markdown-preview
 | [`ripwire`](Formula/ripwire.rb) | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`Apache-2.0`) | `ripwire`, `ripwire-agent-install`, `pkgshare/{skills,hooks}` | Source CMake/C++23 build with Valhalla `parser.c` + Java query patch; opt-in skill/hook installer (`--hook` required for config edits) |
 | [`tgrep`](Formula/tgrep.rb) | [microsoft/tgrep](https://github.com/microsoft/tgrep) (`MIT`) | `tgrep` | SHA-256-pinned release binary; local `.tgrep/` trigram index only; no background watcher started automatically |
 | [`ck`](Formula/ck.rb) | [BeaconBay/ck](https://github.com/BeaconBay/ck) (`MIT OR Apache-2.0`) | `ck` (`--lex`, `--sem`, `--hybrid`, `--serve` MCP) | SHA-256-pinned release binary (`glibc >= 2.39` on Linux); `--lex`/`--regex` fully offline; ONNX models cached on first `--sem` |
+| [`codesearch`](Formula/codesearch.rb) | [flupkede/codesearch](https://github.com/flupkede/codesearch) (`Apache-2.0`) | `codesearch` CLI + `mcp` / `serve`, `pkgshare/integrations/{claude-code,opencode}` | Source Rust build (`cargo install --locked`, `protobuf`, Linux `openssl@4`); defaults `CODESEARCH_SERVE_HOST=127.0.0.1`, `CODESEARCH_EMBED_PROVIDER=fastembed`, `DO_NOT_TRACK=true`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
 | [`fff-mcp`](Formula/fff-mcp.rb) | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) (`MIT`) | `fff-mcp` stdio MCP server | SHA-256-pinned release binary + tag `LICENSE`; wrapper automatically passes `--no-update-check` |
 | [`hashline`](Formula/hashline.rb) | [quangdang46/hashline](https://github.com/quangdang46/hashline) (`MIT OR Apache-2.0`) | `hashline` CLI + `hashline mcp` + `pkgshare/skills/hashline` | Source Rust build (`cargo install --locked`); wrapper exports `HASHLINE_NO_UPDATE_CHECK=1` |
 
@@ -118,6 +119,7 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 | [`bv`](Formula/bv.rb) | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`:cannot_represent` — MIT + Rider) | `bv`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` (`conflicts_with "beads_viewer"`); read-only `--robot-*` graph triage |
 | [`nats`](Formula/nats.rb) | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | `nats`, `bash`/`zsh` completions | Source Go build; stores contexts in `${XDG_CONFIG_HOME:-~/.config}/nats/context`; no daemon started |
 | [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; warns against `herdr update` |
+| [`autoswarm`](Formula/autoswarm.rb) | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) (`MIT`) | `autoswarm` (`desk`), `pkgshare/{skills/autoswarm,plugins/opencode}` | Source `uv` Python `3.13` build (`preserve_rpath`); patches `setup.py` to persist `opt_libexec` Python across upgrades, blocks `update`/`self-update`/`upgrade` (`exit 2`); opt-in `autoswarm setup --host <host>` |
 
 ### 4. Architecture Decisions, Skill Lifecycle & Benchmarking
 
@@ -222,6 +224,7 @@ Thirteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/op
 | :--- | :--- | :--- | :--- |
 | `ripwire` | stdio | `"$PREFIX/opt/ripwire/bin/ripwire" --mcp` | Read-only call-graph & symbol queries |
 | `ck` | stdio | `"$PREFIX/opt/ck/bin/ck" --serve` | Local BM25 + semantic hybrid code search |
+| `codesearch` | stdio / HTTP | `"$PREFIX/opt/codesearch/bin/codesearch" mcp` | Or `codesearch serve` on loopback `127.0.0.1:39725` (`fastembed` offline CPU embeddings) |
 | `fff-mcp` | stdio | `"$PREFIX/opt/fff-mcp/bin/fff-mcp"` | Wrapper injects `--no-update-check` automatically |
 | `hashline` | stdio | `"$PREFIX/opt/hashline/bin/hashline" mcp` | Hash-anchored file read & patch tools |
 | `basic-memory` | stdio | `"$PREFIX/opt/basic-memory/bin/basic-memory" mcp` | Local Markdown knowledge graph (`stdio` only) |
@@ -269,6 +272,8 @@ Fourteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins 
 | `phoenix-cli` | `skills/phoenix-{cli,error-analysis,evals,harbor,tracing}`, `plugins/{claude,codex}` | Symlink from `share/phoenix-cli/skills` |
 | `arize-phoenix` | `skills/phoenix-*`, `plugins/{claude,codex}` | Symlink from `share/arize-phoenix/skills` |
 | `openlit` | `plugins/{claude-code,codex,cursor,opencode}`, `agent-guides/` | `openlit coding install --vendor=<vendor> --dry-run` |
+| `codesearch` | `integrations/{claude-code,opencode}` | Opt-in `codesearch hooks claude install` or drop `codesearch.ts` into OpenCode plugins |
+| `autoswarm` | `skills/autoswarm`, `plugins/opencode` | Opt-in `autoswarm setup --host <host>` (`codex`, `claude-code`, `opencode`, etc.) |
 
 ---
 
