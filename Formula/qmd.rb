@@ -27,7 +27,9 @@ class Qmd < Formula
 
     # Prune prebuilt native Node addons: drop prebuilds/ completely when node-gyp
     # already compiled build/Release/ from source, and drop foreign OS/CPU prebuilds otherwise.
-    native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
+    os_tag = OS.mac? ? "darwin" : "linux"
+    arch_tag = Hardware::CPU.arm? ? "arm64" : "x64"
+    native_tag = "#{os_tag}-#{arch_tag}"
     (libexec/"lib/node_modules/@tobilu/qmd/node_modules").glob("**/prebuilds").each do |prebuilds_dir|
       next unless prebuilds_dir.directory?
 
