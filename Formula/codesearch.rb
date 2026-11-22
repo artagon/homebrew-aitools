@@ -10,6 +10,14 @@ class Codesearch < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/codesearch-1.8.11"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "1266773200254bf33f49c8c4804c896bf1f86c74aefaee8ba40d0cde379568d2"
+    sha256 cellar: :any,                 arm64_linux:  "1602427752325e28ced91c338acc2d18be8b01f6cb9080b9b0f3067b47312eb6"
+    sha256 cellar: :any,                 x86_64_linux: "1c90ee2ee3e0a010f07f6b0d27d47ae2f3b4ca11281237fdc9f92764751e6713"
+  end
+
   depends_on "protobuf" => :build
   depends_on "rust" => :build
 
