@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Deterministic README marker updater and publish.yml staged-patch policy validator.
+# Deterministic doc marker updater and publish.yml staged-patch policy validator.
 #
 # Target contract: Bash 3.2+ executable; macOS BSD + Linux GNU userland; requires awk, cmp, git.
 # Subcommands:
+#   replace-block <target_path> <out_path> <block_path> <marker_name>
 #   replace-readme <readme_path> <out_path> <block_path>
 #   verify-readme-git <head_sha>
+#   verify-about-git <head_sha>
 #   verify-formula-git <head_sha> <formula_path>
 # shellcheck disable=SC2310,SC2312
 
@@ -15,8 +17,7 @@ CI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=scripts/ci/common.sh
 source "${CI_DIR}/common.sh"
 
-readonly BEGIN_MARKER="<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->"
-readonly END_MARKER="<!-- END BOTTLE_PROVENANCE_TABLE -->"
+readonly MARKER_NAME_RE='^[A-Z][A-Z0-9_]*$'
 readonly FORMULA_REL_RE='^Formula/[a-z0-9][a-z0-9@._+-]*\.rb$'
 readonly ROOT_URL_STMT_RE='^    root_url "https://github\.com/artagon/homebrew-aitools/releases/download/[A-Za-z0-9@.%_+-]+"$'
 readonly REBUILD_STMT_RE='^    rebuild [0-9]+$'
@@ -36,14 +37,24 @@ cleanup() {
 trap cleanup EXIT
 
 usage() {
-  printf 'Usage: verify-patch-policy.sh <replace-readme|verify-readme-git|verify-formula-git> ...\n' >&2
+  printf 'Usage: verify-patch-policy.sh <replace-block|replace-readme|verify-readme-git|verify-about-git|verify-formula-git> ...\n' >&2
   exit 2
 }
 
-validate_readme_markers() {
+begin_marker_for() {
+  printf '<!-- BEGIN %s -->' "$1"
+}
+
+end_marker_for() {
+  printf '<!-- END %s -->' "$1"
+}
+
+validate_block_markers() {
   local path="$1"
+  local begin_marker="$2"
+  local end_marker="$3"
   [[ -f "${path}" ]] || return 1
-  awk -v b="${BEGIN_MARKER}" -v e="${END_MARKER}" '
+  awk -v b="${begin_marker}" -v e="${end_marker}" '
     $0 == b {
       b_count++
       b_line = NR
@@ -64,60 +75,127 @@ validate_readme_markers() {
   ' "${path}"
 }
 
-strip_readme_table() {
+file_mentions_marker() {
+  local path="$1"
+  local begin_marker="$2"
+  local end_marker="$3"
+  [[ -f "${path}" ]] || return 1
+  awk -v b="${begin_marker}" -v e="${end_marker}" '
+    index($0, b) > 0 || index($0, e) > 0 {
+      found = 1
+      exit 0
+    }
+    END {
+      exit(found ? 0 : 1)
+    }
+  ' "${path}"
+}
+
+strip_block_markers() {
   local in_path="$1"
   local out_path="$2"
-  validate_readme_markers "${in_path}" || return 1
-  awk -v b="${BEGIN_MARKER}" -v e="${END_MARKER}" '
+  local begin_marker="$3"
+  local end_marker="$4"
+  validate_block_markers "${in_path}" "${begin_marker}" "${end_marker}" || return 1
+  awk -v b="${begin_marker}" -v e="${end_marker}" '
     $0 == b {
       print b
-      in_table = 1
+      in_block = 1
       next
     }
     $0 == e {
       print e
-      in_table = 0
+      in_block = 0
       next
     }
-    !in_table {
+    !in_block {
       print $0
     }
   ' "${in_path}" >"${out_path}"
 }
 
-cmd_replace_readme() {
-  local readme_path="$1"
+cmd_replace_block() {
+  local target_path="$1"
   local out_path="$2"
   local block_path="$3"
+  local marker_name="$4"
 
-  if ! validate_readme_markers "${readme_path}"
+  if [[ ! "${marker_name}" =~ ${MARKER_NAME_RE} ]]
   then
-    printf 'Missing, duplicate, or inline BOTTLE_PROVENANCE_TABLE markers in %s\n' "${readme_path}" >&2
-    return 1
-  fi
-  if ! validate_readme_markers "${block_path}"
-  then
-    printf 'Invalid replacement BOTTLE_PROVENANCE_TABLE block in %s\n' "${block_path}" >&2
+    printf 'Invalid marker name: %s\n' "${marker_name}" >&2
     return 1
   fi
 
-  awk -v b="${BEGIN_MARKER}" -v e="${END_MARKER}" -v block_file="${block_path}" '
+  local begin_marker=""
+  local end_marker=""
+  begin_marker="$(begin_marker_for "${marker_name}")"
+  end_marker="$(end_marker_for "${marker_name}")"
+
+  if ! validate_block_markers "${target_path}" "${begin_marker}" "${end_marker}"
+  then
+    printf 'Missing, duplicate, or inline %s markers in %s\n' "${marker_name}" "${target_path}" >&2
+    return 1
+  fi
+  if ! validate_block_markers "${block_path}" "${begin_marker}" "${end_marker}"
+  then
+    printf 'Invalid replacement %s block in %s\n' "${marker_name}" "${block_path}" >&2
+    return 1
+  fi
+
+  awk -v b="${begin_marker}" -v e="${end_marker}" -v block_file="${block_path}" '
     $0 == b {
       while ((getline bline < block_file) > 0) {
         print bline
       }
       close(block_file)
-      in_table = 1
+      in_block = 1
       next
     }
     $0 == e {
-      in_table = 0
+      in_block = 0
       next
     }
-    !in_table {
+    !in_block {
       print $0
     }
-  ' "${readme_path}" >"${out_path}"
+  ' "${target_path}" >"${out_path}"
+}
+
+strip_optional_marker_pair() {
+  local before_in="$1"
+  local after_in="$2"
+  local before_out="$3"
+  local after_out="$4"
+  local marker_name="$5"
+  local begin_marker=""
+  local end_marker=""
+  local before_has=0
+  local after_has=0
+
+  begin_marker="$(begin_marker_for "${marker_name}")"
+  end_marker="$(end_marker_for "${marker_name}")"
+
+  if file_mentions_marker "${before_in}" "${begin_marker}" "${end_marker}"
+  then
+    before_has=1
+  fi
+  if file_mentions_marker "${after_in}" "${begin_marker}" "${end_marker}"
+  then
+    after_has=1
+  fi
+
+  if [[ "${before_has}" -ne "${after_has}" ]]
+  then
+    return 1
+  fi
+  if [[ "${before_has}" -eq 1 ]]
+  then
+    strip_block_markers "${before_in}" "${before_out}" "${begin_marker}" "${end_marker}" || return 1
+    strip_block_markers "${after_in}" "${after_out}" "${begin_marker}" "${end_marker}" || return 1
+  else
+    cp -- "${before_in}" "${before_out}"
+    cp -- "${after_in}" "${after_out}"
+  fi
 }
 
 cmd_verify_readme_git() {
@@ -125,13 +203,47 @@ cmd_verify_readme_git() {
   [[ "${head_sha}" =~ ${CI_SHA40_RE} ]] || return 1
 
   work_dir="$(mktemp -d "${TMPDIR:-/tmp}/verify-patch-policy.XXXXXX")"
-  git show "${head_sha}:README.md" >"${work_dir}/before.md" 2>/dev/null || return 1
-  git show "HEAD:README.md" >"${work_dir}/after.md" 2>/dev/null || return 1
+  git show "${head_sha}:README.md" >"${work_dir}/before.0" 2>/dev/null || return 1
+  git show "HEAD:README.md" >"${work_dir}/after.0" 2>/dev/null || return 1
 
-  strip_readme_table "${work_dir}/before.md" "${work_dir}/before.stripped" || return 1
-  strip_readme_table "${work_dir}/after.md" "${work_dir}/after.stripped" || return 1
+  local begin_prov=""
+  local end_prov=""
+  begin_prov="$(begin_marker_for "BOTTLE_PROVENANCE_TABLE")"
+  end_prov="$(end_marker_for "BOTTLE_PROVENANCE_TABLE")"
 
-  cmp -s "${work_dir}/before.stripped" "${work_dir}/after.stripped"
+  strip_block_markers "${work_dir}/before.0" "${work_dir}/before.1" "${begin_prov}" "${end_prov}" || return 1
+  strip_block_markers "${work_dir}/after.0" "${work_dir}/after.1" "${begin_prov}" "${end_prov}" || return 1
+
+  strip_optional_marker_pair \
+    "${work_dir}/before.1" "${work_dir}/after.1" \
+    "${work_dir}/before.2" "${work_dir}/after.2" \
+    "TAP_BADGES" || return 1
+
+  strip_optional_marker_pair \
+    "${work_dir}/before.2" "${work_dir}/after.2" \
+    "${work_dir}/before.3" "${work_dir}/after.3" \
+    "TAP_INVENTORY" || return 1
+
+  cmp -s "${work_dir}/before.3" "${work_dir}/after.3"
+}
+
+cmd_verify_about_git() {
+  local head_sha="$1"
+  [[ "${head_sha}" =~ ${CI_SHA40_RE} ]] || return 1
+
+  work_dir="$(mktemp -d "${TMPDIR:-/tmp}/verify-patch-policy.XXXXXX")"
+  git show "${head_sha}:ABOUT.md" >"${work_dir}/before.0" 2>/dev/null || return 1
+  git show "HEAD:ABOUT.md" >"${work_dir}/after.0" 2>/dev/null || return 1
+
+  local begin_about=""
+  local end_about=""
+  begin_about="$(begin_marker_for "ABOUT_INVENTORY")"
+  end_about="$(end_marker_for "ABOUT_INVENTORY")"
+
+  strip_block_markers "${work_dir}/before.0" "${work_dir}/before.1" "${begin_about}" "${end_about}" || return 1
+  strip_block_markers "${work_dir}/after.0" "${work_dir}/after.1" "${begin_about}" "${end_about}" || return 1
+
+  cmp -s "${work_dir}/before.1" "${work_dir}/after.1"
 }
 
 readonly FORMULA_BODY_STOP_RE='^  (def (install|caveats|post_install)|test [d]o)$|^__END__$'
@@ -262,13 +374,21 @@ cmd_verify_formula_git() {
 [[ "$#" -ge 1 ]] || usage
 mode="$1"
 case "${mode}" in
+  replace-block)
+    [[ "$#" -eq 5 ]] || usage
+    cmd_replace_block "$2" "$3" "$4" "$5"
+    ;;
   replace-readme)
     [[ "$#" -eq 4 ]] || usage
-    cmd_replace_readme "$2" "$3" "$4"
+    cmd_replace_block "$2" "$3" "$4" "BOTTLE_PROVENANCE_TABLE"
     ;;
   verify-readme-git)
     [[ "$#" -eq 2 ]] || usage
     cmd_verify_readme_git "$2"
+    ;;
+  verify-about-git)
+    [[ "$#" -eq 2 ]] || usage
+    cmd_verify_about_git "$2"
     ;;
   verify-formula-git)
     [[ "$#" -eq 3 ]] || usage

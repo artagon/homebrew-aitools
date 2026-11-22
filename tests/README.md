@@ -9,6 +9,8 @@ Run the `bats-core` 1.14+ suites (`artagon-shell/shell-testing/v1`) from the rep
 ```sh
 rtk bats --tap tests/integration_agent_install.bats
 rtk bats --tap tests/verify_provenance.bats
+rtk bats --tap tests/update_tap_docs.bats
+rtk bats --tap tests/ci_workflow_plan.bats
 rtk bats --tap tests/cask_postflight_defaults.bats
 ```
 
@@ -46,3 +48,7 @@ Coverage across both target shells (`/bin/bash` 3.2 and Bash 5+) includes:
 ## 3. Cask `postflight_steps` defaults suite (`tests/cask_postflight_defaults.bats`)
 
 Requires `bats-core`, Ruby, a modern Bash 5+ (`BATS_MODERN_BASH`), and stock macOS `/bin/bash` 3.2 (`BATS_BASH32`) on Darwin (skipped on Linux where `/bin/bash` is 5.x). Extracts the exact inline `postflight_steps` script from `Casks/markdown-preview.rb`, `Casks/ghostty.rb`, and `Casks/hammerspoon.rb` and runs each script in an isolated `$BATS_TEST_TMPDIR` against stubbed `defaults` and `duti` binaries, verifying default hardening, `HOMEBREW_AITOOLS_*` vs per-cask `HOMEBREW_<CASK>_*` flag precedence, `CI` gating, and `duti` idempotency with zero live preference writes.
+
+## 4. Tap docs inventory & CI planner suites (`tests/update_tap_docs.bats`, `tests/ci_workflow_plan.bats`)
+
+Require `bats-core`, `jq`, `git`, a modern Bash 5+ (`BATS_MODERN_BASH`), and stock macOS `/bin/bash` 3.2 (`BATS_BASH32`) on Darwin (skipped on Linux). `tests/update_tap_docs.bats` verifies `scripts/update-tap-docs.sh`, `scripts/ci/verify-patch-policy.sh`, and `scripts/ci/publish-bottles.sh` (`README.md` + `ABOUT.md` marker sync, multi-platform bottle sorting, license normalization, cask counts, and tamper rejection outside fenced blocks). `tests/ci_workflow_plan.bats` verifies `scripts/ci/plan-ci.sh` and `scripts/ci/merge-provenance-shards.sh`.

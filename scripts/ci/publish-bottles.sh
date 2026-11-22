@@ -419,15 +419,40 @@ case "${subcmd}" in
       done
     done <"${pr_formulae_file}"
 
+    repo_cwd="$(pwd -P)"
+    doc_candidates=()
     if [[ -f README.md ]] && grep -Fq "<!-- BEGIN BOTTLE_PROVENANCE_TABLE -->" README.md
     then
-      repo_cwd="$(pwd -P)"
       PROVENANCE_REPO_ROOT="${repo_cwd}" README_BOTTLES_FILE="${repo_cwd}/README.md" \
         bash "${SCRIPTS_DIR}/update-readme-bottles.sh"
-      if ! git diff --quiet -- README.md
+      doc_candidates+=(README.md)
+    fi
+    if [[ -f README.md ]] && grep -Fq "<!-- BEGIN TAP_INVENTORY -->" README.md
+    then
+      TAP_DOCS_REPO_ROOT="${repo_cwd}" TAP_DOCS_README_FILE="${repo_cwd}/README.md" \
+        bash "${SCRIPTS_DIR}/update-tap-docs.sh" --readme-only
+      doc_candidates+=(README.md)
+    fi
+    if [[ -f ABOUT.md ]] && grep -Fq "<!-- BEGIN ABOUT_INVENTORY -->" ABOUT.md
+    then
+      TAP_DOCS_REPO_ROOT="${repo_cwd}" TAP_DOCS_ABOUT_FILE="${repo_cwd}/ABOUT.md" \
+        bash "${SCRIPTS_DIR}/update-tap-docs.sh" --about-only
+      doc_candidates+=(ABOUT.md)
+    fi
+    if [[ "${#doc_candidates[@]}" -gt 0 ]]
+    then
+      changed_docs=()
+      for doc_path in README.md ABOUT.md
+      do
+        if [[ -f "${doc_path}" ]] && ! git diff --quiet -- "${doc_path}"
+        then
+          changed_docs+=("${doc_path}")
+        fi
+      done
+      if [[ "${#changed_docs[@]}" -gt 0 ]]
       then
-        git add -- README.md
-        git commit --message "docs(readme): refresh bottle versions and provenance links"
+        git add -- "${changed_docs[@]}"
+        git commit --message "docs: refresh tap inventory and bottle provenance"
       fi
     fi
 
@@ -436,7 +461,7 @@ case "${subcmd}" in
     while IFS= read -r changed_path
     do
       [[ -z "${changed_path}" ]] && continue
-      if [[ "${changed_path}" = "README.md" ]]
+      if [[ "${changed_path}" = "README.md" || "${changed_path}" = "ABOUT.md" ]]
       then
         continue
       fi
@@ -509,10 +534,25 @@ case "${subcmd}" in
       if [[ "${changed_path}" = "README.md" ]]
       then
         bash "${CI_DIR}/verify-patch-policy.sh" verify-readme-git "${HEAD_SHA}" ||
-          ci::fail "README.md modified outside BOTTLE_PROVENANCE_TABLE markers"
+          ci::fail "README.md modified outside auto-generated markers"
         PROVENANCE_REPO_ROOT="${repo_cwd}" README_BOTTLES_FILE="${repo_cwd}/README.md" \
           bash "${SCRIPTS_DIR}/update-readme-bottles.sh" --check ||
           ci::fail "README.md bottle provenance table does not match Formula/*.rb"
+        if grep -Fq "<!-- BEGIN TAP_INVENTORY -->" README.md
+        then
+          TAP_DOCS_REPO_ROOT="${repo_cwd}" TAP_DOCS_README_FILE="${repo_cwd}/README.md" \
+            bash "${SCRIPTS_DIR}/update-tap-docs.sh" --check --readme-only ||
+            ci::fail "README.md tap inventory does not match Formula/*.rb and Casks/*.rb"
+        fi
+        continue
+      fi
+      if [[ "${changed_path}" = "ABOUT.md" ]]
+      then
+        bash "${CI_DIR}/verify-patch-policy.sh" verify-about-git "${HEAD_SHA}" ||
+          ci::fail "ABOUT.md modified outside ABOUT_INVENTORY markers"
+        TAP_DOCS_REPO_ROOT="${repo_cwd}" TAP_DOCS_ABOUT_FILE="${repo_cwd}/ABOUT.md" \
+          bash "${SCRIPTS_DIR}/update-tap-docs.sh" --check --about-only ||
+          ci::fail "ABOUT.md tap inventory does not match Formula/*.rb and Casks/*.rb"
         continue
       fi
 

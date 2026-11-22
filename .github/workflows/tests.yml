@@ -67,6 +67,7 @@ jobs:
       run_lint_job: ${{ steps.plan.outputs.run_lint_job }}
       run_provenance_bats: ${{ steps.plan.outputs.run_provenance_bats }}
       run_readme_check: ${{ steps.plan.outputs.run_readme_check }}
+      run_tap_docs_check: ${{ steps.plan.outputs.run_tap_docs_check }}
       shard_count: ${{ steps.plan.outputs.shard_count }}
       shards_json: ${{ steps.plan.outputs.shards_json }}
       use_merge: ${{ steps.plan.outputs.use_merge }}
@@ -177,11 +178,11 @@ jobs:
           ast-grep test --config sgconfig.yml
           ast-grep scan --config sgconfig.yml . .github/workflows
 
-      - name: Run provenance and CI planner Bats suites
+      - name: Run provenance, tap-docs, and CI planner Bats suites
         if: needs.plan.outputs.run_provenance_bats == 'true'
         run: |
           BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
-            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats
+            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats tests/update_tap_docs.bats
 
       - name: Run cask postflight defaults Bats suite
         if: needs.plan.outputs.run_cask_bats == 'true'
@@ -206,6 +207,10 @@ jobs:
       - name: Verify README bottle provenance table
         if: needs.plan.outputs.run_readme_check == 'true'
         run: ./scripts/update-readme-bottles.sh --check
+
+      - name: Verify README and ABOUT tap tool inventories
+        if: needs.plan.outputs.run_tap_docs_check == 'true'
+        run: ./scripts/update-tap-docs.sh --check
 
   test-bot:
     name: Build, test, and bottle (${{ matrix.os }}, ${{ matrix.shard.id }})
