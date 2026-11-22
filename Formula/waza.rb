@@ -12,6 +12,13 @@ class Waza < Formula
     strategy :github_releases
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/waza-0.42.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "4ff246966d5fc4b3aaa1460c1d3a578749236ed213d5df28578900b881e457c7"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "bf30a062b240a48e424044329bba68f9049e94d13f036cb10f3236c347aa1f97"
+    sha256 cellar: :any,                 x86_64_linux: "1e09e9a8c28e01dc3e348f7acefe4322f192b00bf3a5b394670c481284f0573e"
+  end
+
   depends_on "go" => :build
   depends_on "node" => :build
 
