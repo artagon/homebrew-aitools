@@ -1,10 +1,9 @@
 class Waza < Formula
   desc "Evaluate and benchmark AI agent workflows, custom agents, and skills"
   homepage "https://microsoft.github.io/waza/"
-  url "https://github.com/microsoft/waza/archive/refs/tags/v0.41.0.tar.gz"
-  sha256 "b149312962adbc0711d900d295417f60e450acb153ea3eb8d150dd1287aa8a39"
+  url "https://github.com/microsoft/waza/archive/refs/tags/v0.42.0.tar.gz"
+  sha256 "f36d92c58ba2829783113e70de0e912053d2d333953454b49e87bb328be4f72a"
   license "MIT"
-  revision 1
   head "https://github.com/microsoft/waza.git", branch: "main"
 
   livecheck do
