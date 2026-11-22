@@ -12,6 +12,14 @@ class Squeez < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/squeez-1.49.3_1"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "9259909f35ea50182d73fbca67389dd377bb2be8c94d17830b3b0157abc48250"
+    sha256 cellar: :any,                 arm64_linux:  "6e0c3b84073be0c2195bde36b34459fd221f8350b84e339a85d72cbc75423b6c"
+    sha256 cellar: :any,                 x86_64_linux: "1a4825d4c6c948bb0c81909d514c7b72f7ee5509be515b6c6a7a5adcf0b5f575"
+  end
+
   depends_on "rust" => :build
 
   def install
