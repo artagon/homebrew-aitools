@@ -12,6 +12,14 @@ class Autoswarm < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/autoswarm-0.1.1"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "6d6ec4acfab848c46dc6eb84c17c8f5105664d684a195fa05e678b3c4c47d504"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "854cb553263067458e8bac191af28a2e495082321293a096adcd911a696187e6"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "b3b9edf5f9795202cbe956040cbc4932f10544566addc4027288ad287bd76400"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
