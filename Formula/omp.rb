@@ -9,10 +9,10 @@ class Omp < Formula
   end
 
   bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/omp-18.22.2"
-    sha256 arm64_tahoe:  "63aef2cf2c008db2c40f94de1e5deea3605f6d8e001c9d182322ece91f9748e5"
-    sha256 arm64_linux:  "3d76befddcddd95f8cbb34632d0d9c7acc2d07ffeecc92d1e5516853f939fe5a"
-    sha256 x86_64_linux: "1a840942ac6cf4864eae594fc5175b77e4bb74768bcfbb744138eb93eacdd9c7"
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/omp-19.1.0"
+    sha256 arm64_tahoe:  "c8d4cf27c0ee427098342b4cfa3949c172cfabc95e5acdf4d009b65ed99b3635"
+    sha256 arm64_linux:  "aac20eaf7ad3a64681b4dc29df58fc309d0b27a66af0ac65917fe3120b8cbdd2"
+    sha256 x86_64_linux: "82a62947f202c6a419fb80fc45a01f5062aba9fb959328c9a3a437ddfe2f11d5"
   end
 
   on_macos do
