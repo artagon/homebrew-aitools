@@ -11,6 +11,14 @@ class Cairn < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/cairn-0.2.1"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "8431f02e2bae2c12d2a80d4197c89a30bb5218a6281405a28e71235ddc8778ad"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "d20ee253f44acb72fabd25898a0490a8b46caafe2083a671e7527a3745f48081"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "f1ade0ea18870950c87b76ed1832e421a92763b6f6eddb3d1fd4c1be4745961b"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
