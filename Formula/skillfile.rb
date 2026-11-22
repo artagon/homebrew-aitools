@@ -11,6 +11,13 @@ class Skillfile < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/skillfile-1.9.3"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "3f764feadcdc119ad5fb4b04573ef06f68548d4cbe037e03a168df32f9d67a64"
+    sha256 cellar: :any,                 arm64_linux:  "741a06c50b402936a6f88f7a9e8ff2f3c4a8c9f08cb86e09d68f9af8e3a4ca2a"
+    sha256 cellar: :any,                 x86_64_linux: "eb7f2b6564cf7e347b9893c0f7c3e1b4921b23e95bc297e593b3f1df3a51c068"
+  end
+
   depends_on "rust" => :build
 
   def install
