@@ -11,6 +11,14 @@ class Agenthooks < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agenthooks-0.7.7"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "39c09d6803b1a21f90bc3dbfb3271e8faa9074d5d6d6d7742e74b1e148d2f58b"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "38cb59c26288d62d9a9bfdbd53aaee6edb5ba9e97d9e6a9f89ec4c4347c9664a"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "27defd66bd359d99964468f05807dab622728797f34d956458e736593a90c58c"
+  end
+
   depends_on "go" => :build
 
   def install
