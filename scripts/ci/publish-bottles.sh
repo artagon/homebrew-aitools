@@ -645,6 +645,29 @@ case "${subcmd}" in
     ci::require_repo_slug "${GITHUB_REPOSITORY:-}"
     [[ -n "${RUNNER_TEMP:-}" && -d "${RUNNER_TEMP}" ]] || ci::fail "RUNNER_TEMP is not a directory"
     stage_dir="${RUNNER_TEMP}/publish-stage"
+    published_tags_file="${RUNNER_TEMP}/published-release-tags.txt"
+    : >"${published_tags_file}"
+
+    raw_ids="${CREATED_DRAFT_IDS:-}"
+    if [[ -n "${raw_ids}" ]]
+    then
+      IFS=',' read -r -a draft_ids <<<"${raw_ids}"
+      for draft_id in ${draft_ids[@]+"${draft_ids[@]}"}
+      do
+        [[ -z "${draft_id}" ]] && continue
+        ci::require_uint "${draft_id}" "draft release id"
+        rel_info="$(gh api "repos/${GITHUB_REPOSITORY}/releases/${draft_id}")"
+        is_draft="$(printf '%s\n' "${rel_info}" | jq -r '.draft // false')"
+        rel_tag="$(printf '%s\n' "${rel_info}" | jq -r '.tag_name // empty')"
+        if [[ "${is_draft}" = "true" && -n "${rel_tag}" ]] &&
+           jq -e --arg tag "${rel_tag}" 'any(.bottles[]; .release_tag == $tag)' "${stage_dir}/release-map.json" >/dev/null
+        then
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${draft_id}" -F draft=false >/dev/null
+          printf '%s\n' "${rel_tag}" >>"${published_tags_file}"
+        fi
+      done
+    fi
+
     releases_json="$(list_releases_json "${GITHUB_REPOSITORY}")"
     release_tags_file="${RUNNER_TEMP}/publish-release-tags.txt"
     jq -r '.bottles[].release_tag' "${stage_dir}/release-map.json" | sort -u >"${release_tags_file}"
@@ -652,13 +675,18 @@ case "${subcmd}" in
     do
       [[ -z "${release_tag}" ]] && continue
       ci::require_safe_filename "${release_tag}" "release_tag"
+      if grep -Fxq -- "${release_tag}" "${published_tags_file}"
+      then
+        continue
+      fi
       draft_id="$(
         printf '%s\n' "${releases_json}" |
           jq -r --arg tag "${release_tag}" '[.[] | select(.draft == true and .tag_name == $tag)] | first | .id // empty'
       )"
       if [[ -n "${draft_id}" ]]
       then
-        gh release edit "${release_tag}" --repo "${GITHUB_REPOSITORY}" --draft=false
+        ci::require_uint "${draft_id}" "draft release id"
+        gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${draft_id}" -F draft=false >/dev/null
       fi
     done <"${release_tags_file}"
     ;;
