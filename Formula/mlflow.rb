@@ -11,6 +11,14 @@ class Mlflow < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/mlflow-3.18.0"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "23caa9894139e5e620cd7efdea134a56da92b8b03c36dd8292eea1529320d6f0"
+    sha256 cellar: :any, arm64_linux:  "652851a72d151582724a90ce0eec85efae1526aa40f40ca02c77d32526401a78"
+    sha256 cellar: :any, x86_64_linux: "9d5b80295d9d69fb02ff4b10ec56081d9b26207257e34084a4a7bc385cabd922"
+  end
+
   depends_on "uv" => :build
   depends_on "node"
 
