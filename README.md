@@ -3,14 +3,15 @@
 [![brew test-bot](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml/badge.svg)](https://github.com/artagon/homebrew-aitools/actions/workflows/tests.yml)
 [![Provenance: SLSA v1 + Sigstore](https://img.shields.io/badge/provenance-SLSA%20v1%20%2B%20Sigstore-2ea44f)](https://github.com/artagon/homebrew-aitools/attestations)
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
-[![Formulae: 32](https://img.shields.io/badge/formulae-32-8250df)](#formula-catalog-by-domain)
+[![Formulae: 39](https://img.shields.io/badge/formulae-39-8250df)](#formula-catalog-by-domain)
+[![macOS Casks: 3](https://img.shields.io/badge/macOS%20casks-3-bf8700)](#7-macos-native-desktop-casks)
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
 
-Curated developer CLIs, local MCP servers, memory graphs, evaluation harnesses, OpenTelemetry collectors, subscription-only AI routing & coding agents, and JDK 28 Valhalla-aware AST analyzers for AI coding agents.
+Curated developer CLIs, local MCP servers, memory graphs, cross-agent hook runners, build caches, evaluation harnesses, OpenTelemetry collectors, subscription-only AI routing & coding agents, JDK 28 Valhalla-aware AST analyzers, and macOS desktop automation casks for AI coding agents.
 
 > [!IMPORTANT]
 > **Tap Security & Non-Invasiveness Contract**
-> - **Zero live config mutation**: `brew install`, `upgrade`, and `uninstall` never modify `~/.claude*`, `~/.codex*`, `~/.gemini*`, `~/.config/*`, or shell profiles.
+> - **Zero live config mutation**: `brew install`, `upgrade`, and `uninstall` never modify `~/.claude*`, `~/.codex*`, `~/.gemini*`, `~/.config/*`, `~/.hammerspoon`, or shell profiles; macOS casks configure only their own app `UserDefaults`, overridable via `HOMEBREW_*` environment flags.
 > - **Hardened local-first defaults**: Wrappers disable startup update checks, telemetry, and unsolicited cloud routing, default local services to `127.0.0.1`, and block or warn against in-place self-updaters.
 > - **Cryptographic provenance**: Published bottles carry ref-bound SLSA v1 attestations, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
 
@@ -37,15 +38,17 @@ brew install artagon/aitools/ripwire artagon/aitools/ast-grep-valhalla artagon/a
   artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/codesearch artagon/aitools/fff-mcp artagon/aitools/hashline
 
 # Local agent memory, hybrid Markdown search, and token compression:
-brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/qmd artagon/aitools/squeez
+brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/claude-mem \
+  artagon/aitools/qmd artagon/aitools/squeez
 
-# Multi-agent mail, NATS event bus, terminal workspaces, and Beads issue graphs:
+# Multi-agent mail, NATS event bus, terminal workspaces, fact-intent graphs, and Beads issue graphs:
 brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
-  artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm
+  artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm artagon/aitools/cairn
 
-# Architecture decisions, skill lifecycle compilers, and skill optimization:
-brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/skillfile \
-  artagon/aitools/skillprism artagon/aitools/waza artagon/aitools/skillopt
+# Architecture decisions, hooks, build caching, skill lifecycle compilers, and benchmarking:
+brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/agenthooks \
+  artagon/aitools/skillfile artagon/aitools/skillprism artagon/aitools/waza \
+  artagon/aitools/skillopt artagon/aitools/hyperfine artagon/aitools/kache
 
 # Live evaluation harnesses, versioned skill registries, and OpenTelemetry observability:
 brew install artagon/aitools/mlflow artagon/aitools/inspect-ai artagon/aitools/langfuse-cli \
@@ -55,11 +58,11 @@ brew install artagon/aitools/mlflow artagon/aitools/inspect-ai artagon/aitools/l
 brew install artagon/aitools/magpie artagon/aitools/omp artagon/aitools/pi-agent-rust
 
 # macOS native desktop casks (override defaults with HOMEBREW_* flags):
-brew install --cask artagon/aitools/markdown-preview
+brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/aitools/markdown-preview
 ```
 
 > [!NOTE]
-> Always qualify `artagon/aitools/{tgrep,nats,herdr}` (and `--cask artagon/aitools/markdown-preview`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
+> Always qualify `artagon/aitools/{tgrep,nats,herdr,hyperfine}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
 
 ---
 
@@ -106,6 +109,7 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 | :--- | :--- | :--- | :--- |
 | [`basic-memory`](Formula/basic-memory.rb) | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) (`AGPL-3.0-or-later`) | `basic-memory`, `bm`, `pkgshare/skills/memory-*` | Source `uv` Python `3.13` build (`preserve_rpath`); forces `BASIC_MEMORY_FORCE_LOCAL=true`, disables promos/Logfire, and blocks `cloud`, `update`, and HTTP/SSE transports |
 | [`hindsight`](Formula/hindsight.rb) | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) (`MIT`) | `hindsight`, `hindsight-mcp`, `hindsight-coding-agents`, `pkgshare/skills` | Source Rust CLI + TypeScript/Node MCP bundle; compiled defaults bind `http://127.0.0.1:8888` (`self-hosted`, `autoUpdate=false`), reject non-loopback URLs and `cloud`/`update`, and require `HINDSIGHT_MCP_HARNESS` |
+| [`claude-mem`](Formula/claude-mem.rb) | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) (`Apache-2.0`) | `claude-mem`, `claude-mem-mcp`, `NOTICE`, `pkgshare/{plugin,skills,hooks,modes}` | Source TypeScript/esbuild/Vite + frozen `plugin/bun.lock` build linking `tree-sitter-cli` and pruning foreign `prebuilds/*`; loopback `127.0.0.1`, PostHog/auto-update disabled, ambient `*_API_KEY` scrubbed unless `CLAUDE_MEM_ALLOW_API_KEYS=1`, `update`/`upgrade`/`self-update` blocked (`exit 2`) |
 | [`qmd`](Formula/qmd.rb) | [tobi/qmd](https://github.com/tobi/qmd) (`MIT`) | `qmd` CLI + `qmd mcp` + `pkgshare/skills/qmd` | Source TypeScript/Node build pruning foreign `prebuilds/*`; exports `QMD_SOURCE_MODE=0`; local SQLite BM25 + `sqlite-vec` + GGUF reranking |
 | [`squeez`](Formula/squeez.rb) | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) (`Apache-2.0`) | `squeez` CLI + `squeez mcp`, `NOTICE` | Source Rust build patching conservative defaults (`auto_compress_md=false`, `persona=off`, `wrap_bash=false`) and blocking `squeez update` |
 
@@ -120,17 +124,21 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 | [`nats`](Formula/nats.rb) | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | `nats`, `bash`/`zsh` completions | Source Go build; stores contexts in `${XDG_CONFIG_HOME:-~/.config}/nats/context`; no daemon started |
 | [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; warns against `herdr update` |
 | [`autoswarm`](Formula/autoswarm.rb) | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) (`MIT`) | `autoswarm` (`desk`), `pkgshare/{skills/autoswarm,plugins/opencode}` | Source `uv` Python `3.13` build (`preserve_rpath`); patches `setup.py` to persist `opt_libexec` Python across upgrades, blocks `update`/`self-update`/`upgrade` (`exit 2`); opt-in `autoswarm setup --host <host>` |
+| [`cairn`](Formula/cairn.rb) | [oritera/Cairn](https://github.com/oritera/Cairn) (`AGPL-3.0-only`) | `cairn` (`serve`, `dispatch`), `pkgshare/{examples,docs,skills}` | Source `uv` Python `3.13` build (`preserve_rpath`) stripping upstream Aliyun PyPI mirror/lockfile; `cairn serve` binds `127.0.0.1:8000`, exports `DO_NOT_TRACK=1`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
 
-### 4. Architecture Decisions, Skill Lifecycle & Benchmarking
+### 4. Architecture Decisions, Hooks, Build Caching, Skill Lifecycle & Benchmarking
 
 | Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
 | [`adrkit`](Formula/adrkit.rb) | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`Apache-2.0`) | `adr`, `adrkit`, `adrkit-mcp`, completions, `pkgshare/skills` | Source `bun` build targeting Homebrew `node` (`conflicts_with "adr-tools"`); local `docs/adr` governance |
 | [`agentsync`](Formula/agentsync.rb) | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | `agentsync`, `README.md`, `LICENSE` | SHA-256-pinned archive; wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; edits `.agents/agentsync.toml` only when run |
+| [`agenthooks`](Formula/agenthooks.rb) | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) (`MIT`) | `agenthooks-secretguard`, Go module + `DESIGN.md` + `examples/` in `pkgshare` | Source Go build (`CGO_ENABLED=0`) disabling `claude`/`codex mcp list` subprocess probes (`WithoutMCPListFallback`); masks detected secrets and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
 | [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | `skillfile`, shell completions | Source Rust build (`cargo install --locked`); wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1` |
 | [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | `skillprism`, completions, `man1/skillprism.1` | Source Rust offline Jinja2 multi-harness `SKILL.md.j2` compiler (`./dist/`); zero network or live config writes |
 | [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | `waza` + embedded SPA, completions, `pkgshare/skills` | Source Vite/React + Go build (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`); exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (`exit 2`) |
 | [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | `skillopt-{train,eval,sleep}`, `skillopt-sleep-mcp`, `pkgshare/{plugins,configs}` | Source `uv` Python `3.13` build; `skillopt-sleep` defaults to `--backend mock` (zero API spend) and human review before `adopt` |
+| [`hyperfine`](Formula/hyperfine.rb) | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) (`MIT OR Apache-2.0`) | `hyperfine`, `man1/hyperfine.1`, `bash`/`zsh`/`fish`/`pwsh` completions | Source Rust build (`cargo install --locked`); direct offline execution (`--shell=none`) with zero telemetry or update checks |
+| [`kache`](Formula/kache.rb) | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) (`Apache-2.0`) | `kache`, `kache-engine`, completions, `libexec/shims`, `pkgshare/{schemas,examples}` | Source Rust build (`cargo install --locked`, `RUSTC_WRAPPER=""`); local store + Unix socket daemon (`daemon.sock`) with no remote cache, planner, or telemetry configured; `kache update` exits `2` |
 
 ### 5. Evaluation Harnesses, Skill Registries & OpenTelemetry Observability
 
@@ -192,6 +200,8 @@ magpie oh-my-pi group/sub-coder
 
 | Cask | Upstream & License | App & CLI Assets | Tap Build & `postflight_steps` Hardening |
 | :--- | :--- | :--- | :--- |
+| [`ghostty`](Casks/ghostty.rb) | [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) (`MIT`) | `Ghostty.app` (`1.4.0`, macOS 13+), `ghostty(1)`/`ghostty(5)`, `bash`/`zsh`/`fish` completions | SHA-256-pinned universal `.dmg` (`conflicts_with cask: "ghostty@tip"`); `postflight_steps` disables Sparkle auto-updates (`SUEnableAutomaticChecks`/`SUAutomaticallyUpdate`/`SUSendProfileInfo = false`); never edits `~/.config/ghostty` or shell profiles |
+| [`hammerspoon`](Casks/hammerspoon.rb) | [Hammerspoon/hammerspoon](https://github.com/Hammerspoon/hammerspoon) (`MIT`) | `Hammerspoon.app` (`1.1.1`, macOS 13+), `hs` CLI (`Contents/Frameworks/hs/hs`) | SHA-256-pinned `.zip`; `postflight_steps` disables Sparkle auto-updates (`SUEnableAutomaticChecks`/`SUAutomaticallyUpdate`/`SUSendProfileInfo = false`); never edits `~/.hammerspoon`, coding-agent configs, or shell profiles |
 | [`markdown-preview`](Casks/markdown-preview.rb) | [pluk-inc/markdown-preview](https://github.com/pluk-inc/markdown-preview) (`MIT`) | `Markdown Preview.app` (macOS 15+), `mdp`, `md-preview`, `markdown-preview` | SHA-256-pinned `.dmg` depending on `duti`; `postflight_steps` disables Sparkle auto-updates, PostHog usage analytics, and Sentry crash reports on `doc.md-preview`, and registers `net.daringfireball.markdown` via `duti` once (skipped when already set or when `CI` is truthy); overridable via `HOMEBREW_MARKDOWN_PREVIEW_*` / `HOMEBREW_AITOOLS_*` |
 
 <details>
@@ -199,7 +209,7 @@ magpie oh-my-pi group/sub-coder
 
 Homebrew filters all custom environment variables unless they start with `HOMEBREW_`. Per-cask flags override tap-wide `HOMEBREW_AITOOLS_*` flags; accepted values are `1`/`true`/`yes`/`on` (truthy) and `0`/`false`/`no`/`off` (falsy), and invalid values warn on stderr and fail closed (`false`):
 
-| Tap-Wide Flag | Per-Cask Flag | Default | Effect |
+| Tap-Wide Flag | Per-Cask Flag (`<CASK>` = `GHOSTTY` \| `HAMMERSPOON` \| `MARKDOWN_PREVIEW`) | Default | Effect |
 | :--- | :--- | :--- | :--- |
 | `HOMEBREW_AITOOLS_SKIP_DEFAULTS` | `HOMEBREW_<CASK>_SKIP_DEFAULTS` | `0` | Skip all `postflight_steps` `defaults` and `duti` writes |
 | `HOMEBREW_AITOOLS_AUTO_UPDATES` | `HOMEBREW_<CASK>_AUTO_UPDATES` | `0` | Keep Sparkle automatic update checks enabled (`SUEnableAutomaticChecks=true`) |
@@ -218,7 +228,7 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 
 ## MCP Server Reference
 
-Thirteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/homebrew` on Apple Silicon or `/home/linuxbrew/.linuxbrew` on Linux; for `ast-grep` MCP, point `ast-grep-mcp` at `AST_GREP_BINARY="$PREFIX/opt/ast-grep-valhalla/bin/ast-grep"`):
+Fifteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/homebrew` on Apple Silicon or `/home/linuxbrew/.linuxbrew` on Linux; for `ast-grep` MCP, point `ast-grep-mcp` at `AST_GREP_BINARY="$PREFIX/opt/ast-grep-valhalla/bin/ast-grep"`):
 
 | Formula | Transport | Stable Entrypoint & Arguments | Required Env / Notes |
 | :--- | :--- | :--- | :--- |
@@ -229,6 +239,7 @@ Thirteen formulae ship local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/op
 | `hashline` | stdio | `"$PREFIX/opt/hashline/bin/hashline" mcp` | Hash-anchored file read & patch tools |
 | `basic-memory` | stdio | `"$PREFIX/opt/basic-memory/bin/basic-memory" mcp` | Local Markdown knowledge graph (`stdio` only) |
 | `hindsight` | stdio | `"$PREFIX/opt/hindsight/bin/hindsight-mcp"` | Requires `HINDSIGHT_MCP_HARNESS=<claude-code\|codex\|antigravity-cli>`; talks only to loopback `:8888` |
+| `claude-mem` | stdio / HTTP | `"$PREFIX/opt/claude-mem/bin/claude-mem-mcp"` | Pass `--http` for loopback `127.0.0.1`; scrubs ambient `*_API_KEY` unless `CLAUDE_MEM_ALLOW_API_KEYS=1` |
 | `qmd` | stdio / HTTP | `"$PREFIX/opt/qmd/bin/qmd" mcp` | Pass `--http` for loopback `127.0.0.1:8181` |
 | `squeez` | stdio | `"$PREFIX/opt/squeez/bin/squeez" mcp` | Read-only CLI output token compressor |
 | `agent-mail` | stdio / HTTP | `"$PREFIX/opt/agent-mail/bin/mcp-agent-mail"` | Or `"$PREFIX/opt/agent-mail/bin/am" serve-http` |
@@ -254,7 +265,7 @@ agy mcp add hashline --command "$(brew --prefix)/opt/hashline/bin/hashline" --ar
 
 ## Bundled Agent Skills & Plugins
 
-Fourteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie` and `omp` also stage subscription-only routing templates under `share/<formula>/examples/subscription-only/`):
+Eighteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie`, `omp`, `kache`, and `agenthooks` also stage local-first config templates, JSON schemas, or Go hook modules under `share/<formula>/`):
 
 | Formula | Installed Asset Path (`$(brew --prefix <formula>)/share/<formula>/...`) | Opt-In Activation |
 | :--- | :--- | :--- |
@@ -263,7 +274,9 @@ Fourteen formulae stage reusable `SKILL.md` bundles, guides, or harness plugins 
 | `adrkit` | `skills/` (`decision-memory`, ADR workflows) | Symlink or `agentsync` / `skillfile` |
 | `basic-memory` | `skills/memory-*` | Symlink or `agentsync` / `skillfile` |
 | `hindsight` | `skills/hindsight-{architect,docs,local,self-hosted,coding-agent}` | `hindsight-coding-agents install <client> --server self-hosted` |
+| `claude-mem` | `plugin/`, `skills/mem-search/SKILL.md`, `hooks/`, `modes/` | `claude --plugin-dir $(brew --prefix claude-mem)/share/claude-mem/plugin` or symlink |
 | `qmd` | `skills/qmd/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `cairn` | `skills/tsec-actions/SKILL.md`, `examples/dispatch*.yaml`, `docs/specs/` | Symlink skill or pass `--config` to `cairn dispatch` |
 | `waza` | `skills/{waza,waza-interactive}` | Symlink or `agentsync` / `skillfile` |
 | `skillopt` | `plugins/{claude-code,codex,copilot}`, `configs/` | Symlink plugin or reference sample configs |
 | `pi-agent-rust` | `skills/pi-agent-rust`, `examples/subscription-only/` | Symlink from `share/pi-agent-rust/skills` |
@@ -392,8 +405,8 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 </details>
 
 **Scope & SBOM coverage notes**:
-- **21 source-built formulae** (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `hashline`, `basic-memory`, `hindsight`, `qmd`, `squeez`, `adrkit`, `nats`, `skillfile`, `skillprism`, `waza`, `skillopt`, `magpie`, `mlflow`, `inspect-ai`, `langfuse-cli`, `phoenix-cli`, `arize-phoenix`, `openlit`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **11 upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives.
-- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node `package.json` inventories (`hindsight`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables and single-file `bun` bundles (`adrkit`) expose bottle archive and manifest files only.
+- **28 source-built formulae** (`tree-sitter-java-valhalla`, `ast-grep-valhalla`, `ripwire`, `codesearch`, `hashline`, `basic-memory`, `hindsight`, `claude-mem`, `qmd`, `squeez`, `autoswarm`, `cairn`, `adrkit`, `nats`, `agenthooks`, `skillfile`, `skillprism`, `waza`, `skillopt`, `hyperfine`, `kache`, `magpie`, `mlflow`, `inspect-ai`, `langfuse-cli`, `phoenix-cli`, `arize-phoenix`, `openlit`) attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **11 upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives; and **3 macOS casks** (`ghostty`, `hammerspoon`, `markdown-preview`) verify upstream release archives by pinned `sha256` checksums.
+- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `agenthooks`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `autoswarm`, `cairn`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node/Bun `package.json` inventories (`hindsight`, `claude-mem`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables and single-file `bun` bundles (`adrkit`) expose bottle archive and manifest files only.
 
 ---
 
@@ -421,7 +434,7 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 | Symptom | Cause | Fix |
 | :--- | :--- | :--- |
 | `Cannot install ... conflicting formulae are installed` | Core `ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `pixie`, `px`, `cln`, or `pi-coding-agent` owns the same binary name | Run `brew unlink <conflicting-formula>`, then `brew install artagon/aitools/<formula>` |
-| `brew install tgrep` (or `nats` / `herdr`) installs core formula | Unqualified name resolves to `homebrew/core` first | Use `brew install artagon/aitools/tgrep` (`nats`, `herdr`) |
+| `brew install tgrep` (or `nats` / `herdr` / `hyperfine`) installs core formula | Unqualified name resolves to `homebrew/core` (or `homebrew/cask` for `ghostty` / `hammerspoon` / `markdown-preview`) first | Use `brew install artagon/aitools/<formula>` (or `brew install --cask artagon/aitools/<cask>`) |
 | Homebrew ignores tap formulae (`Tap-Trust`) | Homebrew 7+ requires explicit tap trust | Run `brew trust --tap artagon/aitools` |
 | `HOMEBREW_VERIFY_ATTESTATIONS=1` fails with GitHub auth error | `gh` is unauthenticated and `HOMEBREW_GITHUB_API_TOKEN` is unset | Run `gh auth login` or export `HOMEBREW_GITHUB_API_TOKEN` |
 | `<tool> update` or `px self update` exits `2` | In-place self-updaters are blocked so binaries stay managed by Homebrew | Upgrade with `brew upgrade artagon/aitools/<formula>` |
