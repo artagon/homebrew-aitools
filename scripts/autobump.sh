@@ -11,6 +11,7 @@
 #        autobump.sh write [formula...]          write the bumps, without Git
 #        autobump.sh pr [--base BRANCH] [formula...]  open one pull request per bump (CI)
 #        autobump.sh rewrite FILE OLD NEW        print FILE bumped from OLD to NEW
+#        autobump.sh sync-lock LOCKFILE FORMULA NEW  update LOCKFILE entries from FORMULA
 #
 # Runs on macOS Bash 3.2 and Bash 5. Needs brew, jq, curl, shasum or sha256sum,
 # and, for `pr`, git and gh.
@@ -22,10 +23,12 @@ script_base="$(basename "${BASH_SOURCE[0]}")"
 script_path="${script_dir}/${script_base}"
 repo="$(cd "${script_dir}/.." && pwd -P)"
 formula_dir="${repo}/Formula"
+lockfile_default="${repo}/versions/aitools-lock.json"
 grammar="tree-sitter-java-valhalla"
 
 # Upstream controls tag names; they become branch names, URLs, and commit messages.
 version_re='^[0-9][0-9A-Za-z.+_-]{0,63}$'
+version_line_re='^([[:space:]]*)version "([^"]+)"$'
 url_re='^([[:space:]]*)url "([^"]+)"$'
 sha_re='^([[:space:]]*)sha256 "[0-9a-f]{64}"$'
 revision_re='^  revision ([0-9]+)$'
@@ -43,6 +46,7 @@ usage: autobump.sh check [formula...]
        autobump.sh write [formula...]
        autobump.sh pr [--base BRANCH] [formula...]
        autobump.sh rewrite FILE OLD NEW
+       autobump.sh sync-lock LOCKFILE FORMULA NEW
 EOF
   exit 2
 }
@@ -67,9 +71,9 @@ bump_text() {
   do
     if [[ -n "${pending}" ]]
     then
-      if [[ "${line}" == "  version \"${old}\"" ]]
+      if [[ "${line}" =~ ${version_line_re} ]] && [[ "${BASH_REMATCH[2]}" = "${old}" ]]
       then
-        printf '  version "%s"\n' "${new}"
+        printf '%sversion "%s"\n' "${BASH_REMATCH[1]}" "${new}"
         continue
       fi
       [[ "${line}" =~ ${sha_re} ]] || die "no sha256 line after a url naming ${old} in ${file}"
@@ -92,9 +96,9 @@ bump_text() {
       dropped=1
       continue
     fi
-    if [[ "${line}" == "  version \"${old}\"" ]]
+    if [[ "${line}" =~ ${version_line_re} ]] && [[ "${BASH_REMATCH[2]}" = "${old}" ]]
     then
-      printf '  version "%s"\n' "${new}"
+      printf '%sversion "%s"\n' "${BASH_REMATCH[1]}" "${new}"
       continue
     fi
     printf '%s\n' "${line}"
@@ -145,6 +149,31 @@ replace_with() {
   mv "${file}.autobump" "${file}"
 }
 
+# Extract (artifact_role, platform, resource, url, sha256) rows from a formula file.
+extract_formula_lock_rows() {
+  awk -f "${script_dir}/lib/extract-formula-artifacts.awk" "$1"
+}
+
+# Co-update versions/aitools-lock.json entries for a present tracked formula
+# (covers multi-platform binary formulae like br/bd/agent-mail and acli guest musl resources).
+sync_lockfile_for_formula() {
+  local lock_path="$1" formula_file="$2" new_ver="$3" pkg="" rows_json=""
+  [[ -f "${lock_path}" ]] || return 0
+  [[ "${new_ver}" =~ ${version_re} ]] || die "unexpected version: ${new_ver}"
+  pkg="$(basename "${formula_file}" .rb)"
+
+  if ! jq -e --arg p "${pkg}" '(.artifacts | type) == "array" and any(.artifacts[]; .package == $p and .status == "present")' "${lock_path}" >/dev/null
+  then
+    return 0
+  fi
+
+  rows_json="$(extract_formula_lock_rows "${formula_file}" | jq -R -s 'split("\n") | map(select(length > 0) | split("\t")) | map({artifact_role: .[0], platform: .[1], resource: .[2], url: .[3], sha256: .[4]})')"
+  [[ -n "${rows_json}" ]] || die "could not extract lock rows from ${formula_file}"
+
+  jq --arg pkg "${pkg}" --arg ver "${new_ver}" --argjson rows "${rows_json}" -f "${script_dir}/lib/sync-aitools-lock.jq" "${lock_path}" >"${lock_path}.autobump"
+  mv "${lock_path}.autobump" "${lock_path}"
+}
+
 # Write the bump for NAME into the working tree.
 apply_bump() {
   local name="$1" old="$2" new="$3" formula
@@ -153,6 +182,7 @@ apply_bump() {
     if [[ "${formula}" = "${name}" ]]
     then
       replace_with "${formula_dir}/${formula}.rb" bump_text "${formula_dir}/${formula}.rb" "${old}" "${new}"
+      sync_lockfile_for_formula "${lockfile_default}" "${formula_dir}/${formula}.rb" "${new}"
     else
       replace_with "${formula_dir}/${formula}.rb" bump_revision "${formula_dir}/${formula}.rb"
     fi
@@ -204,6 +234,16 @@ open_pull_request() {
     git switch --create "${branch}" "origin/${base}"
     apply_bump "${name}" "${old}" "${new}"
     brew style "${paths[@]}"
+    if [[ -f "${lockfile_default}" ]]
+    then
+      local lock_dirty=""
+      lock_dirty="$(git status --porcelain -- "${lockfile_default}")"
+      if [[ -n "${lock_dirty}" ]]
+      then
+        "${script_dir}/check-aitools-lock.sh" --lockfile "${lockfile_default}" --formula-dir "${formula_dir}"
+        paths+=("versions/aitools-lock.json")
+      fi
+    fi
     git add -- "${paths[@]}"
     git commit --message "${name} ${new}"
     git push origin "${branch}"
@@ -251,6 +291,10 @@ main() {
     rewrite)
       [[ "$#" -eq 3 ]] || usage
       bump_text "$1" "$2" "$3"
+      ;;
+    sync-lock)
+      [[ "$#" -eq 3 ]] || usage
+      sync_lockfile_for_formula "$1" "$2" "$3"
       ;;
     _pr_one)
       open_pull_request "$@"

@@ -1,7 +1,7 @@
 id: formula-conflicts-same-name
 language: Ruby
 severity: error
-message: Do not declare conflicts_with for same-named formulae across taps (tgrep, nats, herdr).
+message: Do not declare conflicts_with for same-named formulae across taps (tgrep, nats, herdr, nats-server, worktrunk).
 note: Declare conflicts_with only when a differently named formula installs overlapping binaries; users disambiguate same-named formulae with artagon/aitools/<name>.
 files:
   - Formula/*.rb
@@ -13,3 +13,7 @@ rule:
     - pattern: conflicts_with "nats", $$$OPTS
     - pattern: conflicts_with "herdr"
     - pattern: conflicts_with "herdr", $$$OPTS
+    - pattern: conflicts_with "nats-server"
+    - pattern: conflicts_with "nats-server", $$$OPTS
+    - pattern: conflicts_with "worktrunk"
+    - pattern: conflicts_with "worktrunk", $$$OPTS

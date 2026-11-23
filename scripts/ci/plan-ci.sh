@@ -500,6 +500,8 @@ main() {
   local run_installer_bats_standalone="false"
   local run_readme_check="false"
   local run_tap_docs_check="false"
+  local run_lock_check="false"
+  local require_lockfile="false"
 
   local touched_formula_or_cask="false"
   local touched_ast_grep="false"
@@ -509,6 +511,7 @@ main() {
   local touched_installer="false"
   local touched_readme="false"
   local touched_tap_docs="false"
+  local touched_lock="false"
 
   while IFS= read -r path
   do
@@ -517,6 +520,7 @@ main() {
       Formula/*)
         touched_formula_or_cask="true"
         touched_ast_grep="true"
+        touched_lock="true"
         ;;
       Casks/*)
         touched_formula_or_cask="true"
@@ -537,6 +541,9 @@ main() {
         touched_ast_grep="true"
         touched_provenance="true"
         ;;
+      versions/*)
+        touched_lock="true"
+        ;;
       README.md)
         touched_readme="true"
         touched_tap_docs="true"
@@ -555,10 +562,20 @@ main() {
     esac
 
     case "${path}" in
-      scripts/verify-provenance.sh | scripts/update-readme-bottles.sh | scripts/update-tap-docs.sh | scripts/ci/* | \
+      scripts/verify-provenance.sh | scripts/update-readme-bottles.sh | scripts/update-tap-docs.sh | \
+        scripts/check-aitools-lock.sh | scripts/autobump.sh | scripts/install-agent-skills.sh | \
+        scripts/lib/* | scripts/ci/* | \
         tests/verify_provenance.bats | tests/ci_workflow_plan.bats | tests/update_tap_docs.bats | \
+        tests/aitools_lock.bats | tests/install_agent_skills_multitool.bats | \
         tests/helpers/provenance_helper.bash | Formula/*.rb)
         touched_provenance="true"
+        ;;
+      *) ;;
+    esac
+
+    case "${path}" in
+      scripts/check-aitools-lock.sh | scripts/autobump.sh | scripts/lib/*)
+        touched_lock="true"
         ;;
       *) ;;
     esac
@@ -619,6 +636,14 @@ main() {
   then
     run_tap_docs_check="true"
   fi
+  if [[ "${is_push}" = "true" || "${touched_lock}" = "true" ]]
+  then
+    run_lock_check="true"
+  fi
+  if [[ -f "versions/aitools-lock.json" ]] || file_has_line "versions/aitools-lock.json" "${deleted_file}"
+  then
+    require_lockfile="true"
+  fi
 
   local needs_homebrew_in_lint="false"
   if [[ "${run_brew_style}" = "true" ||
@@ -634,7 +659,10 @@ main() {
   fi
 
   local run_lint_job="false"
-  if [[ "${needs_homebrew_in_lint}" = "true" || "${run_readme_check}" = "true" || "${run_tap_docs_check}" = "true" ]]
+  if [[ "${needs_homebrew_in_lint}" = "true" ||
+     "${run_readme_check}" = "true" ||
+     "${run_tap_docs_check}" = "true" ||
+     "${run_lock_check}" = "true" ]]
   then
     run_lint_job="true"
   fi
@@ -659,6 +687,8 @@ main() {
     printf 'run_installer_bats_standalone=%s\n' "${run_installer_bats_standalone}"
     printf 'run_readme_check=%s\n' "${run_readme_check}"
     printf 'run_tap_docs_check=%s\n' "${run_tap_docs_check}"
+    printf 'run_lock_check=%s\n' "${run_lock_check}"
+    printf 'require_lockfile=%s\n' "${require_lockfile}"
     printf 'run_lint_job=%s\n' "${run_lint_job}"
     printf 'needs_homebrew_in_lint=%s\n' "${needs_homebrew_in_lint}"
   } >>"${github_output}"
