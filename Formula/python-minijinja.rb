@@ -11,6 +11,13 @@ class PythonMinijinja < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/python-minijinja-3.1.0"
+    sha256 cellar: :any, arm64_tahoe:  "38acbfd0a2b8fd60119b57e2c3ee9b08803e7bab587fb5cdc0439cd101a69474"
+    sha256 cellar: :any, arm64_linux:  "5732be54b84aa54431e6b11611508293abf7ddc3fd679b5ce990a5ae9013b9b6"
+    sha256 cellar: :any, x86_64_linux: "96cee13d5e459f058c6258658ccfaed1d277c4cd2d80c6e0e63322acfed6b742"
+  end
+
   depends_on "maturin" => :build
   depends_on "python@3.13" => [:build, :test]
   depends_on "python@3.14" => [:build, :test]
