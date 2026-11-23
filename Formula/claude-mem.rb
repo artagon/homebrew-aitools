@@ -11,6 +11,14 @@ class ClaudeMem < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/claude-mem-16.1.0"
+    rebuild 2
+    sha256               arm64_tahoe:  "bf2ba80236be040d8fe157f1886535e27495d7bcbf72e3c9f2771a90e9c8e0c5"
+    sha256 cellar: :any, arm64_linux:  "4920d8b5cb0dcb038b8209e7612687a8db973c3f62b929b8dd33605314d4a0bf"
+    sha256 cellar: :any, x86_64_linux: "aba9da2a7c5d5c9d2c60faa9011f480e2bd85a026489776c354240f060dc5982"
+  end
+
   depends_on "bun"
   depends_on "node"
   depends_on "tree-sitter-cli"
