@@ -12,6 +12,14 @@ class ArizePhoenix < Formula
     strategy :github_releases
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/arize-phoenix-22.0.1"
+    rebuild 2
+    sha256 cellar: :any, arm64_tahoe:  "2fa508cde9581ba383fcc05a965a5721021bbccf64fe98c73f3c0cd4fd077f6b"
+    sha256 cellar: :any, arm64_linux:  "c493e6d00e1d1741f6e0475d9e90d9a5beda6464024fe1163dc79cd1ce9ef0f7"
+    sha256 cellar: :any, x86_64_linux: "414ed2edcd947ab700e5ce9f259251a559f7655fe9f069fdec0ecba1c003140d"
+  end
+
   depends_on "node" => :build
   depends_on "pnpm" => :build
   depends_on "uv" => :build
