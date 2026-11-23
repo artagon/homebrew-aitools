@@ -37,7 +37,8 @@ class EntireGraph < Formula
 
     prefix.install "NOTICES"
 
-    pkgshare.install ".claude-plugin", "entire-plugin.yml", "hooks"
+    pkgshare.install ".claude-plugin", "hooks"
+    pkgshare.install_symlink libexec/"entire-plugin.yml"
     (pkgshare/"skills").install "skills/stats"
     (pkgshare/"scripts").install "scripts/entire-graph-prompt-context.py",
                                  "scripts/entire-graph-statusline.sh"
@@ -133,6 +134,7 @@ class EntireGraph < Formula
 
     assert_path_exists prefix/"NOTICES"
     assert_path_exists libexec/"entire-plugin.yml"
+    assert_path_exists pkgshare/"entire-plugin.yml"
     assert_path_exists pkgshare/"skills/stats/SKILL.md"
     assert_path_exists pkgshare/"hooks/hooks.json"
     assert_path_exists pkgshare/".claude-plugin/plugin.json"
