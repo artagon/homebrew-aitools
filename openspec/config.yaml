@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  Repository: artagon/homebrew-aitools (Homebrew tap and Nix Split-System packaging for AI developer tools).
+  Target platforms: macOS (Apple Silicon arm64_tahoe/sequoia + Intel) and Linux (x86_64_linux + aarch64_linux).
+  Tap invariants:
+  - Wrapper scripts must target macOS /bin/bash 3.2 with set -euo pipefail, stop flag scans at --, and follow Homebrew shfmt/shellcheck conventions.
+  - Disable upstream telemetry, analytics, startup update checks, and paid/cloud routing by default; block self-updaters with exit 2; bind local servers/daemons to loopback (127.0.0.1) or Unix/vsock sockets by default.
+  - Every formula requires literal-versioned url + sha256 (no #{version} interpolation), a direct livecheck block, fully qualified artagon/aitools/<name> caveats/install examples, and bottle compatibility with sign-bottles.yml (SLSA v1 + cosign v3 keyless OIDC).
+  - Never mutate live user dotfiles (~/.claude, ~/.codex, ~/.config/*, ~/.homebrew/trust.json, ~/.sigstore) during installs or tests.
+  - Changes that carry substantial upstream research store redacted durable research documents under openspec/changes/<change>/research/ with zero PII, local usernames, secrets, or proprietary employer paths.
+
+rules:
+  proposal:
+    - Include Why, What Changes, Capabilities (Added/Modified), Out of Scope, and Impact sections.
+    - Reference the durable evidence documents in research/ for architectural claims and benchmarks.
+  specs:
+    - Use SHALL/MUST normative requirements and four-hash #### Scenario: headings with WHEN / THEN / AND clauses.
+    - Make failure modes, security boundaries, exit codes, socket/port bindings, and platform differences explicit and testable.
+  design:
+    - Document Goals / Non-Goals, Component Topology, Security & Trust Boundaries, Key Decisions with Alternatives Rejected, Risks / Trade-offs, Migration Plan, and Open Questions.
+  tasks:
+    - Group implementation tasks into ordered, independently verifiable phases with explicit test and lint gates (cargo test, bats, brew style, ast-grep, openspec validate --strict).
