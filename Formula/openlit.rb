@@ -12,6 +12,14 @@ class Openlit < Formula
     strategy :github_releases
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/openlit-2.2.0"
+    rebuild 2
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "d0f3320e21a0726acbbb0d07325ae9f1d334c8860ed9424532f723cbfec4428f"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "d5120472ffce46eec0f0c3ce486fc2d950ef936577a84e241e2c50cc25c86f6b"
+    sha256 cellar: :any,                 x86_64_linux: "2e5fa7fd322c6ebc0e16b273e1d160a3a202f545bb7457244970a16a5c3fcf9d"
+  end
+
   depends_on "go" => :build
 
   def install
