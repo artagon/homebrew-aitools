@@ -11,13 +11,6 @@ class Magpie < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/magpie-0.1.4665"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "35c82ee3029733f9e9bfd80d6fbbe9463d78c26e1827fdba86c3a40f115916f0"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "1ddf4dfed0fb18b2c2537e26a21bf8b6f1f190eff4c38df997e68ffc010ffdc1"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "4db0767d693c50999916111cf9a952f5f60939cecac23c1787014054a9517ea6"
-  end
-
   depends_on "go" => :build
 
   def install

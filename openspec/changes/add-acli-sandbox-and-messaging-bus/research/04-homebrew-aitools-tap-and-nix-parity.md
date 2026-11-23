@@ -71,18 +71,13 @@ class Acli < Formula
   desc "Sandboxed AI coding CLI launcher, multiplexer, and messaging bus"
   homepage "https://github.com/artagon/acli"
   url "https://github.com/artagon/acli/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "<64-lowercase-hex>"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "Apache-2.0"
 
   livecheck do
     url :stable
     strategy :github_latest
   end
-
-  # Source builds require Homebrew >= 7.0.5 (702cc64b18: def fetch + std_cargo_fetch_args + automatic --offline);
-  # prebuilt 3-platform bottles pour cleanly without source-build toolchains.
-  deny_network_access! [:build, :postinstall]
-  allow_network_access! :test
 
   depends_on "pkgconf" => :build
   depends_on "rust" => :build
@@ -105,13 +100,18 @@ class Acli < Formula
 
   resource "guest-aarch64-linux-musl" do
     url "https://github.com/artagon/acli/releases/download/v0.1.0/acli-guest-aarch64-unknown-linux-musl.tar.xz"
-    sha256 "<64-lowercase-hex>"
+    sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   end
 
   resource "guest-x86_64-linux-musl" do
     url "https://github.com/artagon/acli/releases/download/v0.1.0/acli-guest-x86_64-unknown-linux-musl.tar.xz"
-    sha256 "<64-lowercase-hex>"
+    sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   end
+
+  # Source builds require Homebrew >= 7.0.5 (702cc64b18: def fetch + std_cargo_fetch_args + automatic --offline);
+  # prebuilt 3-platform bottles pour cleanly without source-build toolchains.
+  deny_network_access! [:build, :postinstall]
+  allow_network_access! :test
 
   def fetch
     super
@@ -127,6 +127,7 @@ class Acli < Formula
 
     %w[acli aclid acli-shim].each do |crate|
       next if crate == "acli-shim" && OS.mac? && Hardware::CPU.intel?
+
       system "cargo", "install", *std_cargo_args(path: "crates/#{crate}", root: libexec)
     end
 
@@ -221,8 +222,9 @@ class Acli < Formula
       assert_equal({ "com.apple.security.hypervisor" => true }, der_map)
     end
     assert_match "ok", shell_output("#{bin}/acli bus self-test --isolated-run-dir #{testpath}/run")
-    if (OS.mac? && Hardware::CPU.arm? && Utils.safe_popen_read("/usr/sbin/sysctl", "-n", "kern.hv_support").strip == "1") ||
-       (OS.linux? && File.writable?("/dev/kvm"))
+    mac_hv = OS.mac? && Hardware::CPU.arm? &&
+             Utils.safe_popen_read("/usr/sbin/sysctl", "-n", "kern.hv_support").strip == "1"
+    if mac_hv || (OS.linux? && File.writable?("/dev/kvm"))
       system bin/"acli", "vm", "self-test", "--check-hypervisor"
     end
   end
