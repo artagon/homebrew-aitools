@@ -110,8 +110,8 @@ class Acli < Formula
 
   # Source builds require Homebrew >= 7.0.5 (702cc64b18: def fetch + std_cargo_fetch_args + automatic --offline);
   # prebuilt 3-platform bottles pour cleanly without source-build toolchains.
-  deny_network_access! [:build, :postinstall]
   allow_network_access! :test
+  deny_network_access! [:build, :postinstall]
 
   def fetch
     super
