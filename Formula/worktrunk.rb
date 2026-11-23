@@ -11,6 +11,13 @@ class Worktrunk < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/worktrunk-0.83.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "fa7db20a60cc6410891e7414950697f2b26822e20166df0525b8898ccfa42a42"
+    sha256 cellar: :any,                 arm64_linux:  "4e89ce96479f239687950632f04f5b0620013fbc5dd31901994367f9e92ca3d3"
+    sha256 cellar: :any,                 x86_64_linux: "29b5bd255a5ca0b502d51265e36fef41528e7fde2235db3a023ff05ee4d5f07b"
+  end
+
   depends_on "rust" => :build
 
   conflicts_with "wiredtiger", because: "both install `wt` binaries"
