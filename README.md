@@ -5,7 +5,7 @@
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
 <!-- BEGIN TAP_BADGES -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
-[![Formulae: 40](https://img.shields.io/badge/formulae-40-8250df)](#complete-formula--cask-inventory)
+[![Formulae: 42](https://img.shields.io/badge/formulae-42-8250df)](#complete-formula--cask-inventory)
 [![Casks: 3](https://img.shields.io/badge/casks-3-bf3989)](#complete-formula--cask-inventory)
 <!-- END TAP_BADGES -->
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
@@ -48,10 +48,11 @@ brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aito
 brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
   artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm artagon/aitools/cairn
 
-# Architecture decisions, hooks, build caching, skill lifecycle compilers, and benchmarking:
+# Architecture decisions, hooks, Jinja2 templates, build caching, skill compilers, and benchmarking:
 brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/agenthooks \
-  artagon/aitools/skillfile artagon/aitools/skillprism artagon/aitools/waza \
-  artagon/aitools/skillopt artagon/aitools/hyperfine artagon/aitools/kache
+  artagon/aitools/skillfile artagon/aitools/skillprism artagon/aitools/minijinja-cli \
+  artagon/aitools/python-minijinja artagon/aitools/waza artagon/aitools/skillopt \
+  artagon/aitools/hyperfine artagon/aitools/kache
 
 # Live evaluation harnesses, versioned skill registries, and OpenTelemetry observability:
 brew install artagon/aitools/mlflow artagon/aitools/inspect-ai artagon/aitools/langfuse-cli \
@@ -65,7 +66,7 @@ brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/
 ```
 
 > [!NOTE]
-> Always qualify `artagon/aitools/{tgrep,nats,herdr,hyperfine}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
+> Always qualify `artagon/aitools/{tgrep,nats,herdr,hyperfine,minijinja-cli}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
 
 ---
 
@@ -139,6 +140,8 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 | [`agenthooks`](Formula/agenthooks.rb) | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) (`MIT`) | `agenthooks-secretguard`, Go module + `DESIGN.md` + `examples/` in `pkgshare` | Source Go build (`CGO_ENABLED=0`) disabling `claude`/`codex mcp list` subprocess probes (`WithoutMCPListFallback`); masks detected secrets and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
 | [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | `skillfile`, shell completions | Source Rust build (`cargo install --locked`); wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1` |
 | [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | `skillprism`, completions, `man1/skillprism.1` | Source Rust offline Jinja2 multi-harness `SKILL.md.j2` compiler (`./dist/`); zero network or live config writes |
+| [`minijinja-cli`](Formula/minijinja-cli.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja-cli`, `man1/minijinja-cli.1`, `bash`/`zsh`/`fish`/`pwsh` completions, `pkgshare/skills/minijinja-cli` | Source Rust build (`cargo install --locked`, `ASSET_OUT_DIR`); pure offline Jinja2 CLI renderer & expression evaluator with `--no-include`/`--safe-path`/`--fuel` sandboxing |
+| [`python-minijinja`](Formula/python-minijinja.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja` Python 3 (`3.13`–`3.15`) ABI3 wheels + `pkgshare/skills/minijinja-python` | Offline `maturin` + `cargo fetch --locked` PEP 517 build across Homebrew Pythons; zero runtime network/telemetry deps and deterministic `fuel` + `load_from_path` sandboxing |
 | [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | `waza` + embedded SPA, completions, `pkgshare/skills` | Source Vite/React + Go build (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`); exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (`exit 2`) |
 | [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | `skillopt-{train,eval,sleep}`, `skillopt-sleep-mcp`, `pkgshare/{plugins,configs}` | Source `uv` Python `3.13` build; `skillopt-sleep` defaults to `--backend mock` (zero API spend) and human review before `adopt` |
 | [`hyperfine`](Formula/hyperfine.rb) | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) (`MIT OR Apache-2.0`) | `hyperfine`, `man1/hyperfine.1`, `bash`/`zsh`/`fish`/`pwsh` completions | Source Rust build (`cargo install --locked`); direct offline execution (`--shell=none`) with zero telemetry or update checks |
@@ -235,9 +238,9 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 <!-- BEGIN TAP_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-Total packaged tools: **43** (**40** formulae: **40** bottled, **0** source-only; **3** macOS casks).
+Total packaged tools: **45** (**42** formulae: **40** bottled, **2** source-only; **3** macOS casks).
 
-### Formulae (40)
+### Formulae (42)
 
 | Formula | Version | License | Bottles | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -266,12 +269,14 @@ Total packaged tools: **43** (**40** formulae: **40** bottled, **0** source-only
 | [`kache`](Formula/kache.rb) | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) — Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA |
 | [`langfuse-cli`](Formula/langfuse-cli.rb) | `1.3.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) — Command-line client for Langfuse API and versioned agent skills |
 | [`magpie`](Formula/magpie.rb) | `0.1.4665` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [usemagpie.ai](https://usemagpie.ai) — Subscription-first local gateway and router for AI coding agents |
+| [`minijinja-cli`](Formula/minijinja-cli.rb) | `3.1.0` | `Apache-2.0` | source | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Render Jinja2 templates directly from the command-line to stdout |
 | [`mlflow`](Formula/mlflow.rb) | `3.18.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mlflow.org](https://mlflow.org) — AI evaluation, trace, dataset, and skill registry platform with agent CLIs |
 | [`nats`](Formula/nats.rb) | `0.5.2` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
 | [`omp`](Formula/omp.rb) | `19.1.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
 | [`openlit`](Formula/openlit.rb) | `2.1.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | `1.22.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
+| [`python-minijinja`](Formula/python-minijinja.rb) | `3.1.0` | `Apache-2.0` | source | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
 | [`qmd`](Formula/qmd.rb) | `2.9.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
 | [`ripwire`](Formula/ripwire.rb) | `0.6.10` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) — Codebase symbol maps and call graphs for AI agents |
 | [`skillfile`](Formula/skillfile.rb) | `1.9.3` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [eljulians/skillfile](https://github.com/eljulians/skillfile) — Declarative package manager for AI coding agent skills |
@@ -339,6 +344,8 @@ Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passive
 | `ripwire` | `skills/ripwire-*`, `hooks/*` | `ripwire-agent-install --claude --codex --agy` |
 | `entire-graph` | `skills/stats/SKILL.md`, `hooks/hooks.json`, `.claude-plugin/`, `scripts/` | Opt-in `entire-graph setup --repo .` or symlink from `share/entire-graph/` |
 | `hashline` | `skills/hashline/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `minijinja-cli` | `skills/minijinja-cli/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `python-minijinja` | `skills/minijinja-python/SKILL.md` | Symlink or `agentsync` / `skillfile` |
 | `adrkit` | `skills/` (`decision-memory`, ADR workflows) | Symlink or `agentsync` / `skillfile` |
 | `basic-memory` | `skills/memory-*` | Symlink or `agentsync` / `skillfile` |
 | `hindsight` | `skills/hindsight-{architect,docs,local,self-hosted,coding-agent}` | `hindsight-coding-agents install <client> --server self-hosted` |
