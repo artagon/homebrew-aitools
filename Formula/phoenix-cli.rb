@@ -12,6 +12,14 @@ class PhoenixCli < Formula
     strategy :github_releases
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/phoenix-cli-1.24.0"
+    rebuild 2
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "4665c219f4169b2b6cb47dff793cf2dd023e2554b515ff3b3f6b369647e38b6d"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "278d69c0071246a96c0a3e68612b154f27be7434822205be189f014db22230c0"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "6643832aca9806065d46420fe10e4109e048c4e19ba198832e8691089229fba4"
+  end
+
   depends_on "pnpm" => :build
   depends_on "node"
 
