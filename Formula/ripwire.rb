@@ -298,7 +298,12 @@ class Ripwire < Formula
     installer_shell = OS.mac? ? "/bin/bash" : "bash"
     %w[claude codex].each do |agent|
       system installer_shell, bin/"ripwire-agent-install", "--#{agent}"
-      destination = testpath/((agent == "claude") ? ".claude/skills" : ".agents/skills")
+      skills_dir = if agent == "claude"
+        ".claude/skills"
+      else
+        ".agents/skills"
+      end
+      destination = testpath/skills_dir
       assert_path_exists destination/".ripwire-manifest-v1"
       skills.each do |skill|
         link = destination/skill.parent.basename

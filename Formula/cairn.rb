@@ -65,7 +65,9 @@ class Cairn < Formula
     (libexec/"tools").glob("**/direct_url.json").each { |file| rm(file) }
     (libexec/"tools").glob("**/uv-receipt.toml").each { |file| rm(file) }
 
-    native_tag = "#{OS.mac? ? "darwin" : "linux"}-#{Hardware::CPU.arm? ? "arm64" : "x64"}"
+    os_tag = OS.mac? ? "darwin" : "linux"
+    arch_tag = Hardware::CPU.arm? ? "arm64" : "x64"
+    native_tag = "#{os_tag}-#{arch_tag}"
     (libexec/"tools").glob("**/prebuilds/*").each do |entry|
       name = entry.basename.to_s
       next if name == native_tag || name.start_with?("#{native_tag}.")
