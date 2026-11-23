@@ -11,6 +11,13 @@ class MinijinjaCli < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/minijinja-cli-3.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "25d5ca681609bebe0b8679a47ecb8343933a79abcb17586019a96fb8a54374c2"
+    sha256 cellar: :any,                 arm64_linux:  "9ee251d40835eae9621139f733fda9110fb9733d06401083a4a9b92333616a59"
+    sha256 cellar: :any,                 x86_64_linux: "edffdeeae1dd241847b889c56e5d29bab973fda97d5ad86fd1694d6b737ebe0d"
+  end
+
   depends_on "rust" => :build
 
   deny_network_access!
