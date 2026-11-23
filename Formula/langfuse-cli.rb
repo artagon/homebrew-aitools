@@ -1,8 +1,8 @@
 class LangfuseCli < Formula
   desc "Command-line client for Langfuse API and versioned agent skills"
   homepage "https://github.com/langfuse/langfuse-cli"
-  url "https://github.com/langfuse/langfuse-cli/archive/refs/tags/v1.3.1.tar.gz"
-  sha256 "3c1fe1d6985e2ebd1c9625f7cef0cf9965db512e3f841419ebed94d0a3e87848"
+  url "https://github.com/langfuse/langfuse-cli/archive/refs/tags/v1.4.0.tar.gz"
+  sha256 "9b843ad9d84bba066acb82b64eedbb8643fcc66de7be589c137ea0daac4669b8"
   license "MIT"
   head "https://github.com/langfuse/langfuse-cli.git", branch: "main"
 
