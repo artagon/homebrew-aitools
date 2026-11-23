@@ -5,7 +5,7 @@
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
 <!-- BEGIN TAP_BADGES -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
-[![Formulae: 39](https://img.shields.io/badge/formulae-39-8250df)](#complete-formula--cask-inventory)
+[![Formulae: 40](https://img.shields.io/badge/formulae-40-8250df)](#complete-formula--cask-inventory)
 [![Casks: 3](https://img.shields.io/badge/casks-3-bf3989)](#complete-formula--cask-inventory)
 <!-- END TAP_BADGES -->
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
@@ -37,7 +37,7 @@ Install curated domain bundles with fully qualified `artagon/aitools/<formula>` 
 
 ```sh
 # Code search, JDK 28 Valhalla Java AST, and hash-anchored editing:
-brew install artagon/aitools/ripwire artagon/aitools/ast-grep-valhalla artagon/aitools/tree-sitter-java-valhalla \
+brew install artagon/aitools/ripwire artagon/aitools/entire-graph artagon/aitools/ast-grep-valhalla artagon/aitools/tree-sitter-java-valhalla \
   artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/codesearch artagon/aitools/fff-mcp artagon/aitools/hashline
 
 # Local agent memory, hybrid Markdown search, and token compression:
@@ -78,6 +78,7 @@ brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) (`MIT`) | `libtree-sitter-java-valhalla` + crate sources in `pkgshare` | Source ABI `14` C11 build with additive JEP 401/440/511/513 Java grammar patch; contextual `value` preserves standard Java ASTs |
 | [`ast-grep-valhalla`](Formula/ast-grep-valhalla.rb) | [ast-grep/ast-grep](https://github.com/ast-grep/ast-grep) (`MIT`) | `ast-grep`, `sg`, shell completions | Source Rust build (`cargo install --locked`) compiling `tree-sitter-java-valhalla` into built-in `-l java`; `conflicts_with "ast-grep"` |
 | [`ripwire`](Formula/ripwire.rb) | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) (`Apache-2.0`) | `ripwire`, `ripwire-agent-install`, `pkgshare/{skills,hooks}` | Source CMake/C++23 build with Valhalla `parser.c` + Java query patch; opt-in skill/hook installer (`--hook` required for config edits) |
+| [`entire-graph`](Formula/entire-graph.rb) | [entireio/entire-graph](https://github.com/entireio/entire-graph) (`MIT`) | `entire-graph`, `NOTICES`, `entire-plugin.yml`, `pkgshare/{.claude-plugin,hooks,scripts,skills/stats}` | Source Go + CGO build (`CGO_ENABLED=1`) with standalone prompt-context hook fallback; strict no-egress static analysis (zero network/telemetry); opt-in `entire-graph setup --repo .` |
 | [`tgrep`](Formula/tgrep.rb) | [microsoft/tgrep](https://github.com/microsoft/tgrep) (`MIT`) | `tgrep` | SHA-256-pinned release binary; local `.tgrep/` trigram index only; no background watcher started automatically |
 | [`ck`](Formula/ck.rb) | [BeaconBay/ck](https://github.com/BeaconBay/ck) (`MIT OR Apache-2.0`) | `ck` (`--lex`, `--sem`, `--hybrid`, `--serve` MCP) | SHA-256-pinned release binary (`glibc >= 2.39` on Linux); `--lex`/`--regex` fully offline; ONNX models cached on first `--sem` |
 | [`codesearch`](Formula/codesearch.rb) | [flupkede/codesearch](https://github.com/flupkede/codesearch) (`Apache-2.0`) | `codesearch` CLI + `mcp` / `serve`, `pkgshare/integrations/{claude-code,opencode}` | Source Rust build (`cargo install --locked`, `protobuf`, Linux `openssl@4`); defaults `CODESEARCH_SERVE_HOST=127.0.0.1`, `CODESEARCH_EMBED_PROVIDER=fastembed`, `DO_NOT_TRACK=true`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
@@ -234,9 +235,9 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 <!-- BEGIN TAP_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-Total packaged tools: **42** (**39** formulae: **39** bottled, **0** source-only; **3** macOS casks).
+Total packaged tools: **43** (**40** formulae: **39** bottled, **1** source-only; **3** macOS casks).
 
-### Formulae (39)
+### Formulae (40)
 
 | Formula | Version | License | Bottles | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -255,6 +256,7 @@ Total packaged tools: **42** (**39** formulae: **39** bottled, **0** source-only
 | [`ck`](Formula/ck.rb) | `0.8.1` | `MIT OR Apache-2.0` | `arm64_tahoe` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
 | [`claude-mem`](Formula/claude-mem.rb) | `16.0.2` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
 | [`codesearch`](Formula/codesearch.rb) | `1.8.11` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
+| [`entire-graph`](Formula/entire-graph.rb) | `0.6.0` | `MIT` | source | [entireio/entire-graph](https://github.com/entireio/entire-graph) — Deterministic local code graph for coding agents |
 | [`fff-mcp`](Formula/fff-mcp.rb) | `0.11.0_1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
 | [`hashline`](Formula/hashline.rb) | `0.9.24_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [quangdang46/hashline](https://github.com/quangdang46/hashline) — Hash-anchored line editing for AI coding agents |
 | [`herdr`](Formula/herdr.rb) | `0.9.5` | `Apache-2.0` | `arm64_tahoe` | [herdrdev/herdr](https://github.com/herdrdev/herdr) — Multiplexed terminal manager for AI coding agent sessions |
@@ -335,6 +337,7 @@ Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passive
 | Formula | Installed Asset Path (`$(brew --prefix <formula>)/share/<formula>/...`) | Opt-In Activation |
 | :--- | :--- | :--- |
 | `ripwire` | `skills/ripwire-*`, `hooks/*` | `ripwire-agent-install --claude --codex --agy` |
+| `entire-graph` | `skills/stats/SKILL.md`, `hooks/hooks.json`, `.claude-plugin/`, `scripts/` | Opt-in `entire-graph setup --repo .` or symlink from `share/entire-graph/` |
 | `hashline` | `skills/hashline/SKILL.md` | Symlink or `agentsync` / `skillfile` |
 | `adrkit` | `skills/` (`decision-memory`, ADR workflows) | Symlink or `agentsync` / `skillfile` |
 | `basic-memory` | `skills/memory-*` | Symlink or `agentsync` / `skillfile` |
