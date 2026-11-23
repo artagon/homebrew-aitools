@@ -5,7 +5,7 @@
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
 <!-- BEGIN TAP_BADGES -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
-[![Formulae: 42](https://img.shields.io/badge/formulae-42-8250df)](#complete-formula--cask-inventory)
+[![Formulae: 43](https://img.shields.io/badge/formulae-43-8250df)](#complete-formula--cask-inventory)
 [![Casks: 3](https://img.shields.io/badge/casks-3-bf3989)](#complete-formula--cask-inventory)
 <!-- END TAP_BADGES -->
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
@@ -44,9 +44,10 @@ brew install artagon/aitools/ripwire artagon/aitools/entire-graph artagon/aitool
 brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/claude-mem \
   artagon/aitools/qmd artagon/aitools/squeez
 
-# Multi-agent mail, NATS event bus, terminal workspaces, fact-intent graphs, and Beads issue graphs:
+# Multi-agent mail, NATS event bus, Git worktrees, terminal workspaces, fact-intent graphs, and Beads issue graphs:
 brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
-  artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm artagon/aitools/cairn
+  artagon/aitools/nats artagon/aitools/herdr artagon/aitools/autoswarm artagon/aitools/cairn \
+  artagon/aitools/worktrunk
 
 # Architecture decisions, hooks, Jinja2 templates, build caching, skill compilers, and benchmarking:
 brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/agenthooks \
@@ -66,7 +67,7 @@ brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/
 ```
 
 > [!NOTE]
-> Always qualify `artagon/aitools/{tgrep,nats,herdr,hyperfine,minijinja-cli}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, or `px`), run `brew unlink <formula>` first.
+> Always qualify `artagon/aitools/{tgrep,nats,herdr,hyperfine,minijinja-cli,worktrunk}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, `px`, or `wiredtiger`), run `brew unlink <formula>` first.
 
 ---
 
@@ -130,6 +131,7 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 | [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; warns against `herdr update` |
 | [`autoswarm`](Formula/autoswarm.rb) | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) (`MIT`) | `autoswarm` (`desk`), `pkgshare/{skills/autoswarm,plugins/opencode}` | Source `uv` Python `3.13` build (`preserve_rpath`); patches `setup.py` to persist `opt_libexec` Python across upgrades, blocks `update`/`self-update`/`upgrade` (`exit 2`); opt-in `autoswarm setup --host <host>` |
 | [`cairn`](Formula/cairn.rb) | [oritera/Cairn](https://github.com/oritera/Cairn) (`AGPL-3.0-only`) | `cairn` (`serve`, `dispatch`), `pkgshare/{examples,docs,skills}` | Source `uv` Python `3.13` build (`preserve_rpath`) stripping upstream Aliyun PyPI mirror/lockfile; `cairn serve` binds `127.0.0.1:8000`, exports `DO_NOT_TRACK=1`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
+| [`worktrunk`](Formula/worktrunk.rb) | [max-sixty/worktrunk](https://github.com/max-sixty/worktrunk) (`Apache-2.0 OR MIT`) | `wt`, shell completions, `pkgshare/{skills,plugins,hooks,gemini-extension.json,examples}` | Source Rust build (`cargo fetch` + `deny_network_access!`, `conflicts_with "wiredtiger"`); local-first Git worktree CLI with zero telemetry or startup update checks, opt-in shell integration (`wt config shell install`), and opt-in `[commit.generation]` |
 
 ### 4. Architecture Decisions, Hooks, Build Caching, Skill Lifecycle & Benchmarking
 
@@ -238,9 +240,9 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 <!-- BEGIN TAP_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-Total packaged tools: **45** (**42** formulae: **42** bottled, **0** source-only; **3** macOS casks).
+Total packaged tools: **46** (**43** formulae: **42** bottled, **1** source-only; **3** macOS casks).
 
-### Formulae (42)
+### Formulae (43)
 
 | Formula | Version | License | Bottles | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -286,6 +288,7 @@ Total packaged tools: **45** (**42** formulae: **42** bottled, **0** source-only
 | [`tgrep`](Formula/tgrep.rb) | `1.2.8` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft/tgrep](https://github.com/microsoft/tgrep) — Trigram-indexed grep for fast regex search in large codebases |
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | `0.23.5` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) — Tree-sitter Java grammar with JDK 28 Valhalla value classes and records |
 | [`waza`](Formula/waza.rb) | `0.42.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft.github.io/waza](https://microsoft.github.io/waza/) — Evaluate and benchmark AI agent workflows, custom agents, and skills |
+| [`worktrunk`](Formula/worktrunk.rb) | `0.83.0` | `Apache-2.0 OR MIT` | source | [worktrunk.dev](https://worktrunk.dev) — CLI for Git worktree management, designed for parallel AI agent workflows |
 
 ### macOS Casks (3)
 
@@ -362,6 +365,7 @@ Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passive
 | `openlit` | `plugins/{claude-code,codex,cursor,opencode}`, `agent-guides/` | `openlit coding install --vendor=<vendor> --dry-run` |
 | `codesearch` | `integrations/{claude-code,opencode}` | Opt-in `codesearch hooks claude install` or drop `codesearch.ts` into OpenCode plugins |
 | `autoswarm` | `skills/autoswarm`, `plugins/opencode` | Opt-in `autoswarm setup --host <host>` (`codex`, `claude-code`, `opencode`, etc.) |
+| `worktrunk` | `skills/{worktrunk,wt-switch-create}`, `plugins/{worktrunk,worktrunk-markers}`, `hooks/hooks.json`, `gemini-extension.json`, `examples/` | Symlink from `share/worktrunk/skills` or opt-in `wt config plugins <agent> install` (`claude`, `codex`, `opencode`, `pi`, `omp`) |
 
 ---
 

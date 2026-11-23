@@ -27,7 +27,7 @@ Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, a
 <!-- BEGIN ABOUT_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-This tap currently packages **45** tools: **42** formulae (**42** bottled, **0** source-only) and **3** macOS casks.
+This tap currently packages **46** tools: **43** formulae (**42** bottled, **1** source-only) and **3** macOS casks.
 
 | Tool | Kind | Version | License | Bottles | Summary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -73,6 +73,7 @@ This tap currently packages **45** tools: **42** formulae (**42** bottled, **0**
 | [`tgrep`](Formula/tgrep.rb) | Formula | `1.2.8` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft/tgrep](https://github.com/microsoft/tgrep) — Trigram-indexed grep for fast regex search in large codebases |
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | Formula | `0.23.5` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) — Tree-sitter Java grammar with JDK 28 Valhalla value classes and records |
 | [`waza`](Formula/waza.rb) | Formula | `0.42.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft.github.io/waza](https://microsoft.github.io/waza/) — Evaluate and benchmark AI agent workflows, custom agents, and skills |
+| [`worktrunk`](Formula/worktrunk.rb) | Formula | `0.83.0` | `Apache-2.0 OR MIT` | source | [worktrunk.dev](https://worktrunk.dev) — CLI for Git worktree management, designed for parallel AI agent workflows |
 | [`ghostty`](Casks/ghostty.rb) | Cask | `1.4.0` | — | macOS cask | [ghostty.org](https://ghostty.org/) — Terminal emulator that uses platform-native UI and GPU acceleration |
 | [`hammerspoon`](Casks/hammerspoon.rb) | Cask | `1.1.1` | — | macOS cask | [www.hammerspoon.org](https://www.hammerspoon.org/) — Desktop automation application |
 | [`markdown-preview`](Casks/markdown-preview.rb) | Cask | `0.0.74` | — | macOS cask | [markdownpreview.app](https://markdownpreview.app/) — Markdown previewer with bundled Quick Look extension |
