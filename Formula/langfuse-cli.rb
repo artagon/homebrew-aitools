@@ -11,6 +11,14 @@ class LangfuseCli < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/langfuse-cli-1.4.0"
+    rebuild 2
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "c80604ee38116001279773ba28c6055289ad55f788a3db495b159105c3ee04ff"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "b7cb63332e8dace32b69ccc98786e2272e306df2ee90e135b5dff2669b01455e"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "e3259ab39ef208695eff1023df6615a9e452967da3b847c1f522aed49f2bf0a0"
+  end
+
   depends_on "bun" => :build
   depends_on "node"
 
