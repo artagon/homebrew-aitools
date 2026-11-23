@@ -11,6 +11,14 @@ class InspectAi < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/inspect-ai-0.3.291"
+    rebuild 2
+    sha256 cellar: :any, arm64_tahoe:  "5f8c944a4b39049da3f56f11eb1b3aeb62e3e917bb08a9f4b56ed004d04c9090"
+    sha256 cellar: :any, arm64_linux:  "27c0565e05653cf0564e3d052929f513aa267ba1052c2ca01b5bd336d61f4b11"
+    sha256 cellar: :any, x86_64_linux: "e8ea49c07f4ef746b00f29682e6106e90b1295e6e540fd5832825ffd3b7d2e73"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
