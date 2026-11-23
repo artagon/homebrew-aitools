@@ -27,7 +27,7 @@ Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, a
 <!-- BEGIN ABOUT_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-This tap currently packages **45** tools: **42** formulae (**42** bottled, **0** source-only) and **3** macOS casks.
+This tap currently packages **45** tools: **42** formulae (**33** bottled, **9** source-only) and **3** macOS casks.
 
 | Tool | Kind | Version | License | Bottles | Summary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -35,7 +35,7 @@ This tap currently packages **45** tools: **42** formulae (**42** bottled, **0**
 | [`agent-mail`](Formula/agent-mail.rb) | Formula | `0.3.41` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) — Asynchronous coordination MCP server and CLI for AI coding agents |
 | [`agenthooks`](Formula/agenthooks.rb) | Formula | `0.7.7` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) — Cross-agent hook Go library and credential-scanning hook runner |
 | [`agentsync`](Formula/agentsync.rb) | Formula | `1.53.1` | `MIT` | `arm64_tahoe` | [dallay/agentsync](https://github.com/dallay/agentsync) — Sync AI agent configurations and MCP servers via symbolic links |
-| [`arize-phoenix`](Formula/arize-phoenix.rb) | Formula | `21.1.0` | `Elastic-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
+| [`arize-phoenix`](Formula/arize-phoenix.rb) | Formula | `22.0.1` | `Elastic-2.0` | source | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
 | [`ast-grep-valhalla`](Formula/ast-grep-valhalla.rb) | Formula | `0.51.3` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [ast-grep.github.io](https://ast-grep.github.io/) — Code searching, linting, rewriting with a Valhalla-aware Java grammar |
 | [`autoswarm`](Formula/autoswarm.rb) | Formula | `0.1.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) — Coordinate installed coding agents from one conversation |
 | [`basic-memory`](Formula/basic-memory.rb) | Formula | `1.0.0` | `AGPL-3.0-or-later` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) — Local-first knowledge graph and stdio MCP server for AI agents |
@@ -44,7 +44,7 @@ This tap currently packages **45** tools: **42** formulae (**42** bottled, **0**
 | [`bv`](Formula/bv.rb) | Formula | `0.27.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) — Graph-aware terminal viewer and triage engine for Beads projects |
 | [`cairn`](Formula/cairn.rb) | Formula | `0.2.1` | `AGPL-3.0-only` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [oritera/Cairn](https://github.com/oritera/Cairn) — Blackboard fact-intent graph server and dispatcher for AI agents |
 | [`ck`](Formula/ck.rb) | Formula | `0.8.1` | `MIT OR Apache-2.0` | `arm64_tahoe` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
-| [`claude-mem`](Formula/claude-mem.rb) | Formula | `16.0.2` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
+| [`claude-mem`](Formula/claude-mem.rb) | Formula | `16.1.0` | `Apache-2.0` | source | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
 | [`codesearch`](Formula/codesearch.rb) | Formula | `1.8.11` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
 | [`entire-graph`](Formula/entire-graph.rb) | Formula | `0.6.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [entireio/entire-graph](https://github.com/entireio/entire-graph) — Deterministic local code graph for coding agents |
 | [`fff-mcp`](Formula/fff-mcp.rb) | Formula | `0.11.0_1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
@@ -52,16 +52,16 @@ This tap currently packages **45** tools: **42** formulae (**42** bottled, **0**
 | [`herdr`](Formula/herdr.rb) | Formula | `0.9.5` | `Apache-2.0` | `arm64_tahoe` | [herdrdev/herdr](https://github.com/herdrdev/herdr) — Multiplexed terminal manager for AI coding agent sessions |
 | [`hindsight`](Formula/hindsight.rb) | Formula | `1.2.3` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) — Semantic agent memory CLI and local MCP server |
 | [`hyperfine`](Formula/hyperfine.rb) | Formula | `2.0.0` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) — Command-line benchmarking tool |
-| [`inspect-ai`](Formula/inspect-ai.rb) | Formula | `0.3.290` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [inspect.aisi.org.uk](https://inspect.aisi.org.uk/) — Agentic LLM evaluation harness bundling Inspect SWE and MLflow hooks |
-| [`kache`](Formula/kache.rb) | Formula | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) — Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA |
-| [`langfuse-cli`](Formula/langfuse-cli.rb) | Formula | `1.3.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) — Command-line client for Langfuse API and versioned agent skills |
-| [`magpie`](Formula/magpie.rb) | Formula | `0.1.4665` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [usemagpie.ai](https://usemagpie.ai) — Subscription-first local gateway and router for AI coding agents |
+| [`inspect-ai`](Formula/inspect-ai.rb) | Formula | `0.3.291` | `MIT` | source | [inspect.aisi.org.uk](https://inspect.aisi.org.uk/) — Agentic LLM evaluation harness bundling Inspect SWE and MLflow hooks |
+| [`kache`](Formula/kache.rb) | Formula | `2.3.0` | `Apache-2.0` | source | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) — Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA |
+| [`langfuse-cli`](Formula/langfuse-cli.rb) | Formula | `1.4.0` | `MIT` | source | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) — Command-line client for Langfuse API and versioned agent skills |
+| [`magpie`](Formula/magpie.rb) | Formula | `0.1.4704` | `MIT` | source | [usemagpie.ai](https://usemagpie.ai) — Subscription-first local gateway and router for AI coding agents |
 | [`minijinja-cli`](Formula/minijinja-cli.rb) | Formula | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Render Jinja2 templates directly from the command-line to stdout |
 | [`mlflow`](Formula/mlflow.rb) | Formula | `3.18.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mlflow.org](https://mlflow.org) — AI evaluation, trace, dataset, and skill registry platform with agent CLIs |
 | [`nats`](Formula/nats.rb) | Formula | `0.5.2` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
-| [`omp`](Formula/omp.rb) | Formula | `19.1.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
-| [`openlit`](Formula/openlit.rb) | Formula | `2.1.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
-| [`phoenix-cli`](Formula/phoenix-cli.rb) | Formula | `1.22.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
+| [`omp`](Formula/omp.rb) | Formula | `19.1.1` | `MIT` | source | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
+| [`openlit`](Formula/openlit.rb) | Formula | `2.2.0` | `Apache-2.0` | source | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
+| [`phoenix-cli`](Formula/phoenix-cli.rb) | Formula | `1.24.0` | `Apache-2.0` | source | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | Formula | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
 | [`python-minijinja`](Formula/python-minijinja.rb) | Formula | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
 | [`qmd`](Formula/qmd.rb) | Formula | `2.9.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
