@@ -59,7 +59,7 @@ class ArizePhoenix < Formula
     ENV["UV_TOOL_DIR"] = libexec/"tools"
     ENV["UV_TOOL_BIN_DIR"] = libexec/"bin"
 
-    uv_cutoff = "2026-11-18T00:00:00Z"
+    uv_cutoff = "2026-11-23T00:00:00Z"
     wheels_dir = buildpath/"wheels"
     %w[packages/phoenix-client packages/phoenix-evals packages/phoenix-otel .].each do |pkg_dir|
       rm(Pathname(pkg_dir)/".python-version") if (Pathname(pkg_dir)/".python-version").exist?
