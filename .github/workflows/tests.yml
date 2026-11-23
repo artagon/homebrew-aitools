@@ -57,6 +57,7 @@ jobs:
       include_macos: ${{ steps.plan.outputs.include_macos }}
       matrix_oses_json: ${{ steps.plan.outputs.matrix_oses_json }}
       needs_homebrew_in_lint: ${{ steps.plan.outputs.needs_homebrew_in_lint }}
+      require_lockfile: ${{ steps.plan.outputs.require_lockfile }}
       run_ast_grep: ${{ steps.plan.outputs.run_ast_grep }}
       run_bats_lint: ${{ steps.plan.outputs.run_bats_lint }}
       run_brew_audit_tap: ${{ steps.plan.outputs.run_brew_audit_tap }}
@@ -65,6 +66,7 @@ jobs:
       run_cask_bats: ${{ steps.plan.outputs.run_cask_bats }}
       run_installer_bats_standalone: ${{ steps.plan.outputs.run_installer_bats_standalone }}
       run_lint_job: ${{ steps.plan.outputs.run_lint_job }}
+      run_lock_check: ${{ steps.plan.outputs.run_lock_check }}
       run_provenance_bats: ${{ steps.plan.outputs.run_provenance_bats }}
       run_readme_check: ${{ steps.plan.outputs.run_readme_check }}
       run_tap_docs_check: ${{ steps.plan.outputs.run_tap_docs_check }}
@@ -178,11 +180,12 @@ jobs:
           ast-grep test --config sgconfig.yml
           ast-grep scan --config sgconfig.yml . .github/workflows
 
-      - name: Run provenance, tap-docs, and CI planner Bats suites
+      - name: Run provenance, tap-docs, lock, skill-installer, and CI planner Bats suites
         if: needs.plan.outputs.run_provenance_bats == 'true'
         run: |
           BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
-            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats tests/update_tap_docs.bats
+            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats tests/update_tap_docs.bats \
+            tests/aitools_lock.bats tests/install_agent_skills_multitool.bats
 
       - name: Run cask postflight defaults Bats suite
         if: needs.plan.outputs.run_cask_bats == 'true'
@@ -211,6 +214,17 @@ jobs:
       - name: Verify README and ABOUT tap tool inventories
         if: needs.plan.outputs.run_tap_docs_check == 'true'
         run: ./scripts/update-tap-docs.sh --check
+
+      - name: Verify versions/aitools-lock.json parity
+        if: needs.plan.outputs.run_lock_check == 'true'
+        env:
+          REQUIRE_LOCKFILE: ${{ needs.plan.outputs.require_lockfile }}
+        run: |
+          if [[ "${REQUIRE_LOCKFILE}" = "true" || -f versions/aitools-lock.json ]]; then
+            ./scripts/check-aitools-lock.sh
+          else
+            echo "::notice::versions/aitools-lock.json not yet present (pre-Stage-1); skipping lock parity check"
+          fi
 
   test-bot:
     name: Build, test, and bottle (${{ matrix.os }}, ${{ matrix.shard.id }})

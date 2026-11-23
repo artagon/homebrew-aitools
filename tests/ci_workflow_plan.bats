@@ -247,6 +247,41 @@ case_docs_only_pr() {
   assert_output_eq "$out_other_doc" needs_homebrew_in_lint "false"
   assert_output_eq "$out_other_doc" run_readme_check "false"
   assert_output_eq "$out_other_doc" run_tap_docs_check "false"
+  assert_output_eq "$out_other_doc" run_lock_check "false"
+
+  # versions/* change triggers lint + run_lock_check without Homebrew setup or bottle builds.
+  local out_versions="$BATS_TEST_TMPDIR/out-versions.txt"
+  git -C "$repo" checkout -q -b versions-pr "$base_sha"
+  mkdir -p "$repo/versions"
+  printf '{"schema":"artagon-aitools-lock/v1"}\n' >"$repo/versions/aitools-lock.json"
+  git -C "$repo" add versions/aitools-lock.json
+  git -C "$repo" commit -q -m "chore: update versions lock"
+  head_sha="$(git -C "$repo" rev-parse HEAD)"
+
+  run_plan_in_repo "$shell_bin" "$repo" "$out_versions" \
+    EVENT_NAME=pull_request BASE_SHA="$base_sha" HEAD_SHA="$head_sha"
+
+  assert_output_eq "$out_versions" has_formulae "false"
+  assert_output_eq "$out_versions" run_lint_job "true"
+  assert_output_eq "$out_versions" needs_homebrew_in_lint "false"
+  assert_output_eq "$out_versions" run_lock_check "true"
+  assert_output_eq "$out_versions" require_lockfile "true"
+  assert_output_eq "$out_versions" run_brew_style "false"
+  assert_output_eq "$out_versions" run_tap_docs_check "false"
+
+  # Deleting versions/aitools-lock.json must fail closed (require_lockfile=true + run_lock_check=true).
+  local del_base="" del_head=""
+  del_base="$(git -C "$repo" rev-parse HEAD)"
+  git -C "$repo" rm -q versions/aitools-lock.json
+  git -C "$repo" commit -q -m "remove lockfile"
+  del_head="$(git -C "$repo" rev-parse HEAD)"
+
+  local out_del_lock="$BATS_TEST_TMPDIR/out-del-lock.txt"
+  run_plan_in_repo "$shell_bin" "$repo" "$out_del_lock" \
+    EVENT_NAME=pull_request BASE_SHA="$del_base" HEAD_SHA="$del_head"
+  assert_output_eq "$out_del_lock" run_lint_job "true"
+  assert_output_eq "$out_del_lock" run_lock_check "true"
+  assert_output_eq "$out_del_lock" require_lockfile "true"
 }
 
 case_single_formula_pr_and_validation() {
@@ -283,6 +318,8 @@ case_single_formula_pr_and_validation() {
   assert_output_eq "$out" run_installer_bats_standalone "false"
   assert_output_eq "$out" run_readme_check "false"
   assert_output_eq "$out" run_tap_docs_check "false"
+  assert_output_eq "$out" run_lock_check "true"
+  assert_output_eq "$out" require_lockfile "false"
   assert_output_eq "$out" needs_homebrew_in_lint "true"
   assert_output_eq "$out" run_lint_job "true"
 
@@ -648,6 +685,7 @@ case_push_to_main() {
   assert_output_eq "$out_formula" run_cask_bats "true"
   assert_output_eq "$out_formula" run_readme_check "true"
   assert_output_eq "$out_formula" run_tap_docs_check "true"
+  assert_output_eq "$out_formula" run_lock_check "true"
   assert_output_eq "$out_formula" run_installer_bats_standalone "false"
 
   # Push modifying scripts/ runs full Linux lint/Bats with zero macOS runners (also test all-zero PUSH_BEFORE fallback).

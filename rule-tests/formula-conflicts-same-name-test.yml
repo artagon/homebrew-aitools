@@ -13,6 +13,14 @@ valid:
     class Tgrep < Formula
       desc "Trigram-indexed search"
     end
+  - |
+    class NatsServer < Formula
+      desc "Lightweight cloud messaging system"
+    end
+  - |
+    class Worktrunk < Formula
+      conflicts_with "wiredtiger", because: "both install `wt` binaries"
+    end
 invalid:
   - |
     class Tgrep < Formula
@@ -25,4 +33,12 @@ invalid:
   - |
     class Herdr < Formula
       conflicts_with "herdr", because: "same name in core"
+    end
+  - |
+    class NatsServer < Formula
+      conflicts_with "nats-server", because: "same name in core"
+    end
+  - |
+    class Worktrunk < Formula
+      conflicts_with "worktrunk"
     end

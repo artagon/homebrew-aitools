@@ -12,9 +12,21 @@ snapshots:
       style: primary
       start: 23
       end: 44
+  "class NatsServer < Formula\n  conflicts_with \"nats-server\", because: \"same name in core\"\nend\n":
+    labels:
+    - source: "conflicts_with \"nats-server\", because: \"same name in core\""
+      style: primary
+      start: 29
+      end: 87
   "class Tgrep < Formula\n  conflicts_with \"tgrep\", because: \"same name in core\"\nend\n":
     labels:
     - source: "conflicts_with \"tgrep\", because: \"same name in core\""
       style: primary
       start: 24
       end: 76
+  "class Worktrunk < Formula\n  conflicts_with \"worktrunk\"\nend\n":
+    labels:
+    - source: conflicts_with "worktrunk"
+      style: primary
+      start: 28
+      end: 54
