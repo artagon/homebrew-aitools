@@ -1,8 +1,8 @@
 class PhoenixCli < Formula
   desc "Command-line trace, dataset, experiment, and agent setup client for Phoenix"
   homepage "https://arize.com/docs/phoenix"
-  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/%40arizeai%2Fphoenix-cli%401.22.1.tar.gz"
-  sha256 "0cd92adfa7f29a26a559419d83d3039fc6802d2effb1d74ad4e55d5d212bb3b8"
+  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/%40arizeai%2Fphoenix-cli%401.24.0.tar.gz"
+  sha256 "fb5ad21f36d1c9e140dbffafb1c968a5ebdfe5b21c8994b940092ff7b0a60bf8"
   license "Apache-2.0"
   head "https://github.com/Arize-ai/phoenix.git", branch: "main"
 
