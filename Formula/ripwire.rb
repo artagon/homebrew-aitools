@@ -12,10 +12,10 @@ class Ripwire < Formula
 
   bottle do
     root_url "https://github.com/artagon/homebrew-aitools/releases/download/ripwire-0.6.10"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "4349b25baf93c575162b394236de7415a0123ec01b2089d1c7a64da46c49ab81"
-    sha256 cellar: :any,                 arm64_linux:  "c5c564e12c57279e398931156dd6cd24ed3e470e602b43f547fcb80eacabdf7e"
-    sha256 cellar: :any,                 x86_64_linux: "9906da2e0174dcfd966fff73fcafefc1add524058bc0f5185468f9aadc798a2b"
+    rebuild 2
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "b59ec2827a981de0bba8c6ad97be7403a28b1608f44033cc9178920880da25eb"
+    sha256 cellar: :any,                 arm64_linux:  "09500512c2789b678ab9ba66752bc8e7893fb951200f62bc809e10a3c4560d35"
+    sha256 cellar: :any,                 x86_64_linux: "411e245ae51018282e2dd60d969c7399cc34f6c25b96e4da3462d5c3f5a73bb8"
   end
 
   depends_on "artagon/aitools/tree-sitter-java-valhalla" => :build
