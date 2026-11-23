@@ -27,7 +27,7 @@ Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, a
 <!-- BEGIN ABOUT_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-This tap currently packages **45** tools: **42** formulae (**40** bottled, **2** source-only) and **3** macOS casks.
+This tap currently packages **45** tools: **42** formulae (**42** bottled, **0** source-only) and **3** macOS casks.
 
 | Tool | Kind | Version | License | Bottles | Summary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -56,14 +56,14 @@ This tap currently packages **45** tools: **42** formulae (**40** bottled, **2**
 | [`kache`](Formula/kache.rb) | Formula | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) — Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA |
 | [`langfuse-cli`](Formula/langfuse-cli.rb) | Formula | `1.3.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) — Command-line client for Langfuse API and versioned agent skills |
 | [`magpie`](Formula/magpie.rb) | Formula | `0.1.4665` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [usemagpie.ai](https://usemagpie.ai) — Subscription-first local gateway and router for AI coding agents |
-| [`minijinja-cli`](Formula/minijinja-cli.rb) | Formula | `3.1.0` | `Apache-2.0` | source | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Render Jinja2 templates directly from the command-line to stdout |
+| [`minijinja-cli`](Formula/minijinja-cli.rb) | Formula | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Render Jinja2 templates directly from the command-line to stdout |
 | [`mlflow`](Formula/mlflow.rb) | Formula | `3.18.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mlflow.org](https://mlflow.org) — AI evaluation, trace, dataset, and skill registry platform with agent CLIs |
 | [`nats`](Formula/nats.rb) | Formula | `0.5.2` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
 | [`omp`](Formula/omp.rb) | Formula | `19.1.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
 | [`openlit`](Formula/openlit.rb) | Formula | `2.1.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | Formula | `1.22.1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | Formula | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
-| [`python-minijinja`](Formula/python-minijinja.rb) | Formula | `3.1.0` | `Apache-2.0` | source | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
+| [`python-minijinja`](Formula/python-minijinja.rb) | Formula | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
 | [`qmd`](Formula/qmd.rb) | Formula | `2.9.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
 | [`ripwire`](Formula/ripwire.rb) | Formula | `0.6.10` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) — Codebase symbol maps and call graphs for AI agents |
 | [`skillfile`](Formula/skillfile.rb) | Formula | `1.9.3` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [eljulians/skillfile](https://github.com/eljulians/skillfile) — Declarative package manager for AI coding agent skills |
