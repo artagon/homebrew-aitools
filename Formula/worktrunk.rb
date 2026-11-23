@@ -12,7 +12,6 @@ class Worktrunk < Formula
   end
 
   depends_on "rust" => :build
-  depends_on "git" => :test # Needs git 2.43+
 
   conflicts_with "wiredtiger", because: "both install `wt` binaries"
 
