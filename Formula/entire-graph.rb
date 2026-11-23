@@ -11,6 +11,14 @@ class EntireGraph < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/entire-graph-0.6.0"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "9272de427ca19fa81eaff0021e45c4b40bc52d3791b83e7478e4527669ab271e"
+    sha256 cellar: :any,                 arm64_linux:  "daf039e6afc675f00c83f35cf88f96ebe603ccfe121678517089d519863e7e24"
+    sha256 cellar: :any,                 x86_64_linux: "fea6759084cfe1d319842b134470f75691da95905310696b0bf269c8831c796c"
+  end
+
   depends_on "go" => :build
 
   def install
