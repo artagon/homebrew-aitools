@@ -2,15 +2,11 @@ class Herdr < Formula
   desc "Multiplexed terminal manager for AI coding agent sessions"
   homepage "https://github.com/herdrdev/herdr"
   license "Apache-2.0"
+  revision 1
 
   livecheck do
     url :homepage
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/herdr-0.9.5"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "4dfdf6be14ea11c985bda408b1d946552e6a048e661e26c844df4fffd16a28c3"
   end
 
   on_macos do
@@ -42,27 +38,90 @@ class Herdr < Formula
   end
 
   def install
-    bin.install Dir["herdr-*"].first => "herdr"
-    chmod 0755, bin/"herdr"
+    libexec.install Dir["herdr-*"].first => "herdr"
+    chmod 0755, libexec/"herdr"
     resource("license").stage { prefix.install "LICENSE" }
-    generate_completions_from_executable(bin/"herdr", "completion")
+    generate_completions_from_executable(libexec/"herdr", "completion")
+
+    (bin/"herdr").write <<~SH
+      #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
+      set -euo pipefail
+
+      skip_next=0
+      cmd=""
+      for arg in "$@"; do
+        if [[ "${skip_next}" -eq 1 ]]; then
+          skip_next=0
+          continue
+        fi
+        case "${arg}" in
+          --)
+            break
+            ;;
+          -h | --help)
+            break
+            ;;
+          --session | --machine | --remote | --remote-keybindings)
+            skip_next=1
+            ;;
+          --*=* | -*)
+            ;;
+          *)
+            if [[ -z "${cmd}" ]]; then
+              cmd="${arg}"
+              if [[ "${cmd}" = "update" ]]; then
+                printf '%s\\n' "Error: Homebrew manages herdr upgrades. Run: brew upgrade artagon/aitools/herdr" >&2
+                exit 2
+              fi
+              if [[ "${cmd}" != "channel" ]]; then
+                break
+              fi
+            elif [[ "${cmd}" = "channel" ]]; then
+              if [[ "${arg}" = "set" ]]; then
+                printf '%s\\n' "Error: Homebrew manages herdr upgrades. Run: brew upgrade artagon/aitools/herdr" >&2
+                exit 2
+              fi
+              break
+            fi
+            ;;
+        esac
+      done
+
+      exec "#{libexec}/herdr" "$@"
+    SH
+    chmod 0755, bin/"herdr"
   end
 
   def caveats
     <<~EOS
-      Upgrade with `brew upgrade artagon/aitools/herdr`, not `herdr update`:
-      the self-updater replaces the binary outside Homebrew's control.
+      In-place self-updates (`herdr update` and `herdr channel set`) are disabled
+      by this wrapper. Always qualify this tap when installing or upgrading:
+        brew install artagon/aitools/herdr
+        brew upgrade artagon/aitools/herdr
     EOS
   end
 
   test do
     assert_match "herdr #{version}", shell_output("#{bin}/herdr --version")
+    assert_match "brew upgrade artagon/aitools/herdr", shell_output("#{bin}/herdr update 2>&1", 2)
+    assert_match "brew upgrade artagon/aitools/herdr",
+                 shell_output("#{bin}/herdr --session demo update 2>&1", 2)
+    assert_match "brew upgrade artagon/aitools/herdr",
+                 shell_output("#{bin}/herdr channel set preview 2>&1", 2)
+    assert_match "brew upgrade artagon/aitools/herdr",
+                 shell_output("#{bin}/herdr channel --session demo set stable 2>&1", 2)
 
     ENV["HOME"] = testpath.to_s
     ENV["XDG_CONFIG_HOME"] = (testpath/"config").to_s
     ENV["XDG_STATE_HOME"] = (testpath/"state").to_s
     ENV["HERDR_CONFIG_PATH"] = (testpath/"config.toml").to_s
     ENV["HERDR_SOCKET_PATH"] = (testpath/"herdr.sock").to_s
+    (testpath/"config.toml").write <<~TOML
+      [update]
+      version_check = false
+      manifest_check = false
+    TOML
 
     pid = spawn bin/"herdr", "server"
     status = ""

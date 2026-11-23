@@ -8,35 +8,31 @@ class Agentsync < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agentsync-1.53.1"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "a7ac20920d6d1edbdb7d93d91db75f9fe113c285cf393309eb5fbd78d017de37"
-  end
-
   on_macos do
     on_arm do
-      url "https://github.com/dallay/agentsync/releases/download/v1.53.1/agentsync-1.53.1-aarch64-apple-darwin.tar.gz"
-      sha256 "d7f0e0fefda5748878a7aa2c10ead81eaccbb4afe5d5f9f961360b4b976eb97f"
+      url "https://github.com/dallay/agentsync/releases/download/v1.53.2/agentsync-1.53.2-aarch64-apple-darwin.tar.gz"
+      sha256 "ef72f00ec7700503e2eae6f4b4d5afe529715af6256c03eec1fe82226c62171a"
     end
     on_intel do
-      url "https://github.com/dallay/agentsync/releases/download/v1.53.1/agentsync-1.53.1-x86_64-apple-darwin.tar.gz"
-      sha256 "a8557311a84e32f90a2988419af47dc2e02ab5914291a1db633c869bb83697ae"
+      url "https://github.com/dallay/agentsync/releases/download/v1.53.2/agentsync-1.53.2-x86_64-apple-darwin.tar.gz"
+      sha256 "4f4bc261d2948654a089fc5e81d3c4ac4ec078ebfe9916b6965a55c53e278b82"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/dallay/agentsync/releases/download/v1.53.1/agentsync-1.53.1-aarch64-unknown-linux-musl.tar.gz"
-      sha256 "202ebd9b4cb578fa3584f83e7b384a59c92f8dab907da893aeabad2caf16234a"
+      url "https://github.com/dallay/agentsync/releases/download/v1.53.2/agentsync-1.53.2-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "e56492dcea3d940382cb108bb3a7199b26b8e931e9ca15e9a2bc418e574d7f8f"
     end
     on_intel do
-      url "https://github.com/dallay/agentsync/releases/download/v1.53.1/agentsync-1.53.1-x86_64-unknown-linux-musl.tar.gz"
-      sha256 "74b6c3c669b731787298bd0651f299e097292d9cc94a80a23665d52279b9fd8d"
+      url "https://github.com/dallay/agentsync/releases/download/v1.53.2/agentsync-1.53.2-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "8de319217cc1797262b59f84a60d661b0621f540d9dab1695a06783717ffa4af"
     end
   end
 
   def install
     libexec.install "agentsync"
+    chmod 0755, libexec/"agentsync"
     (bin/"agentsync").write_env_script libexec/"agentsync", AGENTSYNC_NO_UPDATE_CHECK: "1"
     doc.install "README.md"
     prefix.install "LICENSE"
