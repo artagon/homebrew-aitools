@@ -29,6 +29,30 @@ class EntireGraph < Formula
                 "    return [standalone] if standalone else None",
               ].join("\n")
 
+    # Stop ascending the same-volume traversal anchor at the highest ancestor
+    # openable by os.OpenRoot so Landlock sandboxes (which grant read access on
+    # non-denied children of `/` without opening `/`) do not fail closed with EACCES.
+    inreplace "internal/sem/path_volume_unix.go",
+              [
+                "\t\tparentDevice, parentOK := fileSystemDevice(parentInfo)",
+                "\t\tif !parentOK || parentDevice != device {",
+                "\t\t\tbreak",
+                "\t\t}",
+                "\t\troot = parent",
+              ].join("\n"),
+              [
+                "\t\tparentDevice, parentOK := fileSystemDevice(parentInfo)",
+                "\t\tif !parentOK || parentDevice != device {",
+                "\t\t\tbreak",
+                "\t\t}",
+                "\t\tprobeRoot, openErr := os.OpenRoot(parent)",
+                "\t\tif openErr != nil {",
+                "\t\t\tbreak",
+                "\t\t}",
+                "\t\t_ = probeRoot.Close()",
+                "\t\troot = parent",
+              ].join("\n")
+
     ENV["CGO_ENABLED"] = "1"
     ldflags = "-s -w -X main.version=v#{version}"
     system "go", "build", *std_go_args(output: libexec/"entire-graph", ldflags:), "./cmd/entire-graph"
