@@ -1,8 +1,8 @@
 class ArizePhoenix < Formula
   desc "Local-first OpenTelemetry AI observability and evaluation server"
   homepage "https://arize.com/docs/phoenix"
-  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/arize-phoenix-v21.1.0.tar.gz"
-  sha256 "896380a6b3db76ebd4ea89e8c81e7f54be865e072faa2c19614f1cf18e150d55"
+  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/arize-phoenix-v22.0.1.tar.gz"
+  sha256 "1e25579c5c3174ee2db01df4de27e6a7745b91ae1d7b3547e6ec21536f4cda0a"
   license "Elastic-2.0"
   head "https://github.com/Arize-ai/phoenix.git", branch: "main"
 
@@ -59,7 +59,7 @@ class ArizePhoenix < Formula
     ENV["UV_TOOL_DIR"] = libexec/"tools"
     ENV["UV_TOOL_BIN_DIR"] = libexec/"bin"
 
-    uv_cutoff = "2026-11-18T00:00:00Z"
+    uv_cutoff = "2026-11-23T00:00:00Z"
     wheels_dir = buildpath/"wheels"
     %w[packages/phoenix-client packages/phoenix-evals packages/phoenix-otel .].each do |pkg_dir|
       rm(Pathname(pkg_dir)/".python-version") if (Pathname(pkg_dir)/".python-version").exist?

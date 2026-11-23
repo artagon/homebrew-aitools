@@ -1,8 +1,8 @@
 class Openlit < Formula
   desc "OpenTelemetry collector CLI for AI coding agents"
   homepage "https://github.com/openlit/openlit"
-  url "https://github.com/openlit/openlit/archive/refs/tags/openlit-2.1.1.tar.gz"
-  sha256 "9aee93e79be0a7a13db13bfd099cb9d893f0118ade943d19d245f34c9036da9c"
+  url "https://github.com/openlit/openlit/archive/refs/tags/openlit-2.2.0.tar.gz"
+  sha256 "0405416faa140979f65062706dedd36eae6832e4a8477ce9ab8340c3bd721620"
   license "Apache-2.0"
   head "https://github.com/openlit/openlit.git", branch: "main"
 
