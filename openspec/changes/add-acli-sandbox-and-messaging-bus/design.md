@@ -2,7 +2,7 @@
 
 ## Context
 
-See [proposal.md](proposal.md) for motivation and capability boundaries, [research/README.md](research/README.md) for live workstation benchmarks and audits, [research/06-production-agent-cli-and-hook-telemetry.md](research/06-production-agent-cli-and-hook-telemetry.md) for broker-terminated zero-exfiltration telemetry & `artagon-harness-eval` companion store analysis, and [research/05-adversarial-review-ledger.md](research/05-adversarial-review-ledger.md) for the Round 1 (`104`), Round 2 (`66`), Round 3 (`50`), Round 4 (`49`), Round 5 (`47`), Round 6 (`41`), Round 7 (`31`), Round 8 (`25`), Round 9 (`17`), Round 10 (`17`), Round 11 (`53`), Round 12 (`30`), Round 13 (`32`), Round 14 (`20`), Round 15 (`17`), Round 16 (`15`), Round 17 (`15`), and Round 18 (`11`) dual-swarm adversarial remediation ledger (`640` cumulative findings across `18` rounds).
+See [proposal.md](proposal.md) for motivation and capability boundaries, [research/README.md](research/README.md) for live workstation benchmarks and audits, [research/06-production-agent-cli-and-hook-telemetry.md](research/06-production-agent-cli-and-hook-telemetry.md) for broker-terminated zero-exfiltration telemetry & `artagon-harness-eval` companion store analysis, [research/07-rust-hsm-state-machine-architecture.md](research/07-rust-hsm-state-machine-architecture.md) for the pure-Rust `statig = "0.4.1"` hierarchical state machine (`acli-common::hsm`) and compile-time linear typestate architecture, and [research/05-adversarial-review-ledger.md](research/05-adversarial-review-ledger.md) for the Round 1 (`104`), Round 2 (`66`), Round 3 (`50`), Round 4 (`49`), Round 5 (`47`), Round 6 (`41`), Round 7 (`31`), Round 8 (`25`), Round 9 (`17`), Round 10 (`17`), Round 11 (`53`), Round 12 (`30`), Round 13 (`32`), Round 14 (`20`), Round 15 (`17`), Round 16 (`15`), Round 17 (`15`), and Round 18 (`11`) dual-swarm adversarial remediation ledger (`640` cumulative findings across `18` rounds).
 
 This architecture operates under five hard platform and operational constraints:
 
@@ -22,6 +22,7 @@ This architecture operates under five hard platform and operational constraints:
 - Deliver **broker-terminated, zero-exfiltration production telemetry (`specs/agent-cli-production-telemetry/spec.md`)** across all nine CLIs authenticated by dedicated `ACLI_TELEM_TOKEN` (telemetry + same-pane content-free Path B `0x81`/`0x82` ONLY; preserving surviving live panes' `sha256_telem_token`/`fallback_mac_key` across normal `aclid` restarts and minting fresh tokens only for newly spawned panes; accepted residual: macOS loopback TCP HTTP OTLP best-effort vs same-UID downtime port-squatter, `telem.sock` preferred), `< 3 ms` `acli hook emit [--drain]` (two-step `0x81`/`0x82` pipe-handoff Path B receipt + `SessionStart`/respawn unread check + `blake3::derive_key("acli 2026 hook-fallback-mac v1", ACLI_TELEM_TOKEN.as_bytes())` content-free `<= 1 MiB` writer / first-`1 MiB` valid-line prefix reader `acli_telemetry_fallback_truncated_total` `openat`/`unlinkat` host `hooks-fallback.jsonl`, zero `otel.jsonl`), 9-CLI trap normalization, strict `delete -> per-(provider,metric)-canonicalize -> closed-positive-allowlist -> stamp` pipeline (scoping step (a) client target-key deletion strictly to target keys produced by a matching `(provider, metric_or_span_name)` rename entry so unmapped native GenAI-semconv keys pass untouched; `claude_code.{token,cost}.usage`, `lines_of_code.count` -> `acli.loc.change_type`, `code_edit_tool.decision` -> `acli.edit.{decision,source,language}` [out-of-enum `"other"`] + `gen_ai.tool.name`, merging colliding `Sum`/`Histogram` [deterministic lowest pre-projection RFC 8785 JCS attribute-set `SHA-256` tie-break + `acli_telemetry_merge_conflict_total` on `explicit_bounds` mismatch]/`ExponentialHistogram` [min-`scale` downscaling on matching `zero_threshold`]/`Gauge` points, wildcard `process.*`/`os.*` strip, authoritative `service.{name,version,instance.id}` & `13` `acli.*`) + 6-plane W3C stitching (Zone-1/2/3 `tracestate`/`baggage` dropped), 3 privacy tiers + 4-stage pre-write Rust DLP (raw/Base64/URL-safe-Base64/percent-encoded RAM secrets + RFC 5322 email scrubbing; `age`-backed offline `Sink 1` / macOS Keychain or Linux `0600` `instances/<instance_id>/keys/audit-spool.age` `X25519` opt-in `Sink 2` with locked-key `drop-newest` precedence `acli_telemetry_ring_locked_dropped_total` vs collector-only `0`-disk-spool `<= 16 MiB` RAM audit queue), unified `<= 5 MiB`/`<= 16 MiB` decompression + `<= 2 MiB/min` (`burst 5 MiB`, `<= 32 MiB/session`, `HTTP 413` above `5 MiB`) & `HTTP 429` per-pane buckets + `256 MiB`/`14 d` (`<= 64 MiB` per-lineage) cap + `512 MiB` `statvfs` floor, non-blocking Dual-Sink fanout (core pure-Rust `traces/*.json` + `5` Parquet tables + SQLite `store.db` with optional companion `store.duckdb` + tier-gated `0600` `64 MiB` `drop-oldest` `otlp-ring` enforcing `https://` `TLS >= 1.3` and `0` redirects non-loopback), and `acli telemetry status|flush|doctor|export`.
 - Achieve zero-patch `aclid`-owned `herdr` protocol-22 push authority (`pane.report_metadata` + reconnect replay) and `tmux`/`ntm` compatibility via dual-channel `acli-mux/v1` (`vsock:5101` + `vsock:5102` boot-latched alongside `vsock:5040` and `vsock:5050` before `ACLI_SUPERVISOR_KEY` zeroization, typed `0x07`/`0x08` `InjectPrompt` and `0x09`/`0x0A` `PaneRelease`, UTF-8-before-C1 complete ECMA-48 quarantine tokenizer tracking child `DECSET 2004` via multi-param PTY output `CSI ? ... 2004 ... h`/`l` + `RIS`/`DECSTR` reset with out-of-band `acli pane release <pane_id>` atomically discarding held bytes and resetting `tokenizer_state = Ground` + `orphan_paste_open = false`, giving rule (1) strict priority over `orphan_paste_open` while `path_a_quarantined == true` and consuming every subsequent `Ground`-state standalone `0x03`, `paste_tail_discard` with non-standalone `0x03`, exiting back to `Ground` with host notice on `\x1b[201~` OR `5 s` monotonic absolute elapsed time while setting `orphan_paste_open` on timeout exit [host `Attention` entry/exit/`> 30 s` open, forwarding `0x03` once `!path_a_quarantined` ONLY on standalone 1-byte read bounded by `>= 50 ms` stdin idle before/after] to keep dropping unbracketed late paste bytes until `\x1b[201~` or `5 s` monotonic + `250 ms` stdin idle even after quarantine clears, stripping interior `\x1b[200~`/`\x1b[201~` before wrapping a post-timeout `Ground`-state hold-buffer flush inside a single outer `\x1b[200~...\x1b[201~` ONLY when `DECSET 2004` is active [else keeping held + `Attention`], and `Ground`-gated unquarantine, and `60 s` `req_id` cache + OS sleep-paused clocks) and priority-ordered 9-state FSM fusion.
 - Ship hardened `artagon/aitools` formulae (`Homebrew >= 7.0.5` source floor, standalone Stage-1 `libexec/bin/nats-bind-preflight`, `Formula/br.rb` `revision 1`, `Formula/bd.rb` `revision 2` with unconditional `export BD_DISABLE_METRICS=1 BD_DISABLE_EVENT_FLUSH=1 DOLT_METRICS_DISABLED=1 DO_NOT_TRACK=1` verified in `test do` BEFORE the fixture's first embedded-Dolt DB operation, pure-Rust `Formula/acli.rb` zero-Bash `bin/acli` symlink + `bin/aclid` wrapper, exact `CodeDirectory` `Identifier` equality, per-artifact/platform `versions/aitools-lock.json` covering `br`+`bd` verified under `--option builders ''`).
+- Execute all event-driven runtime lifecycles, PTY quarantine parsers, and durable `outbox.db` recovery/grant state machines on a pure-Rust **`statig = "0.4.1"`** hierarchical statechart core (`acli-common::hsm`, `default-features = false, features = ["macro", "serde"]`, `MIT`, `#![no_std]`, zero `"std"` feature, zero heap allocations inside `Inner<M>`) with Lowest Common Ancestor (LCA) entry/exit actions, side-effect-free `Effect` emission into `HsmContext<'_, Efx>`, bounded event deferral (`BoundedDeferQueue<E>`), `after_transition`-only hooks (`mdeloof/statig#76` mitigation keeping internal `acli_hsm_transitions_total` metrics isolated from Sink 1/2 OTLP exports), and zero-side-effect SQLite crash rehydration (`rehydrate_without_entry_actions` over explicit versioned `outbox.db` columns), while keeping acyclic lock-order (`PromotionGuard -> RegistryEpochGuard -> OwnerStateGuard` + disjoint `BeadsFileLock::acquire(&Level0Unlocked)`), 7-stage pre-`execve` `LaunchTopology` / `--pass-fd` sanitization, and 4-barrier diff-promotion invariants as compile-time `PhantomData` linear typestates.
 
 **Non-Goals:**
 
@@ -29,6 +30,7 @@ This architecture operates under five hard platform and operational constraints:
 - Forking `mcp_agent_mail_rust`, `nats-server`, `libkrun`, `herdr`, or `ntm`.
 - Supporting multi-host WAN federation, remote cloud microVMs, or third-party NATS MCP shell wrappers (`mcp-nats`).
 - Mutating user dotfiles (`~/.claude*`, `~/.codex*`, `~/.config/*`, `~/.homebrew/trust.json`, `~/.sigstore`) during `brew install`/`brew upgrade` or CI tests.
+- Adopting or permitting commercial **`Statsig`** analytics or feature-flag SDKs (`statsig.com`, which Codex CLI disables via `[analytics] enabled = false` and `acli` overrides inside per-pane `CODEX_HOME` `[otel]`): **`statig = "0.4.1"`** (`mdeloof/statig`, `MIT`, `#![no_std]` pure-Rust hierarchical state-machine crate with zero network or OS I/O) is completely distinct from commercial `Statsig`, and all `statsig*` dependencies are banned from `Cargo.toml` and `Cargo.lock`.
 
 ## Component Topology
 
@@ -153,6 +155,7 @@ Host Loopback Daemons (aclid-verified child listeners; per-instance overridable)
   127.0.0.1 + [::1]:<aclid_otlp_port>        Dedicated macOS host os-sandbox dual-stack OTLP HTTP/gRPC listener (IPV6_V6ONLY=1, persisted in daemon.json, != runtime 4222/8765/8090, passes http://127.0.0.1:<aclid_otlp_port> to SDKs, TCP SBPL "localhost:<aclid_otlp_port>" + Bearer ACLI_TELEM_TOKEN; preserves surviving live panes' sha256_telem_token & fallback_mac_key across normal aclid restarts and mints fresh tokens only for newly spawned panes [accepted residual: loopback TCP OTLP best-effort vs same-UID downtime port-squatter; telem.sock UDS preferred]; on first-start or restart bind failure disables/revokes ONLY HTTP OTLP ingress keeping telem.sock, fallback_mac_key, & Path B --drain valid)
 
 Canonical Identifiers & Constants:
+  acli-common      Shared host + musl guest pure-Rust crate providing `acli-common::hsm` (`statig = { version = "0.4.1", default-features = false, features = ["macro", "serde"] }`, `MIT`, `#![no_std]`, zero `"std"` feature, zero `statsig*` deps; `HsmContext<'_, Efx>`, `BoundedDeferQueue<E>`, `rehydrate_without_entry_actions`, `after_transition`-only hook adapter) and compile-time `PhantomData` linear typestates
   blake3_16        First 16 lowercase hex characters (64 bits) of a BLAKE3-256 digest
   pane_id          12-char CSPRNG ^[a-z0-9]{12}$ (never recycled; tmux %N stored as display metadata tmux_pane only)
   proj_hash        16-char lowercase hex BLAKE3 digest (`blake3_16`) of canonical project_key
@@ -180,6 +183,264 @@ Canonical Identifiers & Constants:
 | **Leases KV** | Bucket `KV_LEASES_<proj_hash>` | `TTL: 30s`, `SubjectDeleteMarkerTTL`, pre-minted `128-bit` `lease_generation` + optional `bead_id` in JSON record (`lease_id = slot:<slot>:gen:<lease_gen>`), CAS against `current_revision`, `max_hold_s` `600`/`1800 s`, mirror `acli:<slot>:gen:<lease_gen>` (preserved across wake) | Host `aclid` service NKey ONLY (sole renewer) | Host `aclid` / project status read via `aclid` (zero direct pane KV `$JS.API` rights) |
 | **Presence KV** | Bucket `KV_PRESENCE_<proj_hash>` | `MaxMsgsPerSubject: 1`, heartbeat TTL | Host `aclid` service NKey ONLY | Project panes via `bus_who` through `aclid` (zero direct pane KV `$JS.API` rights) |
 | **Object Store** | `ACLI_OBJ_<proj_hash>` (`$O.ACLI_OBJ_<proj_hash>.>`) | `256 MiB` bucket, `max_age: 7d` (re-put/refreshed on every new upload AND before committing `QUARANTINED_SCHEMA` for extant candidate blobs), `16 MiB` max object, `64 MiB` quota per **root spawn lineage** (each grant charges its own `root_lineage_id` full `object_bytes` until expiry/reap), `128 KiB` SHA-256 chunks decoupled from durable **`outbox.db` `acli_obj_grants`** (epoch-qualified PK `(object_sha256, kind, mail_epoch, ref_id, grantee_agent)`, `mail_epoch = 0` for `kind != 'mail'`: `PROVISIONAL` `outbox:<row_id>` -> atomic `LIVE` `msg:<msg_id>` \| `!schema_ok` `QUARANTINED_SCHEMA` `7 d` grace \| confirmed-absent `EXPIRED_MISSING`; spilled `QUEUED_LOCAL` rows record `(object_sha256, object_bytes, blob_uploaded = 0)` before put, startup/restore reconciliation runs strictly BEFORE grant expiry & blob GC, never blindly fails `blob_uploaded == 0` [verifying `(object_sha256, info.size == object_bytes)` in `ACLI_OBJ` to adopt `blob_uploaded = 1` + refresh `7 d` TTL on verified presence, failing ONLY that `QUEUED_LOCAL` row + deleting ONLY its own `PROVISIONAL` grants `WHERE ref_id = 'outbox:' || row_id` in `outbox.db` without row-local physical deletion in `ACLI_OBJ_<proj_hash>` on confirmed absence/mismatch, or retaining GC-protected on transient NATS error], unifies live `QUEUED_LOCAL` `PROVISIONAL` grant lifetime with the exact **`48 h`** retry window [`expires_at = row.created_at + 48 h`; `24 h` applies solely to orphan grants with no live `QUEUED_LOCAL`/`IN_FLIGHT_SUBMITTED` row; `48 h` expiry fails row + deletes grants atomically; pre-submit uses 3 explicit outcomes: `ConfirmedValid` atomically updates `expires_at = submitted_at + 7 d` on all participant `PROVISIONAL` grants inside the SAME `BEGIN IMMEDIATE ... COMMIT` tx setting `IN_FLIGHT_SUBMITTED` before HTTP `send_message`, `ConfirmedInvalid` transitions `QUEUED_LOCAL -> FAILED` + deletes only its own `PROVISIONAL` grants in `outbox.db`, `TransientError` retains `QUEUED_LOCAL` + grants unchanged for jittered retry within `48 h`]; orthogonal `QUEUED_LOCAL` vs `QUARANTINED_SCHEMA`: under BOTH `schema_ok` AND `!schema_ok` (`--boundary-max-id <N>`) restores, verified-blob non-expired (`< 48 h`) `QUEUED_LOCAL` rows (`submitted_at IS NULL`) NEVER enter `QUARANTINED_SCHEMA` — after verifying `(object_sha256, info.size == object_bytes)` + refreshing `7 d` TTL, the restore CAS migrates/reconstructs their authenticated participant grants directly to `state = 'PROVISIONAL', mail_epoch = new_mail_epoch, expires_at = row.created_at + 48 h` for normal submission before hour `48`; under `schema_ok`: aborts CAS with `mail_store_degraded = true` if `IN_FLIGHT_SUBMITTED` lookup errors, else (1a) reconciles surviving `IN_FLIGHT_SUBMITTED`+`PROVISIONAL` -> `LIVE`, (1b) migrates unresolved `IN_FLIGHT_SUBMITTED` (`< 7 d`) `PROVISIONAL` grants to `new_mail_epoch` with refreshed TTL keeping `state = 'PROVISIONAL'`, (2) migrates surviving `LIVE` to `new_mail_epoch`, (3) deletes ONLY non-surviving prior-epoch `LIVE` grants & orphaned/terminal `PROVISIONAL` grants before GC; under `!schema_ok`: `QUARANTINED_SCHEMA` applies exclusively to prior-epoch (`< new_mail_epoch`) `LIVE` (`msg:*`) + unresolved `IN_FLIGHT_SUBMITTED`-linked (`outbox:*`, `< 7 d`) `kind = 'mail'` grants [retiring expired grants, refreshing extant blobs -> `QUARANTINED_SCHEMA`, marking confirmed-absent `ObjectNotFound` `EXPIRED_MISSING` (`missing_attachments_total`) without blocking writers, blocking ONLY on transient NATS/JetStream errors]; physical deletion in `ACLI_OBJ_<proj_hash>` runs exclusively via reference-counted, version-checked blob GC when zero `LIVE`/`PROVISIONAL`/`QUARANTINED_SCHEMA` grants remain; `--allow-spill` required `> 128 KiB`, `-32003` quota/`object_expired`) | Host `aclid` service NKey ONLY | Project panes via `bus_inbox(object_sha256)` matching ANY `LIVE` grant (`kind=="mail"` `now < expires_at && !unverified_store_restore && !epoch_rebind_pending && state=="LIVE" && grant.mail_epoch == mail_epoch` + `grantee_agent == caller_agent_name` + live `row_sha256_16` match + `msg.id > registration_min_msg_id`; `EXPIRED_MISSING` returns `-32003` `object_expired`; `kind=="req"` `grant.mail_epoch == 0` & non-recycled `pane_id` match; body-text `sha256:` never authorizes; `exit 65` on hash mismatch) |
+
+## Hierarchical State Machine (`statig`) & Linear Typestate Architecture
+
+All runtime event-driven lifecycles, stateful ECMA-48 PTY quarantine parsers, and durable `outbox.db` recovery/grant protocols execute on a shared pure-Rust hierarchical statechart core (**`crates/acli-common` -> `acli-common::hsm`**) backed by **`statig = "0.4.1"`**, paired with zero-cost compile-time `PhantomData` linear typestates for acyclic lock-order, FD-sanitization, and 4-barrier diff-promotion invariants (see [research/07-rust-hsm-state-machine-architecture.md](research/07-rust-hsm-state-machine-architecture.md)).
+
+### Crate Pin & Mandatory `statig 0.4.1` Safeguards (`acli-common::hsm`)
+
+1. **Exact Pure-Rust Crate Pin (`statig = { version = "0.4.1", default-features = false, features = ["macro", "serde"] }`):** Single-licensed **`MIT`**, `build = false`, 100% pure Rust (`statig_macro = "^0.4.0"`, `syn`, `quote`, `proc-macro2`, `proc-macro-error2`, `serde`) with zero C/C++ `-sys` crates or build-time network fetches, MSRV `1.66` (`blocking` pure functional core; leaving `async` and `bevy` disabled to avoid unused codegen), and full compatibility with Homebrew `std_cargo_fetch_args` offline builds and static `aarch64`/`x86_64-unknown-linux-musl` guest binaries. **NEVER pass `"std"`** in `features` because `statig 0.4.1` is unconditionally `#![no_std]` and defines no `std` feature (`Cargo` feature resolution fails if `"std"` is specified). All handlers MUST return `statig 0.4.1` **`Outcome::{Handled, Super, Transition}`** — never deprecated `0.3` `Response`, `on_dispatch`, or `on_transition` — and workspace `ast-grep` + `Cargo.lock` gates ban any commercial `statsig*` dependency.
+2. **Pure Functional Core (`HsmContext<'_, Efx>`):** Every `#[state]`, `#[superstate]`, and `#[action]` method is side-effect-free and pushes typed `Effect` values into `context: &mut HsmContext<'_, Efx>` (supplying monotonic clock readings and pure read snapshots) with **zero** direct OS syscalls, socket/PTY writes, process spawns, or SQLite queries inside state handlers. Both shared storage `M` and generated `State` derive `Debug, Clone, PartialEq, Eq` so `proptest` suites can clone, step, and compare `InitializedStateMachine<M>` deterministically in memory.
+3. **Bounded Event Deferral (`BoundedDeferQueue<E>`):** Because `statig::Outcome` has **NO** built-in `Defer` variant or internal deferred-event queue (`Outcome::Super` bubbles synchronously up the superstate chain during the current `handle_with_context` call and is dropped at implicit `Top`), `acli_common::hsm::BoundedDeferQueue<E>` implements UML event deferral with hard byte and event caps (**`MAX_DEFERRED_BYTES = 65_536` [`64 KiB`]** for human `stdin` bytes held during `PtyInputQuarantineHsm::InjectInFlight`; **`MAX_DEFERRED_EVENTS = 64`** for control/bus HSMs) and per-transition-epoch FIFO replay (**`MAX_REPLAY_MICROSTEPS = 16`** via `dispatch_with_bounded_deferral` tracking monotonic `transition_epoch()` from `after_transition` and splicing unconsumed tail events at `prefix_len` — after earlier re-deferred items and ahead of newly deferred items — via `splice_in_flight_at` while reserving in-flight event and byte counts), failing closed losslessly on overflow (`DeferError::QueueFull(E)` / `DeferError::ByteBudgetExceeded { event, attempted, max_bytes }` for caller read backpressure) and step-cap breach (`ReplayStepLimitExceeded`) with zero OOM, double-dispatch, stranded-queue, or livelock risk.
+4. **Zero-Side-Effect SQLite Rehydration (`rehydrate_without_entry_actions`):** Because `InitializedStateMachine<M>` implements `Serialize` **only** (intentionally omitting `Deserialize`) and `UninitializedStateMachine::init_with_context` invokes `Inner::init_with_context` (`self.state.enter(..., self.state.depth())`), naively deserializing and calling `.init_with_context(...)` after an `aclid` crash **re-executes all root-to-leaf superstate and leaf entry actions**. Durable `outbox.db` machines (`StoreEpochRecoveryHsm`, `MailOutboxHsm`, `ObjGrantHsm`) keep explicit versioned SQLite columns (**never** opaque `serde`/`bincode` blobs) as sole crash-durable truth and rehydrate inside `BEGIN IMMEDIATE` via an inert top-level `#[state_machine(initial = "State::hydrating()")]` leaf (depth `1`, no superstate, no `entry_action`) plus `*unsafe { sm.state_mut() } = persisted_state` encapsulated inside the single audited `acli_common::hsm::rehydrate_without_entry_actions` helper (workspace `ast-grep` rules reject `inner_mut()` and `state_mut()` everywhere outside `acli-common::hsm::{defer, rehydrate}`).
+5. **`after_transition`-Only Hook Rule (`mdeloof/statig#76` Mitigation & OTLP Allowlist Isolation):** Because `statig 0.4.1` `blocking::Inner::transition` swaps `(&target, &self.state)` in `before_transition` (`mdeloof/statig#76`, unreleased on `crates.io`), all transition telemetry, `PaneLifecycleHsm` monotonic `seq` + `herdr` protocol-22 emission, and `proptest` transition-edge assertions hook **`after_transition(source, target, context)`** exclusively (`before_transition` is banned via a workspace `ast-grep` rule until `statig >= 0.4.2`). Internal daemon HSM health counters (`acli_hsm_transitions_total{machine, from, to}`) live **strictly** on local operator diagnostics (`acli telemetry status`, `acli telemetry doctor`, and `acli bus status`) and NEVER inject non-allowlisted attributes into Sink 1 (`traces/*.json` / Parquet / `store.db`) or Sink 2 (`otlp-ring` / remote OTLP Collector) exports.
+
+### Hierarchical Statechart Topology (`stateDiagram-v2`)
+
+#### 1. `PaneLifecycleHsm` (2-Stage Sensor Lattice -> 4 `herdr` Superstates) & `PtyInputQuarantineHsm`
+
+```mermaid
+stateDiagram-v2
+    [*] --> Starting
+
+    state "HerdrIdle (LCA entry: pane.report_agent idle + arm 2 s Path A timer)" as HerdrIdle {
+        state "P9: IdleAtPrompt (prompt_glyph_verified, composer_empty)" as IdleAtPrompt
+    }
+
+    state "HerdrWorking (LCA entry: pane.report_agent working)" as HerdrWorking {
+        state "P8: Starting" as Starting
+        state "P7: WorkingTurn (turn_id)" as WorkingTurn
+        state "P6: Compacting" as Compacting
+        Starting --> WorkingTurn : turn started
+        WorkingTurn --> Compacting : PreCompact or PreCompress
+        Compacting --> WorkingTurn : compaction done
+    }
+
+    state "HerdrBlocked (LCA entry: pane.report_agent blocked)" as HerdrBlocked {
+        state "P5: RateLimitedBackoff (Mode A/B HTTP 429 Retry-After)" as RateLimitedBackoff
+        state "P4: BlockedDialog (interactive TUI prompt)" as BlockedDialog
+        state "P3: BlockedPermission (Zone-3 prompt_on_host wait)" as BlockedPermission
+        state "P2: HungTurn (OS sleep-paused monotonic timer)" as HungTurn
+    }
+
+    state "HerdrExited (LCA entry: pane.release_agent)" as HerdrExited {
+        state "P1: Exited (exit_code, exit_origin, exit_subreason)" as Exited
+    }
+
+    Starting --> IdleAtPrompt : prompt ready
+    IdleAtPrompt --> WorkingTurn : user or Path A/B/C turn
+    WorkingTurn --> IdleAtPrompt : turn complete at prompt
+    HerdrWorking --> RateLimitedBackoff : dominant P2..P5 blocker leaf target
+    IdleAtPrompt --> RateLimitedBackoff : dominant P2..P5 blocker leaf target
+    HerdrBlocked --> WorkingTurn : all P2..P5 blockers cleared during turn
+    HerdrBlocked --> IdleAtPrompt : blockers cleared at empty prompt
+    HerdrIdle --> Exited : child exit
+    HerdrWorking --> Exited : child exit
+    HerdrBlocked --> Exited : child exit
+    Exited --> [*]
+
+    note right of HerdrBlocked
+        Stage 1 total-order 4-sensor lattice (pty_ring, proc_tree,
+        api_inflight, hook_channel) resolves simultaneous conflicting
+        sensors deterministically (P1 Exited > P2 HungTurn > ... >
+        P9 IdleAtPrompt) into a concrete leaf Outcome::Transition
+        target; statig LCA enters the parent superstate automatically
+        and after_transition emits monotonic seq and herdr deltas.
+    end note
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> Passthrough
+
+    state "Passthrough (normal human stdin forwarding)" as Passthrough
+
+    state "InjectInFlight (BoundedDeferQueue human stdin cap 64 KiB)" as InjectInFlight {
+        state "SettleWindow25ms (bracketed trigger written)" as SettleWindow25ms
+        state "LineCancelVerify (attempt 1..2 non-0x03 full written_char_len)" as LineCancelVerify
+        SettleWindow25ms --> LineCancelVerify : stdin epoch race or guard miss
+        LineCancelVerify --> LineCancelVerify : attempt 1 dirty retries attempt 2
+    }
+
+    state "PathAQuarantined (hold_buf cap 64 KiB)" as PathAQuarantined {
+        state "Ground (UTF-8 before C1, first 0x03 forward then consume)" as Ground
+        state "EscDisambiguate (25 ms window + 100 ms post-ESC grace)" as EscDisambiguate
+        state "CsiEntry" as CsiEntry
+        state "Ss3Entry" as Ss3Entry
+        state "BracketedPaste (64 KiB reserve 6 B or 1 s idle)" as BracketedPaste
+        state "PasteTailDiscard (201~ or 5 s monotonic)" as PasteTailDiscard
+        state "StringConsume (OSC/DCS/APC/PM/SOS drop)" as StringConsume
+
+        Ground --> EscDisambiguate : byte 0x1b
+        EscDisambiguate --> Ground : 25 ms standalone ESC or atomic 2-byte ESC
+        EscDisambiguate --> CsiEntry : CSI introducer
+        EscDisambiguate --> Ss3Entry : SS3 introducer
+        EscDisambiguate --> StringConsume : OSC/DCS/APC/PM/SOS introducer
+        CsiEntry --> BracketedPaste : 200~ paste open
+        CsiEntry --> Ground : atomic CSI unit or mouse/focus drop
+        Ss3Entry --> Ground : atomic SS3 unit
+        StringConsume --> Ground : ST or BEL
+        BracketedPaste --> Ground : 201~ paste close
+        BracketedPaste --> PasteTailDiscard : 64 KiB cap or 1 s idle appends 201~ in hold_buf
+        PasteTailDiscard --> Ground : real 201~ or 5 s monotonic latches orphan_paste_open
+    }
+
+    Passthrough --> SettleWindow25ms : 0x07 InjectPromptReq preflight ok
+    SettleWindow25ms --> Passthrough : echo ok and epoch match writes CR + 0x08 Submitted
+    LineCancelVerify --> Passthrough : attempt 1 or 2 composer_empty flushes deferred stdin + AbortedEpoch
+    LineCancelVerify --> Ground : attempt 2 dirty moves deferred to hold_buf + AbortedGuard
+    Ground --> Passthrough : Ground and composer_empty and 50 ms idle atomic flush
+    PathAQuarantined --> Passthrough : 0x09 PaneRelease discards hold_buf resets Ground and orphan_paste_open
+
+    note right of PathAQuarantined
+        Orthogonal extended state on PTY owner:
+        1. decset_2004_active tracks multi-param CSI ? 2004 h/l and RIS/DECSTR;
+           gates outer bracketed-paste wrap after interior strip on post-timeout flush.
+        2. orphan_paste_open persists across unquarantine until 201~, PaneRelease,
+           or 5 s monotonic + 250 ms stdin idle; rule (1) keeps priority while
+           quarantined and both require 1-byte 0x03 with 50 ms idle before and after.
+    end note
+```
+
+#### 2. Durable `outbox.db` HSMs (`StoreEpochRecoveryHsm`, `MailOutboxHsm`, & `ObjGrantHsm`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Hydrating
+    state "Hydrating (inert depth-1 leaf; rehydrate_without_entry_actions installs persisted leaf via state_mut)" as Hydrating
+    Hydrating --> HmacGate : fresh startup or offline wal-retry under instance.lock
+
+    state "PreWriterInspection (before opening storage.sqlite3 RW)" as PreWriterInspection {
+        state "HmacAndPresenceGate" as HmacGate
+        state "WriterReapAndLockProbe (daemon.json reap + RO fcntl F_GETLK)" as LockProbe
+        state "RestoreClassifier (needs_epoch_cas priority over --moved)" as Classifier
+        HmacGate --> LockProbe : HMAC ok and DB present
+        LockProbe --> Classifier : zero external writers
+    }
+
+    state "HealthyCrashRecovery (needs_epoch_cas == 0, 1000 ms witness ACTIVE)" as HealthyCrashRecovery {
+        state "CrashCopyActive (CoW or free minus copy at least 512 MiB)" as CrashCopy
+        state "WalCheckpointing (bounded TRUNCATE)" as WalCkpt
+        state "QuickChecking (bounded quick_check 1)" as QuickChk
+        state "HighWaterVerifying" as HighWaterChk
+        CrashCopy --> WalCkpt
+        WalCkpt --> QuickChk
+        QuickChk --> HighWaterChk
+    }
+
+    state "RestoreDetected (entry latches needs_epoch_cas = 1, witness 100% SUPPRESSED)" as RestoreDetected {
+        state "NeedsEpochCasLatched (quarantine stale WAL + quick_check 1)" as CasLatched
+        state "SchemaIncompatibleBlocked (writers stopped without --boundary-max-id)" as SchemaBlocked
+        state "SchemaCompatibleCas (single atomic outbox.db restore CAS)" as SchemaOkCas
+        state "OperatorBoundaryCas (!schema_ok with --boundary-max-id CAS)" as BoundaryCas
+        CasLatched --> SchemaBlocked : not schema_ok and no boundary flag
+        CasLatched --> SchemaOkCas : schema_ok
+        CasLatched --> BoundaryCas : not schema_ok with boundary flag
+        SchemaBlocked --> BoundaryCas : operator supplied --boundary-max-id
+        SchemaBlocked --> SchemaOkCas : schema_ok restored
+    }
+
+    state "StoreDegraded (mail_store_degraded = true, writers stopped)" as StoreDegraded
+
+    state "WritersRunning (entry sets clean_shutdown = 0, 1000 ms witness ACTIVE)" as WritersRunning {
+        state "EpochRebindPending (updates bound_mail_epoch only, holds next_cursor)" as RebindPending
+        state "SteadyState" as SteadyState
+        RebindPending --> SteadyState : surviving panes re-registered
+    }
+
+    state "LiveTamperHalted (outside WritersRunning; entry commits needs_epoch_cas = 1, stops writers, witness SUPPRESSED)" as TamperHalted
+
+    PreWriterInspection --> CrashCopy : non-restore path
+    PreWriterInspection --> CasLatched : restore trigger (offline wal-retry exits non-zero)
+    PreWriterInspection --> StoreDegraded : missing DB or external writer lock
+    HighWaterChk --> CasLatched : high_water_msg_id mismatch
+    HighWaterChk --> SteadyState : post-checkpoint epoch write + delete crash-copy
+    HealthyCrashRecovery --> StoreDegraded : checkpoint, quick_check, or copy-floor failure
+    RestoreDetected --> StoreDegraded : WAL quota, quick_check, or in-flight SQLite error
+    StoreDegraded --> CrashCopy : online ctl.sock wal-retry (needs_epoch_cas == 0)
+    StoreDegraded --> CasLatched : online ctl.sock wal-retry (needs_epoch_cas == 1)
+    SchemaOkCas --> RebindPending : atomic CAS resets witness/prepared_wal + deletes crash-copy
+    BoundaryCas --> RebindPending : atomic CAS sets witness_deferred_schema = 1 + deletes crash-copy
+    SteadyState --> TamperHalted : 1000 ms witness mismatch or live CURSOR_AHEAD
+    TamperHalted --> [*] : clean supervised restart required
+```
+
+```mermaid
+stateDiagram-v2
+    state "MailOutboxHsm (outbox.db.mail_outbox)" as MailOutboxHsm {
+        [*] --> MailHydrating
+        state "Hydrating (inert depth-1 leaf; rehydrate_without_entry_actions uses state_mut)" as MailHydrating
+        MailHydrating --> BlobPending : fresh spilled row
+        MailHydrating --> BlobUploaded : fresh inline row
+        state "Unsent: QueuedLocal (48 h window, NEVER QUARANTINED_SCHEMA)" as Unsent {
+            state "BlobPending (blob_uploaded == 0, ACLI_OBJ adoption check)" as BlobPending
+            state "BlobUploaded (3-way ConfirmedValid/Invalid/Transient pre-submit)" as BlobUploaded
+            BlobPending --> BlobUploaded : upload ok or startup ACLI_OBJ adoption
+        }
+        state "Submitted: InFlightSubmitted (grants extended to submitted_at + 7 d)" as Submitted {
+            state "ContinuityProved (continuity_unproved == 0)" as ContinuityProved
+            state "ContinuityUnproved (one-way latch = 1, forbids Failed and resend)" as ContinuityUnproved
+            ContinuityProved --> ContinuityUnproved : clean_shutdown == 0 or restore CAS
+        }
+        state "Terminal" as MailTerminal {
+            state "Sent (msg_id, promotes grants PROVISIONAL to LIVE)" as Sent
+            state "Published (ACLI_WAKEUPS PubAck, next_cursor untouched)" as Published
+            state "Failed" as Failed
+            state "DeliveryUnknown" as DeliveryUnknown
+            Sent --> Published : positive PubAck
+        }
+        BlobPending --> Failed : confirmed ObjectNotFound (own grants deleted, 0 blob delete)
+        BlobUploaded --> ContinuityProved : ConfirmedValid atomic tx before HTTP send_message
+        BlobUploaded --> Failed : ConfirmedInvalid or 48 h expiry
+        ContinuityProved --> Sent : HTTP msg_id or idempotency_key match
+        ContinuityProved --> Failed : confirmed absent 24 h..8 d
+        ContinuityProved --> DeliveryUnknown : age over 8 d
+        ContinuityUnproved --> Sent : idempotency_key and payload hash match
+        ContinuityUnproved --> DeliveryUnknown : confirmed absent or age over 8 d
+    }
+
+    state "ObjGrantHsm (outbox.db.acli_obj_grants)" as ObjGrantHsm {
+        [*] --> GrantHydrating
+        state "Hydrating (inert depth-1 leaf; rehydrate_without_entry_actions uses state_mut)" as GrantHydrating
+        GrantHydrating --> Provisional48h : fresh grant created
+        state "Active (100% forbids physical ACLI_OBJ bucket GC)" as GrantActive {
+            state "Provisional48h (outbox:row_id, direct PROVISIONAL across all restores)" as Provisional48h
+            state "ProvisionalInFlight7d (outbox:row_id, submitted_at + 7 d)" as ProvisionalInFlight7d
+            state "Live7d (msg:msg_id or req_id, sole bus_inbox object_sha256 authority)" as Live7d
+            state "QuarantinedSchema7d (prior-epoch LIVE and in-flight under 7 d on !schema_ok)" as QuarantinedSchema7d
+            Provisional48h --> ProvisionalInFlight7d : ConfirmedValid IN_FLIGHT_SUBMITTED tx
+            ProvisionalInFlight7d --> Live7d : SENT(msg_id) or schema_ok survival
+            ProvisionalInFlight7d --> QuarantinedSchema7d : !schema_ok extant blob 7 d TTL refresh
+            Live7d --> QuarantinedSchema7d : !schema_ok extant blob 7 d TTL refresh
+            QuarantinedSchema7d --> Live7d : survival + participant + body sha256 verified
+        }
+        state "Terminal" as GrantTerminal {
+            state "ExpiredMissing (ObjectNotFound on !schema_ok, writers unblocked)" as ExpiredMissing
+            state "DeletedRefCountedGc (version-checked ACLI_OBJ GC when 0 Active rows)" as DeletedRefCountedGc
+        }
+        ProvisionalInFlight7d --> ExpiredMissing : !schema_ok confirmed ObjectNotFound
+        Live7d --> ExpiredMissing : !schema_ok confirmed ObjectNotFound
+        GrantActive --> DeletedRefCountedGc : expiry, ConfirmedInvalid, DeliveryUnknown, or non-survival
+    }
+```
+
+### Three-Bucket State Machine & Linear Typestate Inventory
+
+| Bucket & ID | Machine / Typestate (`crates/acli-common` + Owning Crate) | Backing Store & Durability | Superstates / Stages & Key Preserved `R1`–`R18` Invariants |
+| --- | --- | --- | --- |
+| **Bucket A.1** (`statig` In-Memory) | **`PaneLifecycleHsm`** + **`HerdrBridgeSessionHsm`** (`crates/aclid`) | In-memory (`panes-registry.json` HMAC rehydration on `aclid` restart) | Stage 1 pure total-order 4-sensor lattice (`pty_ring`, `proc_tree`, `api_inflight`, `hook_channel`) -> Stage 2 `statig` 4 `herdr` superstates (`HerdrExited` > `HerdrBlocked` [`HungTurn`, `BlockedPermission`, `BlockedDialog`, `RateLimitedBackoff`] > `HerdrWorking` [`Compacting`, `WorkingTurn`, `Starting`] > `HerdrIdle` [`IdleAtPrompt`]) with OS sleep-paused clocks, `after_transition` monotonic `seq`, and `HerdrBridgeSessionHsm` (`Disconnected -> RegisteringEpoch -> ReplayingSnapshot -> StreamingDeltas`) replaying full snapshots (incl. Fast-Exec panes) before deltas. |
+| **Bucket A.2** (`statig` In-Memory) | **`PtyInputQuarantineHsm`** + **`OutboundVtFilterHsm`** / **`Aclimux1StreamBindHsm`** / **`At50ChunkReassemblerHsm`** (`crates/acli`, `crates/acli-guest-supervisor`, `crates/acli-guest-proxy`, `crates/aclid`, `crates/aclid-telemetry`) | In-memory single-threaded PTY owner / `vsock:5101` / `vsock:5050` | `Passthrough` / `InjectInFlight` (`SettleWindow25ms`, `LineCancelVerify { attempt: 1\|2 }` erasing full `written_char_len` via non-`0x03` `ACLIIDX1` reset, `BoundedDeferQueue <= 64 KiB`) / `PathAQuarantined` (`Ground` UTF-8-before-C1 + first `0x03` forward & subsequent `0x03` consume, `EscDisambiguate`, `CsiEntry`, `Ss3Entry`, `BracketedPaste` `64 KiB` reserving `6 B` / `1 s` idle in-buffer `\x1b[201~`, `PasteTailDiscard` `\x1b[201~` or `5 s` monotonic, `StringConsume`) + orthogonal `orphan_paste_open` (`>= 50 ms` idle-bounded 1-byte `0x03` in both rule (1) and post-quarantine) & `decset_2004_active` + superstate `0x09`/`0x0A` `PaneRelease`; companion `(prefix, intermediate, final)` VT allowlist (`CSI 5n`/`6n`/`DA` local reply), `52 B` single-use `ACLIMUX1` bind (`<= 2000 ms`), and `AT50` chunk reassembler (`<= 8`/pane, `5 s` timeout, `<= 5 MiB`/`<= 16 MiB`). |
+| **Bucket A.3** (`statig` In-Memory) | **`WakeupDeliveryHsm`** + **`InboxTailerCursorHsm`** / **`KvBuildSlotLeaseHsm`** (`crates/aclid`) | In-memory + `ACLI_WAKEUPS_<proj_hash>` (`AckExplicit`), `outbox.db` `(next_cursor, cursor_mail_epoch)`, `KV_LEASES_<proj_hash>` | `Idle` vs `Pending` superstate (`Coalescing` `2 s` idle timer, `DeliveringPathB` two-step `0x81`/`0x82` pipe-handoff ack gated on `supports_hook_context_injection`, `DeliveringPathA` fixed ASCII zero-escape trigger suppressed by `(session_seq, mail_epoch, max_id)` / `recovery_incident_id` / `(bead_seq, bead_id, wake_kind)` + surviving-pane `SessionStart`/respawn `sess:...` unread check, `ParkedPathC` non-acking cancel) with orthogonal `undeliverable_escalated: bool` latched after `60 s` inside `Pending` and cleared strictly on `Pending` superstate exit to `Idle` or acknowledged delivery; companion `InboxTailerCursorHsm` (`EpochRebindHold` unconditional `while bound_mail_epoch < mail_epoch`, `SqlCatchup`, `PostRestoreRebase`, `CursorExpiredDrift`, `SteadyPolling` `after=`, `TamperHalted`) and `KvBuildSlotLeaseHsm` (pre-minted `128-bit` `lease_gen` + `current_revision` CAS + post-sleep grace). |
+| **Bucket A.4** (`statig` In-Memory) | **`BeadReconcilerHsm`** & **`BeadDrainerHsm`** (`crates/aclid`) | In-memory + `beads-<proj_hash>.lock` + `outbox.db.bead_outbox` (`PENDING_INTENT`, `last_enqueued_bead_state`, `bead_seq_counters`) | `BeadReconcilerHsm` (`Uninitialized -> StartupFirstAttempt4s` admitting RPCs with `"reconcile_pending": true` -> `IdleSynced` with `writer_pending` holdback & pre/post-scan 5-field `br` WAL digest cache / `MutatingLockEx` pre-spawn `PENDING_INTENT` returning success + `"reconcile_pending": true` when a `0`-exit local mutation hits `<= 4 s` export timeout vs releasing `LOCK_EX` immediately to `IdleSynced` and returning `-32003` `bead_subprocess_timeout` `"outcome_unknown": true` on killed `<= 15 s`/`<= 60 s` subprocesses / `ReconcilingLockEx4s` after closing `LOCK_SH` fd / `FailedCooldown5s`) decoupled from zero-lock async post-lock `BeadDrainerHsm` (`Idle -> DrainingStrictBeadSeq -> NatsOutageBackoff` publishing to `ACLI_BEAD_EVENTS_<proj_hash>` & `ACLI_WAKEUPS_<proj_hash>`). |
+| **Bucket A.5** (`statig` In-Memory) | **`VmSandboxInstanceHsm`** / **`GuestSupervisorLifecycleHsm`** / **`AclidDaemonLifecycleHsm`** / **`LinuxHostOverlayLifecycleHsm`** (`crates/aclid`, `crates/acli-shim`, `crates/acli-guest-supervisor`, `crates/acli`) | In-memory + `vm.lock`, `instance.lock`, `daemon.json`, `host-ovl/<pane_id>/` | `VmSandboxInstanceHsm` (`Stopped -> PreflightValidating -> BootingAndLatching` over `libkrun >= 1.19.8` & `ACLIVM01` `.beads` cookie/passthrough `st_ino` without guest-to-host FUSE `st_dev` comparison -> `WarmReady` enforcing `sum(active_memory_max) + 1024 MiB <= VM_RAM` -> `DrainingRestart \| FaultRecycling` `exit 70` `E70:vsock_control_corrupt`); `GuestSupervisorLifecycleHsm` (`BootInit -> AwaitingThreeChannelBootLatch { c5040, c5050, c5102 }` exit-zeroizing `ACLI_SUPERVISOR_KEY` -> `ServingPanes -> DrainingTeardown`); `AclidDaemonLifecycleHsm` (`Starting` [`HttpOtlpBound` vs `HttpOtlpDegradedDisabled` preserving surviving-pane tokens + dedicated-thread `mcp-agent-mail` lifeline] -> `Ready -> Draining -> Stopped`); `LinuxHostOverlayLifecycleHsm` (`Active -> MidSessionPromoting` `syncfs()` + retained `upper` inodes + `E4:overlay_dirty` -> `ClearedPostExit`). |
+| **Bucket A.6** (`statig` In-Memory) | **`SpoolPolicyHsm`** + **`ExporterBreakerHsm`** + **`DiskFloorHsm`** (`crates/aclid-telemetry`) | In-memory + `0600` `otlp-ring/` (`64 MiB`) or `<= 16 MiB` zeroized RAM queue | Independent single-active-leaf machines: **`SpoolPolicyHsm`** (`DiskRingSpool::{PlainOrKeyUnlockedDropOldest \| AgeKeyLockedDropNewest}` overriding `drop-oldest` with `acli_telemetry_ring_locked_dropped_total` vs `CollectorOnlyRamSpool` writing `0` disk files), **`ExporterBreakerHsm`** (`Healthy` dropping `400`/`413`/`415` poison batches immediately -> `OpenSpoolOnly` `1 s..30 s` jittered/`Retry-After` -> `HalfOpenProbe` enforcing non-loopback `https://` `TLS >= 1.3` & `0` redirects), and orthogonal **`DiskFloorHsm`** (`DiskHealthy <-> DiskFloorHalted` below `512 MiB` `statvfs`). |
+| **Bucket B.1** (`statig` SQLite-Hydrated) | **`StoreEpochRecoveryHsm`** (`crates/aclid`, `crates/acli`) | Authoritative `19`-data-col + `row_hmac_sha256` `outbox.db.acli_store_epoch` (`rehydrate_without_entry_actions`; `store-epoch.json` RO mirror) | `PreWriterInspection` (online & offline `wal-retry` reap + RO `fcntl(F_GETLK)` probe + step-1 restore evaluation) -> `HealthyCrashRecovery` (`needs_epoch_cas == 0`, `1000 ms` 6-col witness active, `crash-copy/` auto-released) \| `RestoreDetected` (`needs_epoch_cas = 1` committed pre-move/pre-`quick_check(1)`, witness 100% suppressed until single atomic restore CAS resets all 7 store witness cols + `prepared_wal` + high-water) \| `StoreDegraded` -> `WritersRunning` (`EpochRebindPending`, `SteadyState`) -> top-level `LiveTamperHalted` (exits `WritersRunning` via LCA, commits `needs_epoch_cas = 1`, stops writers until clean supervised restart). |
+| **Bucket B.2** (`statig` SQLite-Hydrated) | **`MailOutboxHsm`** (`crates/aclid`) | `outbox.db.mail_outbox` (`state` strictly `'QUEUED_LOCAL' \| 'IN_FLIGHT_SUBMITTED' \| 'SENT' \| 'PUBLISHED' \| 'FAILED' \| 'DELIVERY_UNKNOWN'` + `continuity_unproved` + `blob_uploaded`) | `Unsent::QueuedLocal` (`BlobPending` `ACLI_OBJ` adoption vs row-local `FAILED`, `BlobUploaded` `48 h` retry + 3-way `ConfirmedValid`/`ConfirmedInvalid`/`TransientError` pre-submit extending participant grants to `submitted_at + 7 d`; **never** enters `QUARANTINED_SCHEMA`!) -> `Submitted::InFlightSubmitted` (`ContinuityProved` vs one-way `ContinuityUnproved` latch forbidding `FAILED`/resend -> `DELIVERY_UNKNOWN`) -> `Terminal` (`Sent`, `Published`, `Failed`, `DeliveryUnknown`). |
+| **Bucket B.3** (`statig` SQLite-Hydrated) | **`ObjGrantHsm`** (`crates/aclid`) | `outbox.db.acli_obj_grants` (PK `(object_sha256, kind, mail_epoch, ref_id, grantee_agent)`, `state` `'PROVISIONAL' \| 'LIVE' \| 'QUARANTINED_SCHEMA' \| 'EXPIRED_MISSING'`) | `Active` (100% forbids physical `ACLI_OBJ_<proj_hash>` GC: `Provisional48h` migrating directly to `PROVISIONAL` on both `schema_ok` & `!schema_ok` restores, `ProvisionalInFlight7d`, `Live7d` sole `bus_inbox(object_sha256)` authority, `QuarantinedSchema7d` strictly on prior-epoch `LIVE` + unresolved `< 7 d` `IN_FLIGHT_SUBMITTED` mail grants under `!schema_ok` with refreshed `7 d` TTL) -> `Terminal` (`ExpiredMissing` on `ObjectNotFound` without blocking writers, `DeletedRefCountedGc` triggering reference-counted version-checked `ACLI_OBJ` GC). |
+| **Bucket C.1** (Linear Typestate) | **Mutex Hierarchy & Disjoint Beads Lock** (`crates/acli-common`, `crates/aclid`) | Compile-time `PhantomData` tokens + immutable `project-<proj_hash>.lock` `flock` | Enforces `Level0Unlocked -> PromotionGuard -> RegistryEpochGuard -> OwnerStateGuard` (requiring `.lock` `flock` proof to write `project-<proj_hash>.owner`, reverse acquisition unrepresentable) + `BeadsFileLock::acquire(&Level0Unlocked)` preventing `beads-<proj_hash>.lock` nesting at compile time. |
+| **Bucket C.2** (Linear Typestate) | **Seven-Stage `LaunchTopology` & `--pass-fd` Token** (`crates/acli-common`, `crates/acli`) | Compile-time `PhantomData` move-only pipeline pre-`execve` | `RawCliInvocation -> ValidatedRootsAndBinaryPin<T0T2Verified> -> NormalizedFdPlan (--pass-fd >= 3 & //dev/fd/N aliases) -> AllocatedInternalFds (> max(2, max_declared_caller_fd)) -> ScrubbedFdTable -> TerminalIsolatedTopology -> SandboxedReadyToExec`. |
+| **Bucket C.3** (Linear Typestate) | **Four-Barrier Diff-Promotion Gate + 3-Marker Recovery** (`crates/acli-common`, `crates/aclid`, `crates/acli`) | Compile-time `PhantomData` barriers + `promote-<txid>.json` (`PENDING\|COMMITTED\|ABORTED`) | `UnverifiedUpper (&mut PromotionGuard, syncfs() + B4 + 3 overlay marker formats) -> Barrier1PendingAnchored -> Barrier2StagedFchmodFsynced (verbatim host mode on content-only edit) -> Barrier3RenamedDirFsynced (retains Linux upper until exit) -> Barrier4CommittedAndCleared (O(\|modified\|) file_diffs)`, paired with exhaustive 3-marker recovery (`COMMITTED` forward-only, `PENDING` rollback + `ABORTED`, `ABORTED` idempotent cleanup, unknown -> `E70:recovery_corrupt`). |
 
 ## Security & Trust Boundaries
 
@@ -247,6 +508,12 @@ Canonical Identifiers & Constants:
 - **Rationale:** Separates telemetry credentials from bus authority, lets restarted `aclid` verify `hooks-fallback.jsonl` immediately via `fallback_mac_key` without persisting live `ACLI_TELEM_TOKEN`, prevents a single pane's invalid token from tearing down shared `vsock:5050`, prevents `age`-backed collector spool deadlocks by separating offline `Sink 1` keys from Keychain-backed `Sink 2` keys, closes all 9 live CLI traps, and guarantees collector outages or telemetry bursts never stall panes or starve `outbox.db`.
 - **Alternatives Rejected:** Closing shared `vsock:5050` on one pane's invalid `ACLI_TELEM_TOKEN`; keying `hooks-fallback.jsonl` directly with un-persisted `ACLI_TELEM_TOKEN`; encrypting `otlp-ring/` to an offline-only `age1...` key; reusing `ACLI_BUS_TOKEN` on telemetry; staging `otel.jsonl` or raw stdin in `hooks-fallback.jsonl`; `env_remove()` on Claude's `DISABLE_TELEMETRY`; `agy` `--ack agy-allow` `{"decision":"allow"}`; bundling DuckDB inside `Formula/acli.rb`.
 
+### Decision 10: Pure-Rust `statig 0.4.1` HSM Core, Bounded Deferral, SQLite Hydration, & Linear Typestates
+
+- **Choice:** Pin **`statig = { version = "0.4.1", default-features = false, features = ["macro", "serde"] }`** (single-licensed `MIT`, `build = false`, unconditionally `#![no_std]` with **zero `"std"` feature**, zero unused `async` codegen, and **zero commercial `statsig*` crates** in `Cargo.lock`, using `Outcome::{Handled, Super, Transition}` exclusively) inside shared pure-Rust `crates/acli-common` (`acli-common::hsm`) for all Bucket A event-driven runtime lifecycles (`PaneLifecycleHsm` 2-stage lattice + 4 `herdr` superstates, `HerdrBridgeSessionHsm`, `PtyInputQuarantineHsm` + `OutboundVtFilterHsm` / `Aclimux1StreamBindHsm` / `At50ChunkReassemblerHsm`, `WakeupDeliveryHsm` + `InboxTailerCursorHsm` / `KvBuildSlotLeaseHsm`, `BeadReconcilerHsm` & `BeadDrainerHsm`, `VmSandboxInstanceHsm` / `GuestSupervisorLifecycleHsm` / `AclidDaemonLifecycleHsm` / `LinuxHostOverlayLifecycleHsm`, `SpoolPolicyHsm` + `ExporterBreakerHsm` + `DiskFloorHsm`) and Bucket B SQLite-hydrated durable state machines (`StoreEpochRecoveryHsm`, `MailOutboxHsm`, `ObjGrantHsm`). Enforce four runtime safeguards across `acli-common::hsm`: (1) side-effect-free `HsmContext<'_, Efx>` effect emission keeping `M` and `State` `Clone + PartialEq + Eq` for `10,000`-case `proptest` state-space fuzzing; (2) `BoundedDeferQueue<E>` (`MAX_DEFERRED_BYTES = 65_536` [`64 KiB`] for PTY human `stdin` during `InjectInFlight`, `MAX_DEFERRED_EVENTS = 64` for control HSMs, `MAX_REPLAY_MICROSTEPS = 16` per-`transition_epoch` FIFO replay failing closed losslessly on `QueueFull(E)` / `ByteBudgetExceeded { event, attempted, max_bytes }`); (3) zero-side-effect SQLite crash rehydration inside `BEGIN IMMEDIATE` over explicit versioned `outbox.db` columns via inert depth-1 `State::hydrating()` + `*unsafe { sm.state_mut() } = persisted_state` in `rehydrate_without_entry_actions` (with workspace `ast-grep` rules banning `inner_mut()` and `state_mut()` outside `acli-common::hsm::{defer, rehydrate}`); and (4) `after_transition(source, target, context)`-only hook instrumentation (`before_transition` banned via workspace `ast-grep` rule to mitigate `mdeloof/statig#76`, with internal `acli_hsm_transitions_total` health metrics exposed solely on `acli telemetry status` / `acli telemetry doctor` / `acli bus status` and never injected into Sink 1 or Sink 2 OTLP exports). Keep Bucket C acyclic invariants (`PromotionGuard -> RegistryEpochGuard -> OwnerStateGuard` + disjoint `BeadsFileLock::acquire(&Level0Unlocked)`, 7-stage pre-`execve` `LaunchTopology` & `--pass-fd` sanitization token, and 4-barrier diff-promotion gate + 3-marker crash recovery enum) as compile-time `PhantomData` linear typestates verified by `trybuild` compile-fail suites.
+- **Rationale:** Collapses duplicated shutdown, quarantine-release, witness-suppression, and blob-GC cleanup edges into Lowest Common Ancestor (LCA) superstate entry/exit actions with variant-owned state-local storage, preserves 100% pure-Rust offline Homebrew (`std_cargo_fetch_args`) and static musl guest builds, prevents `stdin`/IPC deferral OOM or livelock, prevents duplicate entry-action side effects on `aclid` crash recovery, eliminates swapped `(target, source)` transition telemetry (`mdeloof/statig#76`), and proves lock/FD/promotion ordering at compile time with zero runtime cost.
+- **Alternatives Rejected:** Manual flat `enum` + boolean flags (`path_a_quarantined`, `needs_epoch_cas`, `is_draining` cross-product bugs); flat FSM DSL crates (`smlang 0.8.0`, `rust-fsm 0.8.0` — lack hierarchical superstates, LCA exit/entry ordering, and `Superstate<'sub>` borrows); `state-machines 0.35.0` (requires `rust-version = "1.99"` and `edition = "2024"`, breaking non-bleeding-edge Homebrew/CI runners with rapid `0.x` churn); storing opaque `serde`/`bincode` HSM blobs in `outbox.db` or calling `UninitializedStateMachine::init_with_context` directly on deserialized active states (re-fires root-to-leaf entry actions on crash recovery); hooking `before_transition` on `statig 0.4.1` (`mdeloof/statig#76` swaps `(target, source)` in blocking mode); modeling acyclic compile-time lock/FD/promotion barriers as runtime HSMs; commercial `statsig*` crates.
+
 ## Failure Modes & Recovery
 
 | ID | Failure Mode | Detection | Immediate Containment | Recovery Semantics |
@@ -269,12 +536,13 @@ Canonical Identifiers & Constants:
 - **Supervised Launch adds `1` host `acli` process (`< 3 MiB` RSS) when any fd is a TTY (outside un-relayed `--isolation host`) or on Linux host `os-sandbox` -> Mitigation:** Required to guarantee zero terminal fds outside the PTY relay, allowlist outbound VT filtering on all 5 partial-TTY shapes, atomic `InjectPrompt`, and Linux host overlay promotion; pure non-TTY macOS/host and un-relayed `--isolation host` invocations still use Fast-Exec (`0` surviving `acli` processes), and logical provider identity is exported via `meta.json` and `tmux` `@acli_provider`.
 - **Intel macOS (`x86_64`) lacks `libkrun` HVF VM support -> Mitigation:** `Formula/acli.rb` uses `on_macos { on_arm { depends_on "libkrun" } }` and `on_linux { depends_on "bubblewrap"; depends_on "libkrun"; depends_on "slirp4netns" }`, keeping Intel macOS on default host `os-sandbox` and exiting `69` if `--vm`/`--mode yolo` is requested.
 - **Remote OTLP collector downtime, telemetry disk pressure, or `bd sync` exfiltration -> Mitigation:** Bounded `64 MiB` `drop-oldest` `otlp-ring` (`<= 16 MiB` per-pane share), `256 MiB`/`14 d` (`<= 64 MiB` per-lineage) store cap, and `512 MiB` `statvfs` free-space floor decouple pane latency and `outbox.db` durability completely from collector availability; enumerated closed positive OTel allowlist + 4-stage pre-write Rust DLP (`NO_CONTENT` default; `0` `otlp-ring/` files on disk in collector-only audit) blocks secret/email leakage; all non-`file://` remote `bd sync` modes (`pull|push|sync`) from sandboxed/VM panes require Zone-3 out-of-band host approval.
+- **`statig 0.4.1` lacks built-in event deferral, re-executes entry actions on `UninitializedStateMachine::init_with_context`, and swaps `(target, source)` in blocking `before_transition` (`mdeloof/statig#76`) -> Mitigation:** Centralize all HSM primitives in `acli-common::hsm`: wrap deferral in `BoundedDeferQueue<E>` (`<= 64 KiB` PTY human `stdin` / `<= 64` control events, `<= 16` replay microsteps, per-`transition_epoch` FIFO drain failing closed losslessly on `QueueFull(E)` / `ByteBudgetExceeded`), rehydrate durable `outbox.db` HSMs exclusively from explicit versioned SQLite columns via inert depth-1 `State::hydrating()` + `rehydrate_without_entry_actions` (verified by `proptest` crash-rehydration equivalence suites; `inner_mut()`/`state_mut()` banned outside `acli-common::hsm::{defer, rehydrate}` via `ast-grep`), ban `before_transition` and commercial `statsig*` crates via workspace `ast-grep` and `Cargo.lock` CI gates in favor of `after_transition`, and keep `acli_hsm_transitions_total` strictly on local `acli telemetry status` / `acli telemetry doctor` / `acli bus status` out of Sink 1/2 OTLP exports.
 
 ## Migration Plan
 
 1. **Stage 0 — Tap CI & Script Prerequisites (Dedicated PR to `main` before Formula Bottles):** Land `scripts/check-aitools-lock.sh` (per-artifact/platform covering `br 0.7.6` + `bd 1.3.4` + guest musl `resource` checks), `scripts/ci/plan-ci.sh` (`versions/*` lint trigger), `scripts/autobump.sh` (`versions/aitools-lock.json` + `acli` guest `resource` co-bump), multi-tool 9-CLI `scripts/install-agent-skills.sh` (`--tool ripwire|agent-mail|acli|all`), `rules/ruby/formula-conflicts-same-name.yml` (`"nats-server"`), and `tests/ci_workflow_plan.bats` so `publish.yml` (`check_protected_paths`) never blocks Stage 1 bottle PRs.
 2. **Stage 1 — Hardened Tap Formulae & Lockfile (`status: "staged"` for `acli`, ZERO `acli` Dependency):** Land `Formula/agent-mail.rb` (`0.3.41` `revision 1`), `Formula/nats.rb` (`0.5.2` `revision 1`), `Formula/br.rb` (`0.7.6` `revision 1`, blocking `br upgrade -> exit 2`), `Formula/bd.rb` (`1.3.4` `revision 2`, enforcing unconditional `export BD_DISABLE_METRICS=1 BD_DISABLE_EVENT_FLUSH=1 DOLT_METRICS_DISABLED=1 DO_NOT_TRACK=1` in wrapper, completions, `caveats`, Nix `bd` wrapper, and `test do` first verifying all four effective child env vars equal `1` BEFORE the fixture's first embedded-Dolt DB operation followed by the due-metrics smoke check), standalone `Formula/nats-server.rb` (`2.15.3`, compiling field-independent `libexec/bin/nats-bind-preflight` with zero `acli` dep), and per-artifact/platform `versions/aitools-lock.json` (`acli` `status: "staged"`, `agent-mail`/`nats`/`nats-server`/`br` `0.7.6`/`bd` `1.3.4` `status: "present"`) via `tests.yml` (`Homebrew >= 7.0.5` source floor, cold Cargo/Go caches, standalone Stage-1 port-only CLI + hostless config test with `acli` absent, `include_macos=true`) + `publish.yml` (`brew pr-pull`).
-3. **Stage 2 — `acli` Host Launcher, `os-sandbox`, Telemetry, & `Formula/acli.rb` (`status: "present"`):** Ship pure-Rust `Formula/acli.rb` (`Homebrew >= 7.0.5`, `std_cargo_fetch_args`, zero-Bash `bin.install_symlink libexec/"bin/acli"` + `/bin/bash` `3.2` `bin/aclid` wrapper setting `ACLI_SHIM_PATH`, platform-accurate `libkrun`/`bubblewrap`/`slirp4netns` + `artagon/aitools/{agent-mail,nats-server,br,bd}`, pinned musl guest `resource`s incl. chunked `vsock:5050`/`telem.sock`, hypervisor-only `--id com.artagon.acli.shim` verified by exact `Identifier` equality + binary slot 5/7, default `--isolation os-sandbox`, signed `ACLIIDX1`, closed `acli git` / monotonic `acli spawn`, `< 3 ms` `acli hook emit [--drain]`, `acli telemetry status|flush|doctor|export`, `acli bus status`, `acli bus restore-prepare [--from <backup_db>] [--with-wal <backup_wal>] [--moved] [--boundary-max-id <N>]`, `acli bus wal-inspect`, `acli bus quarantine-prune -- <entry>`, `acli bus wal-retry [--timeout-secs <1..300>] [--skip-copy]`, `acli pane release <pane_id>`, `acli daemon install`, `aclid`-owned `HERDR_SOCKET_PATH` push, `acli ps --json`); flip `acli` to `status: "present"`.
+3. **Stage 2 — `acli` Host Launcher, `os-sandbox`, Telemetry, & `Formula/acli.rb` (`status: "present"`):** Ship pure-Rust `Formula/acli.rb` (`Homebrew >= 7.0.5`, `std_cargo_fetch_args` vendoring pure-Rust `crates/acli-common` `statig = { version = "0.4.1", default-features = false, features = ["macro", "serde"] }` [`MIT`, `build = false`, zero `"std"` feature, zero `statsig*` crates in `Cargo.lock`], zero-Bash `bin.install_symlink libexec/"bin/acli"` + `/bin/bash` `3.2` `bin/aclid` wrapper setting `ACLI_SHIM_PATH`, platform-accurate `libkrun`/`bubblewrap`/`slirp4netns` + `artagon/aitools/{agent-mail,nats-server,br,bd}`, pinned musl guest `resource`s incl. chunked `vsock:5050`/`telem.sock`, hypervisor-only `--id com.artagon.acli.shim` verified by exact `Identifier` equality + binary slot 5/7, default `--isolation os-sandbox`, signed `ACLIIDX1`, closed `acli git` / monotonic `acli spawn`, `< 3 ms` `acli hook emit [--drain]`, `acli telemetry status|flush|doctor|export`, `acli bus status`, `acli bus restore-prepare [--from <backup_db>] [--with-wal <backup_wal>] [--moved] [--boundary-max-id <N>]`, `acli bus wal-inspect`, `acli bus quarantine-prune -- <entry>`, `acli bus wal-retry [--timeout-secs <1..300>] [--skip-copy]`, `acli pane release <pane_id>`, `acli daemon install`, `aclid`-owned `HERDR_SOCKET_PATH` push, `acli ps --json`); flip `acli` to `status: "present"`.
 4. **Stage 3 — Shared `libkrun >= 1.19.8` VM, Proxies, Telemetry Multiplex, & Strict `--mode yolo`:** Enable `aclid` + `acli-shim` shared VM (`min(clamp(host_ram_gib/2, 8, 16), max(host_ram_gib - 4, 4)) GiB`), full case-sensitive closure-scoped EROFS (`.drvPath` cache, `--option builders ''`, zero `bd`/`br`/Python/DuckDB in guest EROFS) + `openat2`/`O_NOFOLLOW_ANY`-verified FD-bound direct RO `/workspace/.beads` (`ACLIVM01` host-validated `.beads` directory cookie / passthrough `st_ino` re-validation + `bwrap --ro-bind-fd <fd> /workspace/.beads` + post-mount guest-local `(st_dev, st_ino)` check) outside `overlayfs`, Mode A/B RFC 3986 proxies with streaming TTFT/token/`429` telemetry, chunked `vsock:5050` `"AT50"` telemetry multiplex + Dual-Sink host fanout (`ACLI_TELEM_TOKEN`), 4-zone MCP firewall (stripping Zone-1/2/3 `tracestate`/`baggage`), fixed `$HOME/.local/share/acli/workspace-locks/` ownership & scope lock, and single-flight 4-barrier `fchmod`/`fsync` diff-promotion gate emitting `O(|modified|)` `file_diffs`.
 5. **Stage 4 — Unified 3-Plane Bus (Dual-Engine `br`+`bd`) & `ACLIIDX1`-Driven `stdio` 9-CLI `acli mcp sync` Cutover:** Update `artagon-scripts` (`lib/mcp.sh` pin `0.3.29 -> 0.3.41`, `WORKTREES_ENABLED=true`, positive-only `AgentGateway` CEL for Zone-2/3 external MCPs, optional Pluggy `acli_fast_shim` calling `acli hook emit`), run `acli mcp sync` across all 9 CLIs (driven by signed `ACLIIDX1` `stdio_env_mode` and verified by live `bus_who`, replacing Node `mcp-remote`), switch `ntm_swarm`/`herdr_swarm` to `aclid` push wakeups (`mail` + `bead_wake` via `ACLI_BEAD_EVENTS_<proj_hash>` & `PENDING_INTENT`/`bead_outbox`), and retire `hcom`/`herdr-message`/`autoswarm`/`cao-ops` inbox from defaults.
 6. **Rollback Strategy:** Every stage is independently reversible without data loss: restore `acli mcp sync` from pruned `0600` `.bak` files; use interactive-confirmed `--no-sandbox` for non-yolo host fallback; stop `aclid` and point `am`/`br`/`bd` directly on host (AgentMail SQLite and `.beads/` formats are untouched); disable remote OTLP export without losing core pure-Rust local `store/` traces; or pin prior signed bottles via Homebrew.
