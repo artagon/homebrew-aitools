@@ -8,6 +8,13 @@ class Agentsync < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agentsync-1.53.2"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "deef5b57b63e86bf5734f931ad28ce8baceab872acc2fb9c82892e323a2a8e90"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "630f0787a825cfd3ea911f9ba3f5705b423df4b99ecc47d2fc6b1405d188d927"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "67ff2c4c03fd351b3fea346cf85ce098750d5c026d830b3587980251f330e4f9"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/dallay/agentsync/releases/download/v1.53.2/agentsync-1.53.2-aarch64-apple-darwin.tar.gz"
