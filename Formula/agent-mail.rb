@@ -10,6 +10,13 @@ class AgentMail < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-mail-0.3.41_1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "434ab95cddca518280a2ec34cd7c818f0053d7e359978c2600ef93949c9a0613"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "205101c95c3322e7cd8a3f77ed53a35a99148b0819395500b47b9d7827331c98"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "f4c0a8c6c1b0e9d102f21b57852c6895d6e46b95dd417e7bf9d38b27c73c9b99"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-aarch64-apple-darwin.tar.xz"
