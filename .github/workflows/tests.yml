@@ -136,6 +136,7 @@ jobs:
           if [[ "${RUN_PROVENANCE_BATS}" = "true" || "${RUN_CASK_BATS}" = "true" || "${RUN_INSTALLER_BATS_STANDALONE}" = "true" ]]; then
             pkgs+=(bats-core)
             command -v jq >/dev/null 2>&1 || pkgs+=(jq)
+            command -v shellcheck >/dev/null 2>&1 || pkgs+=(shellcheck)
           fi
           if [[ "${#pkgs[@]}" -gt 0 ]]; then
             brew install "${pkgs[@]}"
@@ -180,12 +181,21 @@ jobs:
           ast-grep test --config sgconfig.yml
           ast-grep scan --config sgconfig.yml . .github/workflows
 
-      - name: Run provenance, tap-docs, lock, skill-installer, and CI planner Bats suites
+      - name: Run provenance, tap-docs, lock, skill-installer, wrapper, and CI planner Bats suites
         if: needs.plan.outputs.run_provenance_bats == 'true'
         run: |
+          bats_suites=(
+            tests/verify_provenance.bats
+            tests/ci_workflow_plan.bats
+            tests/update_tap_docs.bats
+            tests/aitools_lock.bats
+            tests/install_agent_skills_multitool.bats
+          )
+          if [[ -f tests/stage1_formula_wrappers.bats ]]; then
+            bats_suites+=(tests/stage1_formula_wrappers.bats)
+          fi
           BATS_BASH32=/bin/bash BATS_MODERN_BASH="$(command -v bash)" \
-            bats --tap tests/verify_provenance.bats tests/ci_workflow_plan.bats tests/update_tap_docs.bats \
-            tests/aitools_lock.bats tests/install_agent_skills_multitool.bats
+            bats --tap "${bats_suites[@]}"
 
       - name: Run cask postflight defaults Bats suite
         if: needs.plan.outputs.run_cask_bats == 'true'
