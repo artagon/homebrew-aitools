@@ -11,6 +11,13 @@ class NatsServer < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/nats-server-2.15.3"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "5ff945d8ddef6addceef4b3c81767474aa19d4edcfa85aaedcc3f1e20c49541a"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "8aa324fe6049713e8592f070869f52a913afa5da8f30a2b95deed8f67dfa217c"
+    sha256 cellar: :any,                 x86_64_linux: "778842e24f2b640daf952c19318053be5e9ceb068490f8e05faa9355f7987770"
+  end
+
   depends_on "go" => :build
 
   # `test do` runs local loopback listeners on ephemeral ports.
