@@ -12,6 +12,13 @@ class Nats < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/nats-0.5.2_1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "be04b41376e65cfdc64fa7c326654a20569aea73f63151c20f81985fecfb303b"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "d135900e83aeca98a6432ef6c2c8a902004722334967088daa75dca06b1a6d6a"
+    sha256 cellar: :any,                 x86_64_linux: "357d99ffdc4961d51a3bb689cd6aaed47621fa740d6d91592af9517241fb9682"
+  end
+
   depends_on "go" => :build
 
   deny_network_access! [:build, :postinstall]
