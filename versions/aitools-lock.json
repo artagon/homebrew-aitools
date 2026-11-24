@@ -1,0 +1,188 @@
+{
+  "schema": "artagon-aitools-lock/v1",
+  "nix_closure": {
+    "status": "staged",
+    "flake_lock_rev": null,
+    "vendor_hash": null,
+    "guest_drv_identity": null,
+    "acli_cargo_lock": null,
+    "excluded_from_guest_erofs": [
+      "bd",
+      "br"
+    ]
+  },
+  "artifacts": [
+    {
+      "package": "agent-mail",
+      "version": "0.3.41",
+      "artifact_role": "binary",
+      "platform": "darwin-arm64",
+      "status": "present",
+      "formula": "Formula/agent-mail.rb",
+      "url": "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-aarch64-apple-darwin.tar.xz",
+      "sha256": "1fa85ffa1578b5979d250f2ef3ae4b2fc6ae730cd50c84815755edd87b81ad4d"
+    },
+    {
+      "package": "agent-mail",
+      "version": "0.3.41",
+      "artifact_role": "binary",
+      "platform": "darwin-x86_64",
+      "status": "present",
+      "formula": "Formula/agent-mail.rb",
+      "url": "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-x86_64-apple-darwin.tar.xz",
+      "sha256": "0743ca92e0a1ee938bed7d750fc7516ab4323a51ee0fb511881dcce01fc93c4a"
+    },
+    {
+      "package": "agent-mail",
+      "version": "0.3.41",
+      "artifact_role": "binary",
+      "platform": "linux-arm64",
+      "status": "present",
+      "formula": "Formula/agent-mail.rb",
+      "url": "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-aarch64-unknown-linux-gnu.tar.xz",
+      "sha256": "5e0106db798433e153eb28e4abca16dcebcdb998e6069ba87b6fa2aa5d7c9d93"
+    },
+    {
+      "package": "agent-mail",
+      "version": "0.3.41",
+      "artifact_role": "binary",
+      "platform": "linux-x86_64",
+      "status": "present",
+      "formula": "Formula/agent-mail.rb",
+      "url": "https://github.com/Dicklesworthstone/mcp_agent_mail_rust/releases/download/v0.3.41/mcp-agent-mail-x86_64-unknown-linux-musl.tar.xz",
+      "sha256": "30b3866304b26d14428ce0f85d34e422aca699519f1196ec2f58fbdcdb9e7ccd"
+    },
+    {
+      "package": "nats",
+      "version": "0.5.2",
+      "artifact_role": "source",
+      "platform": "all",
+      "status": "present",
+      "formula": "Formula/nats.rb",
+      "url": "https://github.com/nats-io/natscli/archive/refs/tags/v0.5.2.tar.gz",
+      "sha256": "6a735b879a19a7abaa4b45e512f23ddb7df6e8f1cd14b32091cd8568e4e94f63"
+    },
+    {
+      "package": "nats-server",
+      "version": "2.15.3",
+      "artifact_role": "source",
+      "platform": "all",
+      "status": "present",
+      "formula": "Formula/nats-server.rb",
+      "url": "https://github.com/nats-io/nats-server/archive/refs/tags/v2.15.3.tar.gz",
+      "sha256": "034a2a7535d67ae6f28962976a530dad1bd912dd2d9af05a3990f3b7e674008e"
+    },
+    {
+      "package": "br",
+      "version": "0.7.6",
+      "artifact_role": "binary",
+      "platform": "darwin-arm64",
+      "status": "present",
+      "formula": "Formula/br.rb",
+      "url": "https://github.com/Dicklesworthstone/beads_rust/releases/download/v0.7.6/br-0.7.6-darwin_arm64.tar.gz",
+      "sha256": "d01a4ef66aa5cd40152fc6481b78def7b6dfefd56da1b26dd1c84b38603de6f6"
+    },
+    {
+      "package": "br",
+      "version": "0.7.6",
+      "artifact_role": "binary",
+      "platform": "darwin-x86_64",
+      "status": "present",
+      "formula": "Formula/br.rb",
+      "url": "https://github.com/Dicklesworthstone/beads_rust/releases/download/v0.7.6/br-0.7.6-darwin_amd64.tar.gz",
+      "sha256": "7732a5bfa954f559bf0822ada071f32416b8a46e32ad33819c07d5942b29c46e"
+    },
+    {
+      "package": "br",
+      "version": "0.7.6",
+      "artifact_role": "binary",
+      "platform": "linux-arm64",
+      "status": "present",
+      "formula": "Formula/br.rb",
+      "url": "https://github.com/Dicklesworthstone/beads_rust/releases/download/v0.7.6/br-0.7.6-linux_musl_arm64.tar.gz",
+      "sha256": "7b6ea53d1b3b835115074e18bf6794caaf335bbe5b4f45fdb8091a9cf67c633a"
+    },
+    {
+      "package": "br",
+      "version": "0.7.6",
+      "artifact_role": "binary",
+      "platform": "linux-x86_64",
+      "status": "present",
+      "formula": "Formula/br.rb",
+      "url": "https://github.com/Dicklesworthstone/beads_rust/releases/download/v0.7.6/br-0.7.6-linux_musl_amd64.tar.gz",
+      "sha256": "28b89f8f26540a4c9e6242b3c9fc93bcdd89f4ec0b9c9792895028c53f5bf2bd"
+    },
+    {
+      "package": "bd",
+      "version": "1.3.4",
+      "artifact_role": "binary",
+      "platform": "darwin-arm64",
+      "status": "present",
+      "formula": "Formula/bd.rb",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.4/beads_1.3.4_darwin_arm64.tar.gz",
+      "sha256": "b08a9c15bff80c42235f32946f94a6566a7d90944fe8afe45f3fd2f350596cdb"
+    },
+    {
+      "package": "bd",
+      "version": "1.3.4",
+      "artifact_role": "binary",
+      "platform": "darwin-x86_64",
+      "status": "present",
+      "formula": "Formula/bd.rb",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.4/beads_1.3.4_darwin_amd64.tar.gz",
+      "sha256": "05e713a2da8eeaba40b924184735d9a34d2da8669e4d3ac50cc716605ba10640"
+    },
+    {
+      "package": "bd",
+      "version": "1.3.4",
+      "artifact_role": "binary",
+      "platform": "linux-arm64",
+      "status": "present",
+      "formula": "Formula/bd.rb",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.4/beads_1.3.4_linux_arm64.tar.gz",
+      "sha256": "f4ee6eb3ec79bb2d7eb9d717c73efbcb6fa763cc70f726b4d055b72afdd68ad5"
+    },
+    {
+      "package": "bd",
+      "version": "1.3.4",
+      "artifact_role": "binary",
+      "platform": "linux-x86_64",
+      "status": "present",
+      "formula": "Formula/bd.rb",
+      "url": "https://github.com/gastownhall/beads/releases/download/v1.3.4/beads_1.3.4_linux_amd64.tar.gz",
+      "sha256": "175c26904bde3ff9168d2282ff6b56f17b17f60c22fa5acb3dacc9fb3465303a"
+    },
+    {
+      "package": "acli",
+      "version": "0.1.0",
+      "artifact_role": "source",
+      "platform": "all",
+      "status": "staged",
+      "formula": "Formula/acli.rb",
+      "url": null,
+      "sha256": null
+    },
+    {
+      "package": "acli",
+      "version": "0.1.0",
+      "artifact_role": "guest-musl",
+      "platform": "linux-arm64",
+      "resource": "guest-aarch64-linux-musl",
+      "status": "staged",
+      "formula": "Formula/acli.rb",
+      "url": null,
+      "sha256": null
+    },
+    {
+      "package": "acli",
+      "version": "0.1.0",
+      "artifact_role": "guest-musl",
+      "platform": "linux-x86_64",
+      "resource": "guest-x86_64-linux-musl",
+      "status": "staged",
+      "formula": "Formula/acli.rb",
+      "url": null,
+      "sha256": null
+    }
+  ]
+}

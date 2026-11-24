@@ -2,19 +2,11 @@ class Bd < Formula
   desc "Git-backed graph issue tracker for AI coding agents"
   homepage "https://github.com/gastownhall/beads"
   license "MIT"
-  revision 1
+  revision 2
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bd-1.3.4_1"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "d2dcbe80bd513a3baa4eaf1700c5d826cb8e566fb661fa5d5074571f990eb317"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "c8b8b77fce191460b7183d48a144d2f2cc90d864f9478b01cd4d85579b2cd6e5"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "4640e09db20229d6c281e3ae71bd19dc68c0914f06affaf853e1e17b54bf77ae"
   end
 
   # Upstream release binaries embed the Dolt engine and link only system libraries.
@@ -43,8 +35,12 @@ class Bd < Formula
   conflicts_with "beads", because: "both install `bd` binaries"
 
   def install
-    # bd sends anonymous usage metrics by default; disable metrics at build and runtime.
+    # Disable bd usage metrics, detached event flushing, and embedded Dolt gRPC
+    # metrics during completion generation and at runtime.
     ENV["BD_DISABLE_METRICS"] = "1"
+    ENV["BD_DISABLE_EVENT_FLUSH"] = "1"
+    ENV["DOLT_METRICS_DISABLED"] = "1"
+    ENV["DO_NOT_TRACK"] = "1"
 
     libexec.install "bd"
     chmod 0755, libexec/"bd"
@@ -53,8 +49,10 @@ class Bd < Formula
       # Target contract: macOS /bin/bash 3.2+ wrapper.
       set -euo pipefail
 
-      export BD_DISABLE_METRICS="${BD_DISABLE_METRICS:-1}"
-      export DO_NOT_TRACK="${DO_NOT_TRACK:-1}"
+      export BD_DISABLE_METRICS=1
+      export BD_DISABLE_EVENT_FLUSH=1
+      export DOLT_METRICS_DISABLED=1
+      export DO_NOT_TRACK=1
 
       exec "#{libexec}/bd" "$@"
     SH
@@ -70,8 +68,13 @@ class Bd < Formula
       Homebrew manages upgrades via:
         brew upgrade artagon/aitools/bd
 
-      Anonymous usage metrics are disabled by default in the `bd` wrapper
-      (`BD_DISABLE_METRICS=1`, `DO_NOT_TRACK=1`).
+      The `bd` wrapper unconditionally enforces:
+        BD_DISABLE_METRICS=1
+        BD_DISABLE_EVENT_FLUSH=1
+        DOLT_METRICS_DISABLED=1
+        DO_NOT_TRACK=1
+      suppressing anonymous usage metrics, detached `bd send-metrics` flushing,
+      and embedded Dolt gRPC metrics while preserving `bd update` and `bd upgrade`.
 
       `bd init` writes AGENTS.md and agent setup files in the project unless you
       pass --skip-agents. Installing this formula modifies no agent configuration.
@@ -80,19 +83,62 @@ class Bd < Formula
 
   test do
     ENV["HOME"] = testpath.to_s
-    ENV["BD_DISABLE_METRICS"] = "1"
+    ENV["XDG_CONFIG_HOME"] = (testpath/".config").to_s
 
-    assert_match "bd version #{version}", shell_output("#{bin}/bd --version")
+    # First verify all four effective child env vars are forced to 1 BEFORE the
+    # fixture's first embedded-Dolt database operation.
+    probe_src = (bin/"bd").read
+    refute_nil probe_src.sub!(%Q(exec "#{libexec}/bd" "$@"), "exec /usr/bin/env")
+    probe = testpath/"bd-env-probe"
+    probe.write(probe_src)
+    chmod 0755, probe
 
-    # The embedded Dolt engine needs no external server.
-    system bin/"bd", "init", "--prefix", "brewtest", "--non-interactive", "--skip-hooks", "--skip-agents", "--quiet"
-    assert_path_exists testpath/".beads/config.yaml"
+    override_env = {
+      "BD_DISABLE_EVENT_FLUSH" => "0",
+      "DOLT_METRICS_DISABLED"  => "0",
+      "BD_DISABLE_METRICS"     => "0",
+      "DO_NOT_TRACK"           => "0",
+    }
+    override_prefix = override_env.map { |k, v| "#{k}=#{v}" }.join(" ")
 
-    issue = JSON.parse(shell_output("#{bin}/bd create 'Brew formula test' --json"))
-    assert_equal "Brew formula test", issue["title"]
-    issues = JSON.parse(shell_output("#{bin}/bd list --json"))
-    assert_equal [issue["id"]], issues.map { |entry| entry["id"] }
+    child_env = shell_output("#{override_prefix} #{probe}")
+    assert_match(/^BD_DISABLE_METRICS=1$/, child_env)
+    assert_match(/^BD_DISABLE_EVENT_FLUSH=1$/, child_env)
+    assert_match(/^DOLT_METRICS_DISABLED=1$/, child_env)
+    assert_match(/^DO_NOT_TRACK=1$/, child_env)
 
+    assert_match "Anonymous usage metrics: OFF", shell_output("#{override_prefix} #{bin}/bd metrics")
+    assert_match "bd version #{version}", shell_output("#{override_prefix} #{bin}/bd --version")
+
+    # Seed a due metrics backlog under $HOME/.beads/eventsData and verify that
+    # invoking wrapped bd under explicit *=0 overrides never touches .last-flush
+    # or spawns a detached `bd send-metrics` flusher.
+    events_dir = testpath/".beads/eventsData"
+    events_dir.mkpath
+    due_batch = events_dir/"due-test.evtq"
+    due_batch.write("{}\n")
+    flush_marker = events_dir/".last-flush"
+    refute_path_exists flush_marker
+
+    repo = testpath/"repo"
+    repo.mkpath
+    cd repo do
+      system(override_env, bin/"bd", "init", "--prefix", "brewtest",
+             "--non-interactive", "--skip-hooks", "--skip-agents", "--quiet")
+      assert_path_exists repo/".beads/config.yaml"
+
+      issue = JSON.parse(shell_output("#{override_prefix} #{bin}/bd create 'Brew formula test' --json"))
+      assert_equal "Brew formula test", issue["title"]
+      issues = JSON.parse(shell_output("#{override_prefix} #{bin}/bd list --json"))
+      assert_equal [issue["id"]], issues.map { |entry| entry["id"] }
+    end
+
+    refute_path_exists flush_marker
+    assert_path_exists due_batch
     assert_path_exists prefix/"LICENSE"
+    refute_path_exists testpath/".claude"
+    refute_path_exists testpath/".codex"
+    refute_path_exists testpath/".gemini"
+    refute_path_exists testpath/".agents"
   end
 end
