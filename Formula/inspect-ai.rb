@@ -1,8 +1,8 @@
 class InspectAi < Formula
   desc "Agentic LLM evaluation harness bundling Inspect SWE and MLflow hooks"
   homepage "https://inspect.aisi.org.uk/"
-  url "https://github.com/UKGovernmentBEIS/inspect_ai/archive/refs/tags/0.3.291.tar.gz"
-  sha256 "9b6271ffbbf6d5de330f0f96a85b5edcfc7f887eb61166f4881e0a2f69d88f66"
+  url "https://github.com/UKGovernmentBEIS/inspect_ai/archive/refs/tags/0.3.292.tar.gz"
+  sha256 "2bffe107ca61f0482bd2afd34b8d7abe7cad8b040ffa086db165d1a787b737c9"
   license "MIT"
   head "https://github.com/UKGovernmentBEIS/inspect_ai.git", branch: "main"
 
