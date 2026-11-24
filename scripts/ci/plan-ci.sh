@@ -567,7 +567,7 @@ main() {
         scripts/lib/* | scripts/ci/* | \
         tests/verify_provenance.bats | tests/ci_workflow_plan.bats | tests/update_tap_docs.bats | \
         tests/aitools_lock.bats | tests/install_agent_skills_multitool.bats | \
-        tests/helpers/provenance_helper.bash | Formula/*.rb)
+        tests/stage1_formula_wrappers.bats | tests/helpers/provenance_helper.bash | Formula/*.rb)
         touched_provenance="true"
         ;;
       *) ;;
