@@ -528,3 +528,9 @@ EOF
   run case_autobump_sync_lock "$LOCK_MODERN_BASH"
   [ "$status" -eq 0 ]
 }
+
+@test "repository versions/aitools-lock.json matches committed Formula/*.rb" {
+  run "$LOCK_MODERN_BASH" "$LOCK_SCRIPT" --json
+  [ "$status" -eq 0 ]
+  jq -e '.ok == true and .checked == 17 and .failed == 0' <<<"$output"
+}

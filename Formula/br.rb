@@ -3,15 +3,11 @@ class Br < Formula
   homepage "https://github.com/Dicklesworthstone/beads_rust"
   # MIT License with OpenAI/Anthropic Rider; full text installed to prefix/LICENSE.
   license :cannot_represent
+  revision 1
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/br-0.7.6"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "e79478b198025358c79c6dc57d6f13c384bcc3ded7f1076aafb19978e3ea38c6"
   end
 
   on_macos do
@@ -37,27 +33,79 @@ class Br < Formula
   end
 
   def install
-    bin.install "br"
+    libexec.install "br"
+    chmod 0755, libexec/"br"
+
+    (bin/"br").write <<~SH
+      #!/bin/bash
+      # Target contract: macOS /bin/bash 3.2+ wrapper.
+      set -euo pipefail
+
+      skip_next=0
+      for arg in "$@"; do
+        if [[ "${skip_next}" -eq 1 ]]; then
+          skip_next=0
+          continue
+        fi
+        case "${arg}" in
+          -- | -h | --help | -V | --version)
+            break
+            ;;
+          --db | --actor | --format | --lock-timeout)
+            skip_next=1
+            ;;
+          --*=* | -*)
+            ;;
+          upgrade)
+            echo "br: in-place self-update is disabled; run: brew upgrade artagon/aitools/br" >&2
+            exit 2
+            ;;
+          *)
+            break
+            ;;
+        esac
+      done
+
+      export DO_NOT_TRACK="${DO_NOT_TRACK:-1}"
+
+      exec "#{libexec}/br" "$@"
+    SH
+    chmod 0755, bin/"br"
+
     doc.install "README.md"
     prefix.install "LICENSE"
-    generate_completions_from_executable(bin/"br", "completions")
+    generate_completions_from_executable(libexec/"br", "completions")
   end
 
   def caveats
     <<~EOS
-      Homebrew manages this installation. Do not run `br upgrade`; upgrade with:
+      Homebrew manages this installation. The `br` wrapper blocks `br upgrade`
+      (exiting `2`); upgrade with:
         brew upgrade artagon/aitools/br
+
+      This formula does not modify any agent configuration files.
     EOS
   end
 
   test do
     ENV["HOME"] = testpath.to_s
-    ENV["XDG_CONFIG_HOME"] = (testpath/"config").to_s
+    ENV["XDG_CONFIG_HOME"] = (testpath/".config").to_s
 
     assert_match "br #{version}", shell_output("#{bin}/br --version")
+    assert_match "brew upgrade artagon/aitools/br", shell_output("#{bin}/br upgrade 2>&1", 2)
+    assert_match "brew upgrade artagon/aitools/br",
+                 shell_output("#{bin}/br --actor tester --lock-timeout 5000 upgrade 2>&1", 2)
+    assert_match "brew upgrade artagon/aitools/br",
+                 shell_output("#{bin}/br --db #{testpath}/x.db --format json upgrade 2>&1", 2)
+    assert_match "upgrade", shell_output("#{bin}/br help upgrade")
+
     system bin/"br", "init", "--prefix", "test"
     system bin/"br", "create", "Verify Homebrew formula"
     assert_match "Verify Homebrew formula", shell_output("#{bin}/br list --json")
     assert_path_exists prefix/"LICENSE"
+    refute_path_exists testpath/".claude"
+    refute_path_exists testpath/".codex"
+    refute_path_exists testpath/".gemini"
+    refute_path_exists testpath/".agents"
   end
 end
