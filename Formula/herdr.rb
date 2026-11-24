@@ -9,6 +9,13 @@ class Herdr < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/herdr-0.9.5_1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "1e3c4531069684b3d2e03fa0c342a28a61b7d0948d3852423779487fa223428a"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "deb0f5e346100e83f84a3530a3a462dc099ac9e576aed46d5be3713752c7cfe6"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "a56d81547ab1388afefff7ebf9f77e172a66fa602666bb5fe227c8714a1319f1"
+  end
+
   on_macos do
     on_arm do
       url "https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-macos-aarch64"
