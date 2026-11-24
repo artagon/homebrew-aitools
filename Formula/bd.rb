@@ -99,42 +99,43 @@ class Bd < Formula
       "BD_DISABLE_METRICS"     => "0",
       "DO_NOT_TRACK"           => "0",
     }
-    override_prefix = override_env.map { |k, v| "#{k}=#{v}" }.join(" ")
 
-    child_env = shell_output("#{override_prefix} #{probe}")
-    assert_match(/^BD_DISABLE_METRICS=1$/, child_env)
-    assert_match(/^BD_DISABLE_EVENT_FLUSH=1$/, child_env)
-    assert_match(/^DOLT_METRICS_DISABLED=1$/, child_env)
-    assert_match(/^DO_NOT_TRACK=1$/, child_env)
+    with_env(override_env) do
+      child_env = shell_output(probe.to_s)
+      assert_match(/^BD_DISABLE_METRICS=1$/, child_env)
+      assert_match(/^BD_DISABLE_EVENT_FLUSH=1$/, child_env)
+      assert_match(/^DOLT_METRICS_DISABLED=1$/, child_env)
+      assert_match(/^DO_NOT_TRACK=1$/, child_env)
 
-    assert_match "Anonymous usage metrics: OFF", shell_output("#{override_prefix} #{bin}/bd metrics")
-    assert_match "bd version #{version}", shell_output("#{override_prefix} #{bin}/bd --version")
+      assert_match "Anonymous usage metrics: OFF", shell_output("#{bin}/bd metrics")
+      assert_match "bd version #{version}", shell_output("#{bin}/bd --version")
 
-    # Seed a due metrics backlog under $HOME/.beads/eventsData and verify that
-    # invoking wrapped bd under explicit *=0 overrides never touches .last-flush
-    # or spawns a detached `bd send-metrics` flusher.
-    events_dir = testpath/".beads/eventsData"
-    events_dir.mkpath
-    due_batch = events_dir/"due-test.evtq"
-    due_batch.write("{}\n")
-    flush_marker = events_dir/".last-flush"
-    refute_path_exists flush_marker
+      # Seed a due metrics backlog under $HOME/.beads/eventsData and verify that
+      # invoking wrapped bd under explicit *=0 overrides never touches .last-flush
+      # or spawns a detached `bd send-metrics` flusher.
+      events_dir = testpath/".beads/eventsData"
+      events_dir.mkpath
+      due_batch = events_dir/"due-test.evtq"
+      due_batch.write("{}\n")
+      flush_marker = events_dir/".last-flush"
+      refute_path_exists flush_marker
 
-    repo = testpath/"repo"
-    repo.mkpath
-    cd repo do
-      system(override_env, bin/"bd", "init", "--prefix", "brewtest",
-             "--non-interactive", "--skip-hooks", "--skip-agents", "--quiet")
-      assert_path_exists repo/".beads/config.yaml"
+      repo = testpath/"repo"
+      repo.mkpath
+      cd repo do
+        system bin/"bd", "init", "--prefix", "brewtest",
+               "--non-interactive", "--skip-hooks", "--skip-agents", "--quiet"
+        assert_path_exists repo/".beads/config.yaml"
 
-      issue = JSON.parse(shell_output("#{override_prefix} #{bin}/bd create 'Brew formula test' --json"))
-      assert_equal "Brew formula test", issue["title"]
-      issues = JSON.parse(shell_output("#{override_prefix} #{bin}/bd list --json"))
-      assert_equal [issue["id"]], issues.map { |entry| entry["id"] }
+        issue = JSON.parse(shell_output("#{bin}/bd create 'Brew formula test' --json"))
+        assert_equal "Brew formula test", issue["title"]
+        issues = JSON.parse(shell_output("#{bin}/bd list --json"))
+        assert_equal [issue["id"]], issues.map { |entry| entry["id"] }
+      end
+
+      refute_path_exists flush_marker
+      assert_path_exists due_batch
     end
-
-    refute_path_exists flush_marker
-    assert_path_exists due_batch
     assert_path_exists prefix/"LICENSE"
     refute_path_exists testpath/".claude"
     refute_path_exists testpath/".codex"
