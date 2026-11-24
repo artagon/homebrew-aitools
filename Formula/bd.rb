@@ -9,6 +9,13 @@ class Bd < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/bd-1.3.4_2"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "0c73ec0ff81a2349d3100e72ab193e202caf9b650ee1b691e0aad44e41c6a216"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "1066a3ce396282f7d123ca8fe37809bbc1e692ee66fad4a41b06c0dcaca3defd"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "4cfa5c42528bddc1f06e1d2206350c75e66df83567f122727b16e746c5ef7e4f"
+  end
+
   # Upstream release binaries embed the Dolt engine and link only system libraries.
   on_macos do
     on_arm do
