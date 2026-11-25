@@ -1,10 +1,9 @@
 class Hashline < Formula
   desc "Hash-anchored line editing for AI coding agents"
   homepage "https://github.com/quangdang46/hashline"
-  url "https://github.com/quangdang46/hashline/archive/refs/tags/v0.9.24.tar.gz"
-  sha256 "46474cafe9281e305603f5b75659c3c98832645893bfa610d699f492c5ea7197"
+  url "https://github.com/quangdang46/hashline/archive/refs/tags/v0.9.26.tar.gz"
+  sha256 "7df4abbccfad832a0de41261e61ef319c82da4d872a5d01b591e80c94b8060e5"
   license any_of: ["MIT", "Apache-2.0"]
-  revision 1
   head "https://github.com/quangdang46/hashline.git", branch: "main"
 
   livecheck do
