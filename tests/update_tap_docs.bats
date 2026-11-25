@@ -147,6 +147,34 @@ class GammaScoped < Formula
 end
 EOF
 
+  cat >"$repo/Formula/delta-npm.rb" <<EOF
+class DeltaNpm < Formula
+  desc "Delta scoped npm tarball tool"
+  homepage "https://delta.example.dev"
+  url "https://registry.npmjs.org/@scope/delta-npm/-/delta-npm-0.1.27.tgz"
+  sha256 "${sha}"
+  license "MIT"
+
+  def install
+    bin.install "delta"
+  end
+end
+EOF
+
+  cat >"$repo/Formula/epsilon-npm.rb" <<EOF
+class EpsilonNpm < Formula
+  desc "Epsilon unscoped npm tarball tool"
+  homepage "https://epsilon.example.dev"
+  url "https://registry.npmjs.org/epsilonai/-/epsilonai-2026.1117.0.tgz"
+  sha256 "${sha}"
+  license "MIT"
+
+  def install
+    bin.install "epsilon"
+  end
+end
+EOF
+
   cat >"$repo/Casks/sample-app.rb" <<'EOF'
 cask "sample-app" do
   version "1.0.5"
@@ -194,14 +222,18 @@ EOF
   TAP_DOCS_REPO_ROOT="$repo" "$shell_bin" "$DOCS_SCRIPT" --check --readme-only
   TAP_DOCS_REPO_ROOT="$repo" "$shell_bin" "$DOCS_SCRIPT" --check --about-only
 
-  # Verify badges, counts, canonical bottle tag order, pipe escaping, licenses, and singular cask.
-  grep -Fq "formulae-3-8250df" "$repo/README.md"
+  # Verify badges, counts, canonical bottle tag order, pipe escaping, licenses, npm tarballs, and singular cask.
+  grep -Fq "formulae-5-8250df" "$repo/README.md"
   grep -Fq "casks-1-bf3989" "$repo/README.md"
-  grep -Fq 'Total packaged tools: **4** (**3** formulae: **1** bottled, **2** source-only; **1** macOS cask).' "$repo/README.md"
+  grep -Fq 'Total packaged tools: **6** (**5** formulae: **1** bottled, **4** source-only; **1** macOS cask).' "$repo/README.md"
   # shellcheck disable=SC2016
   grep -Fq '| [`alpha-bottled`](Formula/alpha-bottled.rb) | `1.2.3_2` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [example/alpha](https://github.com/example/alpha) — Alpha tool \| pipes escaped |' "$repo/README.md"
   # shellcheck disable=SC2016
   grep -Fq '| [`beta-source`](Formula/beta-source.rb) | `0.4.0` | Custom (`LICENSE`) | source | [beta.example.org](https://beta.example.org/) — Beta source-only tool |' "$repo/README.md"
+  # shellcheck disable=SC2016
+  grep -Fq '| [`delta-npm`](Formula/delta-npm.rb) | `0.1.27` | `MIT` | source | [delta.example.dev](https://delta.example.dev) — Delta scoped npm tarball tool |' "$repo/README.md"
+  # shellcheck disable=SC2016
+  grep -Fq '| [`epsilon-npm`](Formula/epsilon-npm.rb) | `2026.1117.0` | `MIT` | source | [epsilon.example.dev](https://epsilon.example.dev) — Epsilon unscoped npm tarball tool |' "$repo/README.md"
   # shellcheck disable=SC2016
   grep -Fq '| [`gamma-scoped`](Formula/gamma-scoped.rb) | `2.5.0` | `BSD-3-Clause AND MIT` | source | [github.com/example/mono/tree/main/pkg](https://github.com/example/mono/tree/main/pkg) — Gamma scoped tag tool |' "$repo/README.md"
   # shellcheck disable=SC2016

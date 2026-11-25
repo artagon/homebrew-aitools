@@ -60,9 +60,27 @@ sha256_of() {
   fi
 }
 
+# Resolve content-addressed files.pythonhosted.org URLs through the PyPI JSON API.
+resolve_pypi_url() {
+  local orig_url="$1" old="$2" new="$3"
+  local filename="" target_filename="" dist_name="" resolved=""
+  filename="${orig_url##*/}"
+  target_filename="${filename//${old}/${new}}"
+  dist_name="${filename%%-*}"
+  dist_name="${dist_name//_/-}"
+  resolved="$(
+    curl -fsSL --retry 3 --user-agent artagon-aitools-autobump "https://pypi.org/pypi/${dist_name}/${new}/json" |
+      jq -r --arg fn "${target_filename}" '.urls[] | select(.filename == $fn) | .url' |
+      head -n 1
+  )"
+  [[ -n "${resolved}" ]] || die "could not resolve PyPI artifact ${target_filename} for ${dist_name} ${new}"
+  printf '%s\n' "${resolved}"
+}
+
 # Print FILE with every url that names OLD moved to NEW and the sha256 after it refreshed.
 bump_text() {
-  local file="$1" old="$2" new="$3" line indent new_url pending="" changed=0 dropped=0
+  local file="$1" old="$2" new="$3" line indent orig_url new_url pending="" changed=0 dropped=0
+  local pypi_re='^https://files\.pythonhosted\.org/packages/'
   # Versions hold no glob or `&` characters, so the substitution below is literal
   # in Bash 3.2 and 5 alike.
   [[ "${old}" =~ ${version_re} ]] || die "unexpected version: ${old}"
@@ -84,7 +102,13 @@ bump_text() {
     if [[ "${line}" =~ ${url_re} ]] && [[ "${BASH_REMATCH[2]}" == *"${old}"* ]]
     then
       indent="${BASH_REMATCH[1]}"
-      new_url="${BASH_REMATCH[2]//${old}/${new}}"
+      orig_url="${BASH_REMATCH[2]}"
+      if [[ "${orig_url}" =~ ${pypi_re} ]]
+      then
+        new_url="$(resolve_pypi_url "${orig_url}" "${old}" "${new}")"
+      else
+        new_url="${orig_url//${old}/${new}}"
+      fi
       pending="$(sha256_of "${new_url}")"
       [[ "${pending}" =~ ${hash_re} ]] || die "could not hash ${new_url}"
       printf '%surl "%s"\n' "${indent}" "${new_url}"

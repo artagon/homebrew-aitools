@@ -167,6 +167,8 @@ extract_version_from_url() {
   local raw_url="$2"
   local dl_re='releases/download/([^/]+)/'
   local archive_re='archive/(refs/tags/)?([^/]+)\.(tar\.gz|tar\.xz|tgz|zip)$'
+  local npm_re='^https://registry\.npmjs\.org/(@[^/]+/)?([^/]+)/-/([^/]+)\.(tgz|tar\.gz)$'
+  local npm_ver_re='^[0-9][0-9A-Za-z.+_-]*$'
   local tag_part=""
 
   if [[ "${raw_url}" =~ ${dl_re} ]]
@@ -175,6 +177,20 @@ extract_version_from_url() {
   elif [[ "${raw_url}" =~ ${archive_re} ]]
   then
     tag_part="${BASH_REMATCH[2]}"
+  elif [[ "${raw_url}" =~ ${npm_re} ]]
+  then
+    local npm_pkg="${BASH_REMATCH[2]}"
+    local npm_stem="${BASH_REMATCH[3]}"
+    local npm_ver=""
+    if [[ "${npm_stem}" == "${npm_pkg}-"* ]]
+    then
+      npm_ver="${npm_stem#"${npm_pkg}-"}"
+      if [[ "${npm_ver}" =~ ${npm_ver_re} ]]
+      then
+        printf '%s\n' "${npm_ver}"
+        return 0
+      fi
+    fi
   fi
 
   if [[ -n "${tag_part}" ]]
@@ -252,7 +268,7 @@ parse_formula_file() {
   local desc="" homepage="" explicit_version="" revision="0" primary_url="" license_raw="" bottle_tags=""
   local line=""
 
-  local stop_re='^  (def (install|caveats|post_install)|test do)$|^__END__$'
+  local stop_re='^  (def (fetch|install|caveats|post_install)|test do)$|^__END__$'
   local skip_start_re='^([[:space:]]*)(livecheck|resource "[^"]+"|fails_with[^d]+|head)[[:space:]]+do$'
   local bottle_start_re='^([[:space:]]*)bottle do$'
   local desc_re='^  desc "([^"]+)"$'

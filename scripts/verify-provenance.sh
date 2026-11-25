@@ -119,6 +119,8 @@ extract_version_from_url() {
   local raw_url="$2"
   local dl_re='releases/download/([^/]+)/'
   local archive_re='archive/(refs/tags/)?([^/]+)\.(tar\.gz|tar\.xz|tgz|zip)$'
+  local npm_re='^https://registry\.npmjs\.org/(@[^/]+/)?([^/]+)/-/([^/]+)\.(tgz|tar\.gz)$'
+  local npm_ver_re='^[0-9][0-9A-Za-z.+_-]*$'
   local tag_part=""
 
   if [[ "${raw_url}" =~ ${dl_re} ]]
@@ -127,6 +129,20 @@ extract_version_from_url() {
   elif [[ "${raw_url}" =~ ${archive_re} ]]
   then
     tag_part="${BASH_REMATCH[2]}"
+  elif [[ "${raw_url}" =~ ${npm_re} ]]
+  then
+    local npm_pkg="${BASH_REMATCH[2]}"
+    local npm_stem="${BASH_REMATCH[3]}"
+    local npm_ver=""
+    if [[ "${npm_stem}" == "${npm_pkg}-"* ]]
+    then
+      npm_ver="${npm_stem#"${npm_pkg}-"}"
+      if [[ "${npm_ver}" =~ ${npm_ver_re} ]]
+      then
+        printf '%s\n' "${npm_ver}"
+        return 0
+      fi
+    fi
   fi
 
   if [[ -n "${tag_part}" ]]
@@ -195,7 +211,7 @@ parse_formula_metadata() {
   local in_resource=0 resource_indent=""
   local explicit_version="" primary_url="" line=""
 
-  local stop_re='^  (def (install|caveats|post_install)|test do)$|^__END__$'
+  local stop_re='^  (def (fetch|install|caveats|post_install)|test do)$|^__END__$'
   local livecheck_start_re='^([[:space:]]*)livecheck do$'
   local bottle_start_re='^([[:space:]]*)bottle do$'
   local resource_start_re='^([[:space:]]*)resource "[^"]+" do$'
@@ -357,7 +373,7 @@ list_formula_bottle_tags() {
   [[ -f "${rb_file}" ]] || return 1
 
   local in_bottle=0 bottle_indent="" line=""
-  local stop_re='^  (def (install|caveats|post_install)|test do)$|^__END__$'
+  local stop_re='^  (def (fetch|install|caveats|post_install)|test do)$|^__END__$'
   local bottle_start_re='^([[:space:]]*)bottle do$'
   local sha_tag_re='^[[:space:]]*sha256[[:space:]]+(cellar:[[:space:]]+(:[a-z_]+|"[^"]+"),[[:space:]]+)?([a-z0-9_]+):[[:space:]]+"[0-9a-f]{64}"$'
 

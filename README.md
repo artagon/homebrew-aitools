@@ -5,12 +5,12 @@
 [![Platforms: macOS arm64 & Linux arm64/x86_64](https://img.shields.io/badge/platforms-arm64__tahoe%20%7C%20arm64__linux%20%7C%20x86__64__linux-0969da)](https://github.com/artagon/homebrew-aitools/releases)
 <!-- BEGIN TAP_BADGES -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
-[![Formulae: 44](https://img.shields.io/badge/formulae-44-8250df)](#complete-formula--cask-inventory)
-[![Casks: 3](https://img.shields.io/badge/casks-3-bf3989)](#complete-formula--cask-inventory)
+[![Formulae: 53](https://img.shields.io/badge/formulae-53-8250df)](#complete-formula--cask-inventory)
+[![Casks: 6](https://img.shields.io/badge/casks-6-bf3989)](#complete-formula--cask-inventory)
 <!-- END TAP_BADGES -->
 [![License: MIT](https://img.shields.io/badge/tap%20license-MIT-57606a)](ABOUT.md#authors--license)
 
-Curated developer CLIs, local MCP servers, memory graphs, cross-agent hook runners, build caches, evaluation harnesses, OpenTelemetry collectors, subscription-only AI routing & coding agents, JDK 28 Valhalla-aware AST analyzers, and macOS desktop automation casks for AI coding agents.
+Curated developer CLIs, local MCP servers, memory and context databases, multi-agent orchestration platforms, design intelligence & OpenAPM skill catalogs, cross-agent hook runners, build caches, evaluation harnesses, AI learning companions, OpenTelemetry collectors, subscription-only AI routing & coding agents, JDK 28 Valhalla-aware AST analyzers, and macOS desktop casks for AI coding agents.
 
 > [!IMPORTANT]
 > **Tap Security & Non-Invasiveness Contract**
@@ -18,7 +18,7 @@ Curated developer CLIs, local MCP servers, memory graphs, cross-agent hook runne
 > - **Hardened local-first defaults**: Wrappers disable startup update checks, telemetry, and unsolicited cloud routing, default local services to `127.0.0.1`, and block or warn against in-place self-updaters.
 > - **Cryptographic provenance**: Published bottles carry ref-bound SLSA v1 attestations, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
 
-[Quick Start](#quick-start) · [Formula Catalog](#formula-catalog-by-domain) · [Complete Inventory](#complete-formula--cask-inventory) · [MCP Server Reference](#mcp-server-reference) · [Bundled Agent Skills](#bundled-agent-skills--plugins) · [Provenance & Verification](#build-provenance--verification) · [Publishing & Autobump](#publishing--automatic-updates) · [Troubleshooting](#troubleshooting--faq)
+[Quick Start](#quick-start) · [Domain Taxonomy](#domain-taxonomy) · [Tool Catalog](#formula-catalog-by-domain) · [Complete Inventory](#complete-formula--cask-inventory) · [MCP Server Reference](#mcp-server-reference) · [Bundled Agent Skills](#bundled-agent-skills--plugins) · [Package `AGENTS.md` Guides](docs/packages/README.md) · [Provenance & Verification](#build-provenance--verification) · [Publishing & Autobump](#publishing--automatic-updates) · [Troubleshooting](#troubleshooting--faq)
 
 ---
 
@@ -36,44 +36,77 @@ HOMEBREW_VERIFY_ATTESTATIONS=1 brew install artagon/aitools/ripwire
 Install curated domain bundles with fully qualified `artagon/aitools/<formula>` names:
 
 ```sh
-# Code search, JDK 28 Valhalla Java AST, and hash-anchored editing:
-brew install artagon/aitools/ripwire artagon/aitools/entire-graph artagon/aitools/ast-grep-valhalla artagon/aitools/tree-sitter-java-valhalla \
-  artagon/aitools/tgrep artagon/aitools/ck artagon/aitools/codesearch artagon/aitools/fff-mcp artagon/aitools/hashline
+# 1. Code intelligence, Valhalla Java AST, and hash-anchored editing:
+brew install artagon/aitools/tree-sitter-java-valhalla artagon/aitools/ast-grep-valhalla \
+  artagon/aitools/ripwire artagon/aitools/entire-graph artagon/aitools/tgrep \
+  artagon/aitools/ck artagon/aitools/codesearch artagon/aitools/fff-mcp artagon/aitools/hashline
 
-# Local agent memory, hybrid Markdown search, and token compression:
+# 2. Agent memory, context databases, hybrid search, and token compression:
 brew install artagon/aitools/basic-memory artagon/aitools/hindsight artagon/aitools/claude-mem \
-  artagon/aitools/qmd artagon/aitools/squeez
+  artagon/aitools/openviking artagon/aitools/qmd artagon/aitools/squeez
 
-# Multi-agent mail, NATS event bus, Git worktrees, terminal workspaces, fact-intent graphs, and Beads issue graphs:
-brew install artagon/aitools/agent-mail artagon/aitools/br artagon/aitools/bd artagon/aitools/bv \
-  artagon/aitools/nats artagon/aitools/nats-server artagon/aitools/herdr artagon/aitools/autoswarm \
-  artagon/aitools/cairn artagon/aitools/worktrunk
+# 3. Multi-agent orchestration, messaging, workspaces, and Beads task graphs:
+brew install artagon/aitools/paperclip artagon/aitools/agent-mail artagon/aitools/agent-tincan \
+  artagon/aitools/autoswarm artagon/aitools/cairn artagon/aitools/nats artagon/aitools/nats-server \
+  artagon/aitools/herdr artagon/aitools/worktrunk artagon/aitools/bd artagon/aitools/br artagon/aitools/bv
 
-# Architecture decisions, hooks, Jinja2 templates, build caching, skill compilers, and benchmarking:
-brew install artagon/aitools/adrkit artagon/aitools/agentsync artagon/aitools/agenthooks \
-  artagon/aitools/skillfile artagon/aitools/skillprism artagon/aitools/minijinja-cli \
-  artagon/aitools/python-minijinja artagon/aitools/waza artagon/aitools/skillopt \
-  artagon/aitools/hyperfine artagon/aitools/kache
+# 4. Agent skills lifecycle, curated OpenAPM skill packs, personas, and design intelligence:
+brew install artagon/aitools/agentsync artagon/aitools/skillfile artagon/aitools/skillprism artagon/aitools/skillopt \
+  artagon/aitools/agent-skills artagon/aitools/agency-agents artagon/aitools/ui-ux-pro-max-cli \
+  artagon/aitools/diagram-design artagon/aitools/printing-press-library
 
-# Live evaluation harnesses, versioned skill registries, and OpenTelemetry observability:
-brew install artagon/aitools/mlflow artagon/aitools/inspect-ai artagon/aitools/langfuse-cli \
-  artagon/aitools/phoenix-cli artagon/aitools/arize-phoenix artagon/aitools/openlit
+# 5. Evaluation harnesses, workflow benchmarking, and OpenTelemetry observability:
+brew install artagon/aitools/inspect-ai artagon/aitools/waza artagon/aitools/mlflow \
+  artagon/aitools/langfuse-cli artagon/aitools/phoenix-cli artagon/aitools/arize-phoenix artagon/aitools/openlit
 
-# Subscription-only AI gateway & terminal coding agents (no API keys):
-brew install artagon/aitools/magpie artagon/aitools/omp artagon/aitools/pi-agent-rust
+# 6. Coding agents, subscription-only gateways, and AI learning companions:
+brew install artagon/aitools/magpie artagon/aitools/omp artagon/aitools/pi-agent-rust artagon/aitools/deeptutor
 
-# macOS native desktop casks (override defaults with HOMEBREW_* flags):
-brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/aitools/markdown-preview
+# 7. Governance, security hooks, templating, build caching, and micro-benchmarking:
+brew install artagon/aitools/adrkit artagon/aitools/agenthooks artagon/aitools/minijinja-cli \
+  artagon/aitools/python-minijinja artagon/aitools/kache artagon/aitools/hyperfine
+
+# 8. macOS native desktop casks (override postflight defaults with HOMEBREW_* flags where supported):
+brew install --cask artagon/aitools/ghostty artagon/aitools/hammerspoon artagon/aitools/markdown-preview \
+  artagon/aitools/agency-agents artagon/aitools/deeptutor artagon/aitools/open-design
 ```
 
 > [!NOTE]
-> Always qualify `artagon/aitools/{tgrep,nats,nats-server,herdr,hyperfine,minijinja-cli,worktrunk}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks. When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `pi-coding-agent`, `pixie`, `px`, or `wiredtiger`), run `brew unlink <formula>` first.
+> Always qualify `artagon/aitools/{tgrep,nats,nats-server,herdr,hyperfine,minijinja-cli,worktrunk}` (and `--cask artagon/aitools/{ghostty,hammerspoon,markdown-preview,agency-agents,deeptutor,open-design}`) so Homebrew selects this tap over same-named `homebrew/core` formulae or `homebrew/cask` casks (note `agency-agents` and `deeptutor` each ship both a CLI formula and a macOS desktop `--cask`). When a differently named core formula with overlapping binaries is linked (`ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `cln`, `ov`, `pi-coding-agent`, `pixie`, `px`, or `wiredtiger`), run `brew unlink <formula>` first.
+
+---
+
+## Domain Taxonomy
+
+The tap organizes all **59** tools (**53** formulae + **6** macOS casks) into **8** mutually exclusive capability layers across the local-first AI engineering stack:
+
+```mermaid
+flowchart LR
+  D1["1. Code Intelligence (9)"] --> D2["2. Memory & Context (6)"]
+  D2 --> D3["3. Multi-Agent Runtime (12)"]
+  D4["4. Skills, Personas & Design (9)"] --> D3
+  D3 --> D6["6. Coding Agents & Companions (4)"]
+  D7["7. Governance, Hooks & Build (6)"] --> D6
+  D6 --> D5["5. Eval & OTel Observability (7)"]
+  D8["8. macOS Desktop Casks (6)"] -.-> D6
+```
+
+| Layer | Domain | Kind & Count | Primary Role |
+| :--- | :--- | :--- | :--- |
+| **1** | [Code Intelligence, Valhalla Java AST & Safe Editing](#1-code-intelligence-valhalla-java-ast--safe-editing) | 9 formulae | Structural AST search/rewrite, call graphs, semantic/trigram search, hash-anchored editing |
+| **2** | [Agent Memory, Context Databases & Token Compression](#2-agent-memory-context-databases--token-compression) | 6 formulae | Knowledge graphs, cross-session memory, context/RAG databases, BM25/vector Markdown, token compression |
+| **3** | [Multi-Agent Orchestration, Messaging & Workspaces](#3-multi-agent-orchestration-messaging--workspaces) | 12 formulae | Multi-agent control planes, agent mail, Tailscale MCP relays, NATS buses, multiplexers, Git worktrees, Beads task graphs |
+| **4** | [Agent Skills, Personas & Design Intelligence](#4-agent-skills-personas--design-intelligence) | 9 formulae | Skill managers/compilers/optimizers, OpenAPM skill packs, persona catalogs, UI/UX & diagram intelligence, Go CLI catalogs |
+| **5** | [Evaluation Harnesses & OpenTelemetry Observability](#5-evaluation-harnesses--opentelemetry-observability) | 7 formulae | Live agent eval harnesses, workflow benchmarks, versioned skill registries, local OTLP trace collectors & workbenches |
+| **6** | [Coding Agents, Subscription Gateways & AI Companions](#6-coding-agents-subscription-gateways--ai-companions) | 4 formulae | Subscription-only OAuth routers, terminal coding agents without API-key spend, agent-native learning companions |
+| **7** | [Governance, Security Hooks, Templating & Build Speed](#7-governance-security-hooks-templating--build-speed) | 6 formulae | ADR governance, secret-guarding hooks, sandboxed MiniJinja CLI/Python engines, content-addressed build caching, micro-benchmarking |
+| **8** | [macOS Native Desktop Casks](#8-macos-native-desktop-casks) | 6 casks | Signed & notarized macOS terminals, automation engines, Markdown viewers, persona managers, learning apps & design workspaces |
 
 ---
 
 ## Formula Catalog by Domain
 
-### 1. Code Search, JDK 28 Valhalla Java AST & Hash-Anchored Editing
+### 1. Code Intelligence, Valhalla Java AST & Safe Editing
 
 | Formula | Upstream & License | Binaries, Libraries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
@@ -109,53 +142,55 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 
 </details>
 
-### 2. Local Agent Memory, Hybrid Markdown Search & Token Compression
+### 2. Agent Memory, Context Databases & Token Compression
 
 | Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
 | [`basic-memory`](Formula/basic-memory.rb) | [basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory) (`AGPL-3.0-or-later`) | `basic-memory`, `bm`, `pkgshare/skills/memory-*` | Source `uv` Python `3.13` build (`preserve_rpath`); forces `BASIC_MEMORY_FORCE_LOCAL=true`, disables promos/Logfire, and blocks `cloud`, `update`, and HTTP/SSE transports |
 | [`hindsight`](Formula/hindsight.rb) | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) (`MIT`) | `hindsight`, `hindsight-mcp`, `hindsight-coding-agents`, `pkgshare/skills` | Source Rust CLI + TypeScript/Node MCP bundle; compiled defaults bind `http://127.0.0.1:8888` (`self-hosted`, `autoUpdate=false`), reject non-loopback URLs and `cloud`/`update`, and require `HINDSIGHT_MCP_HARNESS` |
 | [`claude-mem`](Formula/claude-mem.rb) | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) (`Apache-2.0`) | `claude-mem`, `claude-mem-mcp`, `NOTICE`, `pkgshare/{plugin,skills,hooks,modes}` | Source TypeScript/esbuild/Vite + frozen `plugin/bun.lock` build linking `tree-sitter-cli` and pruning foreign `prebuilds/*`; loopback `127.0.0.1`, PostHog/auto-update disabled, ambient `*_API_KEY` scrubbed unless `CLAUDE_MEM_ALLOW_API_KEYS=1`, `update`/`upgrade`/`self-update` blocked (`exit 2`) |
+| [`openviking`](Formula/openviking.rb) | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) (`AGPL-3.0-only`) | `openviking`, `ov`, `openviking-server`, `openviking-gateway`, `pkgshare/{agent-plugins,skills,plugins,examples}` | `uv` Python `3.13` install of official `cp310-abi3` native wheel (Rust `ov`/`ragfs` + C++ SIMD vectordb + Web Studio SPA, `preserve_rpath`, `conflicts_with "ov"`); wraps server/gateway to bind `127.0.0.1`, disables OTel/telemetry (`OTEL_SDK_DISABLED=true`, `DO_NOT_TRACK=1`), patches `ov.conf.example` to loopback, and blocks top-level `update`/`self-update`/`upgrade` (`exit 2`) |
 | [`qmd`](Formula/qmd.rb) | [tobi/qmd](https://github.com/tobi/qmd) (`MIT`) | `qmd` CLI + `qmd mcp` + `pkgshare/skills/qmd` | Source TypeScript/Node build pruning foreign `prebuilds/*`; exports `QMD_SOURCE_MODE=0`; local SQLite BM25 + `sqlite-vec` + GGUF reranking |
 | [`squeez`](Formula/squeez.rb) | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) (`Apache-2.0`) | `squeez` CLI + `squeez mcp`, `NOTICE` | Source Rust build patching conservative defaults (`auto_compress_md=false`, `persona=off`, `wrap_bash=false`) and blocking `squeez update` |
 
-### 3. Multi-Agent Coordination, Event Buses & Beads Graph Tracking
+### 3. Multi-Agent Orchestration, Messaging & Workspaces
+
+| Formula | Sub-Domain | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- | :--- |
+| [`paperclip`](Formula/paperclip.rb) | Orchestration | [paperclipai/paperclip](https://github.com/paperclipai/paperclip) (`MIT`) | `paperclipai` (CLI, React UI, embedded PostgreSQL 18, `paperclip-runnerd`), `pkgshare/skills` | Official npm tarball build (`preserve_rpath`) deduplicating agent SDKs, hydrating host-only `@embedded-postgres`, pruning foreign binaries/source maps/Linux `codex-resources/zsh`; unconditionally enforces `PAPERCLIP_TELEMETRY_DISABLED=1`, `DO_NOT_TRACK=1`, `PAPERCLIP_UPDATE_CHECK=0`, defaults `PAPERCLIP_ANNOUNCEMENTS_ENABLED=false` and loopback `127.0.0.1:3100`, and blocks `update`/`upgrade`/`self-update`/`install`/`uninstall` (`exit 2`) |
+| [`autoswarm`](Formula/autoswarm.rb) | Orchestration | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) (`MIT`) | `autoswarm` (`desk`), `pkgshare/{skills/autoswarm,plugins/opencode}` | Source `uv` Python `3.13` build (`preserve_rpath`); patches `setup.py` to persist `opt_libexec` Python across upgrades, blocks `update`/`self-update`/`upgrade` (`exit 2`); opt-in `autoswarm setup --host <host>` |
+| [`cairn`](Formula/cairn.rb) | Orchestration | [oritera/Cairn](https://github.com/oritera/Cairn) (`AGPL-3.0-only`) | `cairn` (`serve`, `dispatch`), `pkgshare/{examples,docs,skills}` | Source `uv` Python `3.13` build (`preserve_rpath`) stripping upstream Aliyun PyPI mirror/lockfile; `cairn serve` binds `127.0.0.1:8000`, exports `DO_NOT_TRACK=1`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
+| [`agent-mail`](Formula/agent-mail.rb) | Messaging | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) (`:cannot_represent` — MIT + Rider) | `mcp-agent-mail`, `am`, `LICENSE`, `pkgshare/skills/agent-mail` | SHA-256-pinned archive; wraps both `am` and `mcp-agent-mail` to default `HTTP_HOST=127.0.0.1`, `CONVERT_IMAGES=false`, `DO_NOT_TRACK=1`, and block `self-update`/`update` (`exit 2`) while preserving `am upgrade` |
+| [`agent-tincan`](Formula/agent-tincan.rb) | Messaging | [mvanhorn/agent-tincan](https://github.com/mvanhorn/agent-tincan) (`MIT`) | `tincan`, `tincan mcp`, `bash`/`zsh`/`fish` completions, `pkgshare/{extension,docs}` | Offline pure-Go build (`CGO_ENABLED=0`, `def fetch` + `deny_network_access!`); exports `DO_NOT_TRACK=1`, blocks `tincan upgrade` and `relay-upgrade` (`exit 2`), and stages the unpacked Chrome extension and guides passively |
+| [`nats`](Formula/nats.rb) | Event Bus | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | `nats`, `bash`/`zsh` completions, `pkgshare/skills/nats` | Offline Go source build (`def fetch` + `deny_network_access!`); wrapper injects `NATS_URL=nats://127.0.0.1:4222` only when no server/context flag, `NATS_URL`, `NATS_CONTEXT`, or saved `context.txt` is set |
+| [`nats-server`](Formula/nats-server.rb) | Event Bus | [nats-io/nats-server](https://github.com/nats-io/nats-server) (`Apache-2.0`) | `nats-server`, `libexec/bin/nats-bind-preflight` | Offline Go source build (`def fetch`, no `service do`); preflight resolves client address/port independently (`127.0.0.1`/`4222`), rejects blank CLI bind addresses and duplicate top-level config setters (`exit 78`), and defaults JetStream `--store_dir` under XDG state |
+| [`herdr`](Formula/herdr.rb) | Workspaces | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; wrapper blocks `herdr update` and `herdr channel set` (`exit 2`) |
+| [`worktrunk`](Formula/worktrunk.rb) | Workspaces | [max-sixty/worktrunk](https://github.com/max-sixty/worktrunk) (`Apache-2.0 OR MIT`) | `wt`, shell completions, `pkgshare/{skills,plugins,hooks,gemini-extension.json,examples}` | Source Rust build (`cargo fetch` + `deny_network_access!`, `conflicts_with "wiredtiger"`); local-first Git worktree CLI with zero telemetry or startup update checks, opt-in shell integration (`wt config shell install`), and opt-in `[commit.generation]` |
+| [`bd`](Formula/bd.rb) | Task Graphs | [gastownhall/beads](https://github.com/gastownhall/beads) (`MIT`) | `bd`, shell completions, `LICENSE` | SHA-256-pinned archive with embedded pure-Go Dolt (`conflicts_with "beads"`); wrapper unconditionally forces `BD_DISABLE_METRICS=1`, `BD_DISABLE_EVENT_FLUSH=1`, `DOLT_METRICS_DISABLED=1`, and `DO_NOT_TRACK=1` |
+| [`br`](Formula/br.rb) | Task Graphs | [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`:cannot_represent` — MIT + Rider) | `br`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` in `prefix`; wrapper exports `DO_NOT_TRACK=1` and blocks `br upgrade` (`exit 2`) |
+| [`bv`](Formula/bv.rb) | Task Graphs | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`:cannot_represent` — MIT + Rider) | `bv`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` (`conflicts_with "beads_viewer"`); read-only `--robot-*` graph triage |
+
+### 4. Agent Skills, Personas & Design Intelligence
+
+| Formula | Sub-Domain | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- | :--- |
+| [`agentsync`](Formula/agentsync.rb) | Skill Lifecycle | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | `agentsync`, `README.md`, `LICENSE` | SHA-256-pinned archive; wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; edits `.agents/agentsync.toml` only when run |
+| [`skillfile`](Formula/skillfile.rb) | Skill Lifecycle | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | `skillfile`, shell completions | Source Rust build (`cargo install --locked`); wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1` |
+| [`skillprism`](Formula/skillprism.rb) | Skill Lifecycle | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | `skillprism`, completions, `man1/skillprism.1` | Source Rust offline Jinja2 multi-harness `SKILL.md.j2` compiler (`./dist/`); zero network or live config writes |
+| [`skillopt`](Formula/skillopt.rb) | Skill Lifecycle | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | `skillopt-{train,eval,sleep}`, `skillopt-sleep-mcp`, `pkgshare/{plugins,configs}` | Source `uv` Python `3.13` build; `skillopt-sleep` defaults to `--backend mock` (zero API spend) and human review before `adopt` |
+| [`agent-skills`](Formula/agent-skills.rb) | Skill Catalog | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (`MIT`) | `addy-agent-skills`, `pkgshare/{skills,agents,references,commands,hooks,apm,.{claude,codex}-plugin}` (26 skills + OpenAPM) | Passively stages all 26 SDLC skills, 5 agent personas, 7 checklists, 10 commands, and a symlink-free OpenAPM package (`apm.yml`/`apm.lock.yaml`) without activating hooks or editing dotfiles |
+| [`agency-agents`](Formula/agency-agents.rb) | Persona Catalog | [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents) (`MIT`) | `agency-agents`, `agency-agents-install`, `agency-agents-convert`, `pkgshare/` (18 divisions + manifests) | Commit-pinned catalog patching `convert.sh`/`install.sh` to cache conversions under `$XDG_CACHE_HOME` (`AGENCY_INTEGRATIONS_DIR`) instead of the read-only Cellar; exports `DO_NOT_TRACK=1`, blocks `update`/`self-update`/`upgrade` (`exit 2`), and never edits agent dotfiles on install |
+| [`ui-ux-pro-max-cli`](Formula/ui-ux-pro-max-cli.rb) | Design Intel | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (`MIT`) | `uipro`, `uipro-search`, `pkgshare/{skills,apm,skill.json}` (7 skills + OpenAPM) | Source `bun` bundle (`npm ci --omit=dev`) + stdlib Python `3.13` offline CSV search; exports `DO_NOT_TRACK=1`/`PYTHONDONTWRITEBYTECODE=1`, blocks `uipro update` (`exit 2`), and stages a symlink-free OpenAPM package passively |
+| [`diagram-design`](Formula/diagram-design.rb) | Design Intel | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) (`MIT`) | `diagram-design` (`self-check`, `--list`, `--apm-path`), `pkgshare/{skills,apm,commands,prompts,.{claude,codex,factory,qoder}-plugin}` | Commit-pinned archive across 52 HTML/SVG diagram types using Homebrew Python `3.13` stdlib (`--offline` enforces system-font-only checks); exports `DO_NOT_TRACK=1`/`PYTHONDONTWRITEBYTECODE=1`, blocks `update`/`self-update`/`upgrade` (`exit 2`), and stages both native plugins and a symlink-free OpenAPM package passively |
+| [`printing-press-library`](Formula/printing-press-library.rb) | CLI Catalog | [mvanhorn/printing-press-library](https://github.com/mvanhorn/printing-press-library) (`MIT`) | `printing-press-library`, `pkgshare/skills/printing-press-library/SKILL.md` | Official npm tarball build pruning foreign `prebuilds/*` + SHA-256-pinned passive discovery skill; exports `DO_NOT_TRACK=1` and `DISABLE_TELEMETRY=1`; catalog CLI installs remain strictly opt-in (`--bin-dir`, `--cli-only`, `--skill-only`) |
+
+### 5. Evaluation Harnesses & OpenTelemetry Observability
 
 | Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
-| [`agent-mail`](Formula/agent-mail.rb) | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) (`:cannot_represent` — MIT + Rider) | `mcp-agent-mail`, `am`, `LICENSE`, `pkgshare/skills/agent-mail` | SHA-256-pinned archive; wraps both `am` and `mcp-agent-mail` to default `HTTP_HOST=127.0.0.1`, `CONVERT_IMAGES=false`, `DO_NOT_TRACK=1`, and block `self-update`/`update` (`exit 2`) while preserving `am upgrade` |
-| [`br`](Formula/br.rb) | [Dicklesworthstone/beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`:cannot_represent` — MIT + Rider) | `br`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` in `prefix`; wrapper exports `DO_NOT_TRACK=1` and blocks `br upgrade` (`exit 2`) |
-| [`bd`](Formula/bd.rb) | [gastownhall/beads](https://github.com/gastownhall/beads) (`MIT`) | `bd`, shell completions, `LICENSE` | SHA-256-pinned archive with embedded pure-Go Dolt (`conflicts_with "beads"`); wrapper unconditionally forces `BD_DISABLE_METRICS=1`, `BD_DISABLE_EVENT_FLUSH=1`, `DOLT_METRICS_DISABLED=1`, and `DO_NOT_TRACK=1` |
-| [`bv`](Formula/bv.rb) | [Dicklesworthstone/beads_viewer](https://github.com/Dicklesworthstone/beads_viewer) (`:cannot_represent` — MIT + Rider) | `bv`, shell completions, `LICENSE` | SHA-256-pinned archive; full custom `LICENSE` (`conflicts_with "beads_viewer"`); read-only `--robot-*` graph triage |
-| [`nats`](Formula/nats.rb) | [nats-io/natscli](https://github.com/nats-io/natscli) (`Apache-2.0`) | `nats`, `bash`/`zsh` completions, `pkgshare/skills/nats` | Offline Go source build (`def fetch` + `deny_network_access!`); wrapper injects `NATS_URL=nats://127.0.0.1:4222` only when no server/context flag, `NATS_URL`, `NATS_CONTEXT`, or saved `context.txt` is set |
-| [`nats-server`](Formula/nats-server.rb) | [nats-io/nats-server](https://github.com/nats-io/nats-server) (`Apache-2.0`) | `nats-server`, `libexec/bin/nats-bind-preflight` | Offline Go source build (`def fetch`, no `service do`); preflight resolves client address/port independently (`127.0.0.1`/`4222`), rejects blank CLI bind addresses and duplicate top-level config setters (`exit 78`), and defaults JetStream `--store_dir` under XDG state |
-| [`herdr`](Formula/herdr.rb) | [herdrdev/herdr](https://github.com/herdrdev/herdr) (`Apache-2.0`) | `herdr`, shell completions, `LICENSE` | SHA-256-pinned binary + tag `LICENSE`; local Unix socket session multiplexer; wrapper blocks `herdr update` and `herdr channel set` (`exit 2`) |
-| [`autoswarm`](Formula/autoswarm.rb) | [HKUDS/AutoSwarm](https://github.com/HKUDS/AutoSwarm) (`MIT`) | `autoswarm` (`desk`), `pkgshare/{skills/autoswarm,plugins/opencode}` | Source `uv` Python `3.13` build (`preserve_rpath`); patches `setup.py` to persist `opt_libexec` Python across upgrades, blocks `update`/`self-update`/`upgrade` (`exit 2`); opt-in `autoswarm setup --host <host>` |
-| [`cairn`](Formula/cairn.rb) | [oritera/Cairn](https://github.com/oritera/Cairn) (`AGPL-3.0-only`) | `cairn` (`serve`, `dispatch`), `pkgshare/{examples,docs,skills}` | Source `uv` Python `3.13` build (`preserve_rpath`) stripping upstream Aliyun PyPI mirror/lockfile; `cairn serve` binds `127.0.0.1:8000`, exports `DO_NOT_TRACK=1`, and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
-| [`worktrunk`](Formula/worktrunk.rb) | [max-sixty/worktrunk](https://github.com/max-sixty/worktrunk) (`Apache-2.0 OR MIT`) | `wt`, shell completions, `pkgshare/{skills,plugins,hooks,gemini-extension.json,examples}` | Source Rust build (`cargo fetch` + `deny_network_access!`, `conflicts_with "wiredtiger"`); local-first Git worktree CLI with zero telemetry or startup update checks, opt-in shell integration (`wt config shell install`), and opt-in `[commit.generation]` |
-
-### 4. Architecture Decisions, Hooks, Build Caching, Skill Lifecycle & Benchmarking
-
-| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
-| :--- | :--- | :--- | :--- |
-| [`adrkit`](Formula/adrkit.rb) | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`Apache-2.0`) | `adr`, `adrkit`, `adrkit-mcp`, completions, `pkgshare/skills` | Source `bun` build targeting Homebrew `node` (`conflicts_with "adr-tools"`); local `docs/adr` governance |
-| [`agentsync`](Formula/agentsync.rb) | [dallay/agentsync](https://github.com/dallay/agentsync) (`MIT`) | `agentsync`, `README.md`, `LICENSE` | SHA-256-pinned archive; wrapper exports `AGENTSYNC_NO_UPDATE_CHECK=1`; edits `.agents/agentsync.toml` only when run |
-| [`agenthooks`](Formula/agenthooks.rb) | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) (`MIT`) | `agenthooks-secretguard`, Go module + `DESIGN.md` + `examples/` in `pkgshare` | Source Go build (`CGO_ENABLED=0`) disabling `claude`/`codex mcp list` subprocess probes (`WithoutMCPListFallback`); masks detected secrets and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
-| [`skillfile`](Formula/skillfile.rb) | [eljulians/skillfile](https://github.com/eljulians/skillfile) (`Apache-2.0`) | `skillfile`, shell completions | Source Rust build (`cargo install --locked`); wrapper exports `SKILLFILE_NO_UPDATE_NOTIFIER=1` |
-| [`skillprism`](Formula/skillprism.rb) | [Tuvren/skillprism](https://github.com/Tuvren/skillprism) (`Apache-2.0`) | `skillprism`, completions, `man1/skillprism.1` | Source Rust offline Jinja2 multi-harness `SKILL.md.j2` compiler (`./dist/`); zero network or live config writes |
-| [`minijinja-cli`](Formula/minijinja-cli.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja-cli`, `man1/minijinja-cli.1`, `bash`/`zsh`/`fish`/`pwsh` completions, `pkgshare/skills/minijinja-cli` | Source Rust build (`cargo install --locked`, `ASSET_OUT_DIR`); pure offline Jinja2 CLI renderer & expression evaluator with `--no-include`/`--safe-path`/`--fuel` sandboxing |
-| [`python-minijinja`](Formula/python-minijinja.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja` Python 3 (`3.13`–`3.15`) ABI3 wheels + `pkgshare/skills/minijinja-python` | Offline `maturin` + `cargo fetch --locked` PEP 517 build across Homebrew Pythons; zero runtime network/telemetry deps and deterministic `fuel` + `load_from_path` sandboxing |
-| [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | `waza` + embedded SPA, completions, `pkgshare/skills` | Source Vite/React + Go build (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`); exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (`exit 2`) |
-| [`skillopt`](Formula/skillopt.rb) | [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt) (`MIT`) | `skillopt-{train,eval,sleep}`, `skillopt-sleep-mcp`, `pkgshare/{plugins,configs}` | Source `uv` Python `3.13` build; `skillopt-sleep` defaults to `--backend mock` (zero API spend) and human review before `adopt` |
-| [`hyperfine`](Formula/hyperfine.rb) | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) (`MIT OR Apache-2.0`) | `hyperfine`, `man1/hyperfine.1`, `bash`/`zsh`/`fish`/`pwsh` completions | Source Rust build (`cargo install --locked`); direct offline execution (`--shell=none`) with zero telemetry or update checks |
-| [`kache`](Formula/kache.rb) | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) (`Apache-2.0`) | `kache`, `kache-engine`, completions, `libexec/shims`, `pkgshare/{schemas,examples}` | Source Rust build (`cargo install --locked`, `RUSTC_WRAPPER=""`); local store + Unix socket daemon (`daemon.sock`) with no remote cache, planner, or telemetry configured; `kache update` exits `2` |
-
-### 5. Evaluation Harnesses, Skill Registries & OpenTelemetry Observability
-
-| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
-| :--- | :--- | :--- | :--- |
-| [`mlflow`](Formula/mlflow.rb) | [mlflow/mlflow](https://github.com/mlflow/mlflow) (`Apache-2.0`) | `mlflow` (`mcp run`, `skills`), `mlflow-codex`, `mlflow-claude-code`, `pkgshare/skills` | Source Yarn 4 React UI + TypeScript agent CLIs + `uv` `mlflow[mcp]`; exports `MLFLOW_DISABLE_TELEMETRY=true` and `DO_NOT_TRACK=true` |
 | [`inspect-ai`](Formula/inspect-ai.rb) | [UKGovernmentBEIS/inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai) (`MIT`) | `inspect` bundling `inspect-swe` (`0.3.0`) + `inspect-mlflow` (`0.9.0`) | Source `uv` Python `3.13` wheel bundle with `mcp`, `anthropic`, `openai`, and `google-genai`; exports `MLFLOW_DISABLE_TELEMETRY=true` |
+| [`waza`](Formula/waza.rb) | [microsoft/waza](https://github.com/microsoft/waza) (`MIT`) | `waza` + embedded SPA, completions, `pkgshare/skills` | Source Vite/React + Go build (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`); exports `WAZA_NO_UPDATE_CHECK=1` and blocks `waza update` (`exit 2`) |
+| [`mlflow`](Formula/mlflow.rb) | [mlflow/mlflow](https://github.com/mlflow/mlflow) (`Apache-2.0`) | `mlflow` (`mcp run`, `skills`), `mlflow-codex`, `mlflow-claude-code`, `pkgshare/skills` | Source Yarn 4 React UI + TypeScript agent CLIs + `uv` `mlflow[mcp]`; exports `MLFLOW_DISABLE_TELEMETRY=true` and `DO_NOT_TRACK=true` |
 | [`langfuse-cli`](Formula/langfuse-cli.rb) | [langfuse/langfuse-cli](https://github.com/langfuse/langfuse-cli) (`MIT`) | `langfuse` (`api`, `skills`), `pkgshare/skills` | Source `bun` build targeting Homebrew `node`; patches `DEFAULT_HOST` from `cloud.langfuse.com` to `http://127.0.0.1:3000` |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) (`Apache-2.0`) | `px`, `phoenix-cli`, `pxi`, `pkgshare/{skills,plugins}` | Source `pnpm` TypeScript build (`conflicts_with "pixie", "px"`); disables npm update checks, exports `SCARF_NO_ANALYTICS=true`, and blocks `px self update` (`exit 2`) |
 | [`arize-phoenix`](Formula/arize-phoenix.rb) | [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) (`Elastic-2.0`) | `phoenix`, `arize-phoenix`, `LICENSE`, `IP_NOTICE`, `pkgshare/{skills,plugins}` | Source `pnpm` `phoenix-ui` + `uv` workspace wheels; defaults `PHOENIX_HOST=127.0.0.1`, `PHOENIX_TELEMETRY_ENABLED=false`, and `PHOENIX_ALLOW_EXTERNAL_RESOURCES=false` |
@@ -179,13 +214,14 @@ ripwire-agent-install --claude --hook         # opt-in PreToolUse hook registrat
 
 </details>
 
-### 6. Subscription-Only AI Gateway & Terminal Coding Agents
+### 6. Coding Agents, Subscription Gateways & AI Companions
 
 | Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
 | :--- | :--- | :--- | :--- |
 | [`magpie`](Formula/magpie.rb) | [yetone/magpie](https://github.com/yetone/magpie) (`MIT`) | `magpie`, `THIRD_PARTY_NOTICES`, `pkgshare/examples/subscription-only/setup-groups.sh` | Source Go `packedassets` build (macOS WebKit tray + Linux static `nogui`); loopback `127.0.0.1:3425`, telemetry/auto-update/PII downloads disabled, API-key providers and paid credits blocked unless `MAGPIE_ALLOW_API_KEYS=1` / `MAGPIE_ALLOW_CREDITS=1`, `magpie update` blocked (`exit 2`) |
 | [`omp`](Formula/omp.rb) | [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) (`MIT`) | `omp`, completions, `pkgshare/examples/subscription-only/{models.yml,config.yml}` | SHA-256-pinned binary + tag `LICENSE`; injects `homebrew-policy.yml` (`checkUpdate: false`, `update.auto: false`, `otlpExportEnabled: false`), disables OTel/AutoQA/Spotlight, scrubs ambient `*_API_KEY`, and blocks `omp update`, `--api-key`, and `--include-env` (`exit 2`) unless `OMP_ALLOW_API_KEYS=1` |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) (`:cannot_represent` — MIT + Rider) | `pi`, `rpi`, completions, `LICENSE`, `pkgshare/{skills/pi-agent-rust,examples/subscription-only}` | SHA-256-pinned archive + full custom `LICENSE` (`conflicts_with "cln", "pi-coding-agent"`); exports `PI_SKIP_VERSION_CHECK=1` and `DO_NOT_TRACK=true`, scrubs ambient `*_API_KEY`, and blocks `self-update` and `--api-key` (`exit 2`) unless `PI_ALLOW_API_KEYS=1` |
+| [`deeptutor`](Formula/deeptutor.rb) | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (`Apache-2.0`) | `deeptutor`, `THIRD_PARTY_NOTICES.md`, `pkgshare/{skills,apm}` | Source `uv` Python `3.13` core wheel (`preserve_rpath`, zero ML/Node bloat); patches `serve`/`launcher` from `0.0.0.0` to `127.0.0.1`, disables `version_check_enabled` and `detect_installation()` auto-updates, exports `DO_NOT_TRACK=1`/`NEXT_TELEMETRY_DISABLED=1`, blocks `update`/`self-update`/`upgrade` (`exit 2`), and stages `SKILL.md` + OpenAPM package passively |
 
 <details>
 <summary><strong>Subscription-only OAuth onboarding (`magpie`, `omp`, & `pi-agent-rust`)</strong></summary>
@@ -206,18 +242,32 @@ magpie oh-my-pi group/sub-coder
 
 </details>
 
-### 7. macOS Native Desktop Casks
+### 7. Governance, Security Hooks, Templating & Build Speed
 
-| Cask | Upstream & License | App & CLI Assets | Tap Build & `postflight_steps` Hardening |
+| Formula | Upstream & License | Binaries & Assets | Tap Build & Runtime Hardening |
+| :--- | :--- | :--- | :--- |
+| [`adrkit`](Formula/adrkit.rb) | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) (`Apache-2.0`) | `adr`, `adrkit`, `adrkit-mcp`, completions, `pkgshare/skills` | Source `bun` build targeting Homebrew `node` (`conflicts_with "adr-tools"`); local `docs/adr` governance |
+| [`agenthooks`](Formula/agenthooks.rb) | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) (`MIT`) | `agenthooks-secretguard`, Go module + `DESIGN.md` + `examples/` in `pkgshare` | Source Go build (`CGO_ENABLED=0`) disabling `claude`/`codex mcp list` subprocess probes (`WithoutMCPListFallback`); masks detected secrets and blocks `update`/`self-update`/`upgrade` (`exit 2`) |
+| [`minijinja-cli`](Formula/minijinja-cli.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja-cli`, `man1/minijinja-cli.1`, `bash`/`zsh`/`fish`/`pwsh` completions, `pkgshare/skills/minijinja-cli` | Source Rust build (`cargo install --locked`, `ASSET_OUT_DIR`); pure offline Jinja2 CLI renderer & expression evaluator with `--no-include`/`--safe-path`/`--fuel` sandboxing |
+| [`python-minijinja`](Formula/python-minijinja.rb) | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) (`Apache-2.0`) | `minijinja` Python 3 (`3.13`–`3.15`) ABI3 wheels + `pkgshare/skills/minijinja-python` | Offline `maturin` + `cargo fetch --locked` PEP 517 build across Homebrew Pythons; zero runtime network/telemetry deps and deterministic `fuel` + `load_from_path` sandboxing |
+| [`kache`](Formula/kache.rb) | [kunobi-ninja/kache](https://github.com/kunobi-ninja/kache) (`Apache-2.0`) | `kache`, `kache-engine`, completions, `libexec/shims`, `pkgshare/{schemas,examples}` | Source Rust build (`cargo install --locked`, `RUSTC_WRAPPER=""`); local store + Unix socket daemon (`daemon.sock`) with no remote cache, planner, or telemetry configured; `kache update` exits `2` |
+| [`hyperfine`](Formula/hyperfine.rb) | [sharkdp/hyperfine](https://github.com/sharkdp/hyperfine) (`MIT OR Apache-2.0`) | `hyperfine`, `man1/hyperfine.1`, `bash`/`zsh`/`fish`/`pwsh` completions | Source Rust build (`cargo install --locked`); direct offline execution (`--shell=none`) with zero telemetry or update checks |
+
+### 8. macOS Native Desktop Casks
+
+| Cask | Upstream & License | App & CLI Assets | Tap Build & Hardening |
 | :--- | :--- | :--- | :--- |
 | [`ghostty`](Casks/ghostty.rb) | [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) (`MIT`) | `Ghostty.app` (`1.4.0`, macOS 13+), `ghostty(1)`/`ghostty(5)`, `bash`/`zsh`/`fish` completions | SHA-256-pinned universal `.dmg` (`conflicts_with cask: "ghostty@tip"`); `postflight_steps` disables Sparkle auto-updates (`SUEnableAutomaticChecks`/`SUAutomaticallyUpdate`/`SUSendProfileInfo = false`); never edits `~/.config/ghostty` or shell profiles |
 | [`hammerspoon`](Casks/hammerspoon.rb) | [Hammerspoon/hammerspoon](https://github.com/Hammerspoon/hammerspoon) (`MIT`) | `Hammerspoon.app` (`1.1.1`, macOS 13+), `hs` CLI (`Contents/Frameworks/hs/hs`) | SHA-256-pinned `.zip`; `postflight_steps` disables Sparkle auto-updates (`SUEnableAutomaticChecks`/`SUAutomaticallyUpdate`/`SUSendProfileInfo = false`); never edits `~/.hammerspoon`, coding-agent configs, or shell profiles |
 | [`markdown-preview`](Casks/markdown-preview.rb) | [pluk-inc/markdown-preview](https://github.com/pluk-inc/markdown-preview) (`MIT`) | `Markdown Preview.app` (macOS 15+), `mdp`, `md-preview`, `markdown-preview` | SHA-256-pinned `.dmg` depending on `duti`; `postflight_steps` disables Sparkle auto-updates, PostHog usage analytics, and Sentry crash reports on `doc.md-preview`, and registers `net.daringfireball.markdown` via `duti` once (skipped when already set or when `CI` is truthy); overridable via `HOMEBREW_MARKDOWN_PREVIEW_*` / `HOMEBREW_AITOOLS_*` |
+| [`agency-agents`](Casks/agency-agents.rb) | [msitarzewski/agency-agents-app](https://github.com/msitarzewski/agency-agents-app) (`MIT`) | `Agency Agents.app` (`0.3.2`, Apple Silicon & Intel, macOS 13+) | Signed & notarized dual-arch Tauri `.dmg`; omits `auto_updates true`; upstream ships with `updateAutoCheck: false` and zero telemetry/crash reporting (no macOS `UserDefaults` keys); never edits `~/.claude*`, `~/.codex*`, or `~/.config/*` |
+| [`deeptutor`](Casks/deeptutor.rb) | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (`Apache-2.0`) | `Open DeepTutor.app` (`1.7.4`, Apple Silicon & Intel, macOS 13+) | Signed & notarized dual-arch Electron `.dmg` bundling an Ed25519-signed local Python/Node runtime bound to `127.0.0.1` (`NEXT_TELEMETRY_DISABLED=1`); omits `auto_updates true`; no automatic update discovery or app telemetry; never edits agent dotfiles |
+| [`open-design`](Casks/open-design.rb) | [nexu-io/open-design](https://github.com/nexu-io/open-design) (`Apache-2.0`) | `Open Design.app` (`0.27.2`, Apple Silicon & Intel, macOS 12+), hardened `open-design` launcher | Signed & notarized dual-arch Electron `.dmg`; omits `auto_updates true`; installs hardened `open-design` CLI launcher (`OD_UPDATE_ENABLED=0`, `OD_UPDATE_AUTO_CHECK=0`, `OD_UPDATE_AUTO_DOWNLOAD=0`, `DO_NOT_TRACK=1`) and documents upstream's first-run analytics opt-out (`PRIVACY.md`); never edits agent dotfiles |
 
 <details>
 <summary><strong>Cask install environment flags (`HOMEBREW_*`)</strong></summary>
 
-Homebrew filters all custom environment variables unless they start with `HOMEBREW_`. Per-cask flags override tap-wide `HOMEBREW_AITOOLS_*` flags; accepted values are `1`/`true`/`yes`/`on` (truthy) and `0`/`false`/`no`/`off` (falsy), and invalid values warn on stderr and fail closed (`false`):
+Homebrew filters all custom environment variables unless they start with `HOMEBREW_`. Per-cask flags override tap-wide `HOMEBREW_AITOOLS_*` flags; accepted values are `1`/`true`/`yes`/`on` (truthy) and `0`/`false`/`no`/`off` (falsy), and invalid values warn on stderr and fail closed (`false`). `agency-agents`, `deeptutor`, and `open-design` do not use macOS `UserDefaults` or `postflight_steps`, so these flags do not apply to them:
 
 | Tap-Wide Flag | Per-Cask Flag (`<CASK>` = `GHOSTTY` \| `HAMMERSPOON` \| `MARKDOWN_PREVIEW`) | Default | Effect |
 | :--- | :--- | :--- | :--- |
@@ -241,14 +291,17 @@ HOMEBREW_MARKDOWN_PREVIEW_SET_DEFAULT=0 \
 <!-- BEGIN TAP_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-Total packaged tools: **47** (**44** formulae: **44** bottled, **0** source-only; **3** macOS casks).
+Total packaged tools: **59** (**53** formulae: **44** bottled, **9** source-only; **6** macOS casks).
 
-### Formulae (44)
+### Formulae (53)
 
 | Formula | Version | License | Bottles | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | [`adrkit`](Formula/adrkit.rb) | `0.20.0_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) — Architecture governance CLI and MCP server for AI coding agents |
+| [`agency-agents`](Formula/agency-agents.rb) | `2026.11.09` | `MIT` | source | [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents) — Specialized AI agent persona catalog and multi-tool installer |
 | [`agent-mail`](Formula/agent-mail.rb) | `0.3.41_1` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) — Asynchronous coordination MCP server and CLI for AI coding agents |
+| [`agent-skills`](Formula/agent-skills.rb) | `0.6.18` | `MIT` | source | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade software engineering skills and checklists for AI agents |
+| [`agent-tincan`](Formula/agent-tincan.rb) | `0.32.0` | `MIT` | source | [agenttincan.com](https://agenttincan.com) — Tailscale-based relay and MCP bridge for AI agent collaboration |
 | [`agenthooks`](Formula/agenthooks.rb) | `0.7.7` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) — Cross-agent hook Go library and credential-scanning hook runner |
 | [`agentsync`](Formula/agentsync.rb) | `1.53.2` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dallay/agentsync](https://github.com/dallay/agentsync) — Sync AI agent configurations and MCP servers via symbolic links |
 | [`arize-phoenix`](Formula/arize-phoenix.rb) | `22.0.1` | `Elastic-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
@@ -262,6 +315,8 @@ Total packaged tools: **47** (**44** formulae: **44** bottled, **0** source-only
 | [`ck`](Formula/ck.rb) | `0.8.1_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
 | [`claude-mem`](Formula/claude-mem.rb) | `16.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
 | [`codesearch`](Formula/codesearch.rb) | `1.8.11` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
+| [`deeptutor`](Formula/deeptutor.rb) | `1.7.4` | `Apache-2.0` | source | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion CLI and SDK |
+| [`diagram-design`](Formula/diagram-design.rb) | `2.6.178` | `MIT` | source | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) — Editorial HTML and SVG diagram skill across 52 types for AI coding agents |
 | [`entire-graph`](Formula/entire-graph.rb) | `0.6.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [entireio/entire-graph](https://github.com/entireio/entire-graph) — Deterministic local code graph for coding agents |
 | [`fff-mcp`](Formula/fff-mcp.rb) | `0.11.0_1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
 | [`hashline`](Formula/hashline.rb) | `0.9.24_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [quangdang46/hashline](https://github.com/quangdang46/hashline) — Hash-anchored line editing for AI coding agents |
@@ -278,8 +333,11 @@ Total packaged tools: **47** (**44** formulae: **44** bottled, **0** source-only
 | [`nats`](Formula/nats.rb) | `0.5.2_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
 | [`omp`](Formula/omp.rb) | `19.1.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
 | [`openlit`](Formula/openlit.rb) | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
+| [`openviking`](Formula/openviking.rb) | `0.5.6` | `AGPL-3.0-only` | source | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) — Agent-native context database for AI memory, RAG, and skills |
+| [`paperclip`](Formula/paperclip.rb) | `2026.1117.0` | `MIT` | source | [paperclip.ing](https://paperclip.ing) — Open-source orchestration platform and CLI for teams of AI agents |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | `1.24.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
+| [`printing-press-library`](Formula/printing-press-library.rb) | `0.1.27` | `MIT` | source | [printingpress.dev](https://printingpress.dev) — Catalog and installer CLI for Printing Press-generated Go CLIs and skills |
 | [`python-minijinja`](Formula/python-minijinja.rb) | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
 | [`qmd`](Formula/qmd.rb) | `2.9.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
 | [`ripwire`](Formula/ripwire.rb) | `0.6.10` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) — Codebase symbol maps and call graphs for AI agents |
@@ -289,16 +347,20 @@ Total packaged tools: **47** (**44** formulae: **44** bottled, **0** source-only
 | [`squeez`](Formula/squeez.rb) | `1.49.3_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) — Token compressor and stdio MCP server for AI coding agents |
 | [`tgrep`](Formula/tgrep.rb) | `1.2.8` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft/tgrep](https://github.com/microsoft/tgrep) — Trigram-indexed grep for fast regex search in large codebases |
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | `0.23.5` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) — Tree-sitter Java grammar with JDK 28 Valhalla value classes and records |
+| [`ui-ux-pro-max-cli`](Formula/ui-ux-pro-max-cli.rb) | `2.15.0` | `MIT` | source | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) — UI/UX design intelligence CLI, searchable database, and agent skills |
 | [`waza`](Formula/waza.rb) | `0.42.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft.github.io/waza](https://microsoft.github.io/waza/) — Evaluate and benchmark AI agent workflows, custom agents, and skills |
 | [`worktrunk`](Formula/worktrunk.rb) | `0.83.0` | `Apache-2.0 OR MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [worktrunk.dev](https://worktrunk.dev) — CLI for Git worktree management, designed for parallel AI agent workflows |
 
-### macOS Casks (3)
+### macOS Casks (6)
 
 | Cask | Version | Description |
 | :--- | :--- | :--- |
+| [`agency-agents`](Casks/agency-agents.rb) | `0.3.2` | [agencyagents.app](https://agencyagents.app/) — Native desktop manager for installing and tracking AI agent personas |
+| [`deeptutor`](Casks/deeptutor.rb) | `1.7.4` | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion desktop app |
 | [`ghostty`](Casks/ghostty.rb) | `1.4.0` | [ghostty.org](https://ghostty.org/) — Terminal emulator that uses platform-native UI and GPU acceleration |
 | [`hammerspoon`](Casks/hammerspoon.rb) | `1.1.1` | [www.hammerspoon.org](https://www.hammerspoon.org/) — Desktop automation application |
 | [`markdown-preview`](Casks/markdown-preview.rb) | `0.0.74` | [markdownpreview.app](https://markdownpreview.app/) — Markdown previewer with bundled Quick Look extension |
+| [`open-design`](Casks/open-design.rb) | `0.27.2` | [open-design.ai](https://open-design.ai/) — Collaborative AI design agent workspace |
 <!-- END TAP_INVENTORY -->
 
 ---
@@ -320,6 +382,7 @@ Formulae shipping local MCP servers (`PREFIX="$(brew --prefix)"`, e.g. `/opt/hom
 | `qmd` | stdio / HTTP | `"$PREFIX/opt/qmd/bin/qmd" mcp` | Pass `--http` for loopback `127.0.0.1:8181` |
 | `squeez` | stdio | `"$PREFIX/opt/squeez/bin/squeez" mcp` | Read-only CLI output token compressor |
 | `agent-mail` | stdio / HTTP | `"$PREFIX/opt/agent-mail/bin/mcp-agent-mail"` | Or `"$PREFIX/opt/agent-mail/bin/am" serve-http` |
+| `agent-tincan` | stdio | `"$PREFIX/opt/agent-tincan/bin/tincan" mcp` | Tailscale-based multi-agent relay, messaging, and task MCP bridge |
 | `adrkit` | stdio | `"$PREFIX/opt/adrkit/bin/adrkit-mcp"` | Local `docs/adr` governance server |
 | `skillopt` | stdio | `"$PREFIX/opt/skillopt/bin/skillopt-sleep-mcp"` | Defaults working repo to caller `cwd` (`SKILLOPT_SLEEP_REPO` overrides) |
 | `mlflow` | stdio | `"$PREFIX/opt/mlflow/bin/mlflow" mcp run` | Set `MLFLOW_TRACKING_URI` (e.g. `http://127.0.0.1:5000` or `sqlite:///mlflow.db`) |
@@ -342,7 +405,7 @@ agy mcp add hashline --command "$(brew --prefix)/opt/hashline/bin/hashline" --ar
 
 ## Bundled Agent Skills & Plugins
 
-Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passively under `pkgshare` without touching live agent directories (`magpie`, `omp`, `kache`, and `agenthooks` also stage local-first config templates, JSON schemas, or Go hook modules under `share/<formula>/`):
+Formulae staging reusable `SKILL.md` bundles, OpenAPM (`apm.yml` + `apm.lock.yaml`) packages, guides, or harness plugins passively under `pkgshare` without touching live agent directories (per-package config paths, defaults, and agent rules live in [`docs/packages/README.md`](docs/packages/README.md) and `$(brew --prefix <formula>)/share/doc/<formula>/AGENTS.md` for new packages; `magpie`, `omp`, `kache`, and `agenthooks` also stage local-first config templates, JSON schemas, or Go hook modules under `share/<formula>/`):
 
 | Formula | Installed Asset Path (`$(brew --prefix <formula>)/share/<formula>/...`) | Opt-In Activation |
 | :--- | :--- | :--- |
@@ -370,6 +433,15 @@ Formulae staging reusable `SKILL.md` bundles, guides, or harness plugins passive
 | `agent-mail` | `skills/agent-mail/SKILL.md` | `./scripts/install-agent-skills.sh --tool agent-mail --claude --codex --agy` or symlink |
 | `nats` | `skills/nats/SKILL.md` | Symlink or `agentsync` / `skillfile` |
 | `worktrunk` | `skills/{worktrunk,wt-switch-create}`, `plugins/{worktrunk,worktrunk-markers}`, `hooks/hooks.json`, `gemini-extension.json`, `examples/` | Symlink from `share/worktrunk/skills` or opt-in `wt config plugins <agent> install` (`claude`, `codex`, `opencode`, `pi`, `omp`) |
+| `agent-tincan` | `extension/` (unpacked Chrome extension), `docs/{agents.txt,llms.txt,quickstart.md,...}` | Load unpacked extension in Chrome or point agents at `share/agent-tincan/docs/agents.txt` |
+| `printing-press-library` | `skills/printing-press-library/SKILL.md` | Symlink or `agentsync` / `skillfile` |
+| `agency-agents` | `divisions.json`, `tools.json`, 18 persona divisions, `scripts/{install,convert}.sh` | Opt-in `agency-agents-install --tool <tool> --division <div...> --dry-run` |
+| `ui-ux-pro-max-cli` | `skills/{ui-ux-pro-max,banner-design,brand,design,design-system,slides,ui-styling}`, `apm/{apm.yml,apm.lock.yaml,skills/}` | `apm install "$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm" --target agent-skills` or `uipro init --ai <agent>` |
+| `diagram-design` | `skills/diagram-design/`, `commands/`, `prompts/`, `.{claude,codex,factory,qoder}-plugin/`, `apm/{apm.yml,apm.lock.yaml,skills/}` | `apm install "$(brew --prefix diagram-design)/share/diagram-design/apm" --target agent-skills` or `claude --plugin-dir "$(brew --prefix diagram-design)/share/diagram-design"` |
+| `agent-skills` | `skills/` (26 skills), `agents/`, `references/`, `commands/`, `hooks/`, `.{claude,codex}-plugin/`, `apm/{apm.yml,apm.lock.yaml,skills/}` | `apm install "$(brew --prefix agent-skills)/share/agent-skills/apm" --target agent-skills` or `addy-agent-skills --list` |
+| `paperclip` | `skills/{paperclip,paperclip-board,paperclip-create-agent,...}` (9 skills) | Symlink from `share/paperclip/skills` or `agentsync` / `skillfile` |
+| `deeptutor` | `skills/deeptutor-cli/SKILL.md`, `apm/{apm.yml,apm.lock.yaml,skills/}` | `apm install "$(brew --prefix deeptutor)/share/deeptutor/apm" --target agent-skills` or symlink |
+| `openviking` | `agent-plugins/`, `skills/` (7 skills), `plugins/{claude-code,codex,opencode,agent-hook}`, `examples/`, `.{claude-plugin,agents}/` | Symlink from `share/openviking/skills` or register plugin from `share/openviking/plugins/` |
 
 ---
 
@@ -590,8 +662,8 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 </details>
 
 **Scope & SBOM coverage notes**:
-- **Source-built formulae** attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **upstream-binary formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`) attest bottle packaging of SHA-256-pinned upstream release archives; and **macOS casks** (`ghostty`, `hammerspoon`, `markdown-preview`) verify upstream release archives by pinned `sha256` checksums.
-- Go binaries (`bd`, `bv`, `nats`, `tgrep`, `agenthooks`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `autoswarm`, `cairn`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node/Bun `package.json` inventories (`hindsight`, `claude-mem`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables and single-file `bun` bundles (`adrkit`) expose bottle archive and manifest files only.
+- **Source-built formulae** attest compilation in `tests.yml` on GitHub-hosted `macos-26` (`arm64_tahoe`), `ubuntu-24.04-arm` (`arm64_linux`), and `ubuntu-24.04` (`x86_64_linux`) runners; **upstream-binary, wheel, and npm-bundle formulae** (`tgrep`, `ck`, `fff-mcp`, `agent-mail`, `br`, `bd`, `bv`, `herdr`, `agentsync`, `omp`, `pi-agent-rust`, `openviking`, `paperclip`, `printing-press-library`) attest bottle packaging of SHA-256-pinned upstream release archives, PyPI wheels, or npm tarballs; and **macOS casks** (`ghostty`, `hammerspoon`, `markdown-preview`, `agency-agents`, `deeptutor`, `open-design`) verify upstream release archives by pinned `sha256` checksums.
+- Go binaries (`agent-tincan`, `bd`, `bv`, `nats`, `tgrep`, `agenthooks`, `waza`, `magpie`, `openlit`), Python wheel metadata (`basic-memory`, `autoswarm`, `cairn`, `deeptutor`, `openviking`, `skillopt`, `mlflow`, `inspect-ai`, `arize-phoenix`), Node/Bun `package.json` inventories (`hindsight`, `claude-mem`, `paperclip`, `printing-press-library`, `qmd`, `langfuse-cli`, `phoenix-cli`), and `cargo-auditable` Rust binaries expose full package inventories to `syft`, whereas standard Rust/C/C++ binaries without embedded audit tables, pure-asset skill catalogs (`agency-agents`, `agent-skills`, `diagram-design`), and single-file `bun` bundles (`adrkit`, `ui-ux-pro-max-cli`) expose bottle archive and manifest files only.
 
 ---
 
@@ -621,8 +693,8 @@ All published bottles are attested on `refs/heads/main` and indexed in the [GitH
 
 | Symptom | Cause | Fix |
 | :--- | :--- | :--- |
-| `Cannot install ... conflicting formulae are installed` | Core `ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `pixie`, `px`, `cln`, or `pi-coding-agent` owns the same binary name | Run `brew unlink <conflicting-formula>`, then `brew install artagon/aitools/<formula>` |
-| `brew install tgrep` (or `nats` / `herdr` / `hyperfine`) installs core formula | Unqualified name resolves to `homebrew/core` (or `homebrew/cask` for `ghostty` / `hammerspoon` / `markdown-preview`) first | Use `brew install artagon/aitools/<formula>` (or `brew install --cask artagon/aitools/<cask>`) |
+| `Cannot install ... conflicting formulae are installed` | Core `ast-grep`, `beads`, `beads_viewer`, `adr-tools`, `pixie`, `px`, `cln`, `pi-coding-agent`, `ov`, or `wiredtiger` owns the same binary name | Run `brew unlink <conflicting-formula>`, then `brew install artagon/aitools/<formula>` |
+| `brew install tgrep` (or `nats` / `herdr` / `hyperfine` / `agency-agents` / `deeptutor`) resolves to the wrong package | Unqualified name resolves to `homebrew/core` (or `homebrew/cask` for `ghostty` / `hammerspoon` / `markdown-preview`), or hits a dual formula/cask name (`agency-agents`, `deeptutor`) | Use `brew install artagon/aitools/<formula>` for CLI formulae or `brew install --cask artagon/aitools/<cask>` (`ghostty`, `hammerspoon`, `markdown-preview`, `agency-agents`, `deeptutor`, `open-design`) for desktop apps |
 | Homebrew ignores tap formulae (`Tap-Trust`) | Homebrew 7+ requires explicit tap trust | Run `brew trust --tap artagon/aitools` |
 | `HOMEBREW_VERIFY_ATTESTATIONS=1` fails with GitHub auth error | `gh` is unauthenticated and `HOMEBREW_GITHUB_API_TOKEN` is unset | Run `gh auth login` or export `HOMEBREW_GITHUB_API_TOKEN` |
 | `<tool> update` or `px self update` exits `2` | In-place self-updaters are blocked so binaries stay managed by Homebrew | Upgrade with `brew upgrade artagon/aitools/<formula>` |

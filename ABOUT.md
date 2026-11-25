@@ -2,37 +2,42 @@
 
 ## Overview
 
-`artagon/aitools` is a curated Homebrew tap shipping developer CLIs, local MCP servers, memory and search engines, multi-agent coordination tools, skill lifecycle compilers, evaluation harnesses, OpenTelemetry collectors, subscription-first coding-agent gateways, and JDK 28 Valhalla-aware AST analyzers for AI coding agents. Published bottles target macOS (`arm64_tahoe`) and Linux (`arm64_linux`, `x86_64_linux`; see [`README.md`](README.md) for per-formula platform coverage) with ref-bound SLSA v1 provenance, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
+`artagon/aitools` is a curated Homebrew tap shipping developer CLIs, local MCP servers, memory and context databases, multi-agent orchestration platforms, design intelligence & OpenAPM skill catalogs, skill lifecycle compilers, evaluation harnesses, AI learning companions, OpenTelemetry collectors, subscription-first coding-agent gateways, JDK 28 Valhalla-aware AST analyzers, and macOS native desktop casks for AI coding agents. Published bottles target macOS (`arm64_tahoe`) and Linux (`arm64_linux`, `x86_64_linux`; see [`README.md`](README.md) for per-formula platform coverage) with ref-bound SLSA v1 provenance, signed build lineage, keyless Sigstore `cosign` v3 bundles, and SPDX 2.3 + CycloneDX 1.6 SBOMs.
 
 Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, and bottle provenance links live in [`Formula/*.rb`](Formula), [`Casks/*.rb`](Casks), and [`README.md`](README.md).
 
 ## Design Guarantees
 
 - **Zero live dotfile or agent-config mutation**: `brew install`, `brew upgrade`, and `brew uninstall` never edit `~/.claude*`, `~/.codex*`, `~/.gemini*`, `~/.config/*`, `~/.hammerspoon`, or shell profiles; bundled skills, plugins, hooks, and templates stage passively under `pkgshare` for explicit opt-in, while macOS cask `postflight_steps` configure only each app's own `UserDefaults` and guarded single-UTI LaunchServices defaults (opt-out via `HOMEBREW_*_SKIP_DEFAULTS=1`).
-- **Hardened local-first & telemetry-off defaults**: Wrappers, source patches, and cask `postflight_steps` suppress startup update checks, telemetry/analytics beacons, and unsolicited cloud or paid-API routing, bind local services and collectors to loopback (`127.0.0.1`), and block or warn against in-place self-updaters so upgrades remain managed by `brew`.
+- **Hardened local-first & telemetry-off defaults**: Wrappers, source patches, and cask `postflight_steps` suppress startup update checks, telemetry/analytics beacons, and unsolicited cloud or paid-API routing, bind local services and collectors to loopback (`127.0.0.1`), and block or warn against in-place self-updaters so upgrades remain managed by `brew` (signed desktop casks that ignore macOS `UserDefaults` omit `auto_updates true`, document explicit opt-out controls, and provide hardened launcher guidance in caveats and `docs/packages/*/AGENTS.md`).
 - **Additive JDK 28 Valhalla Java AST support**: Compiles JEP 401/440/511/513 Java syntax (`value` classes/records, constructor prologues before `super(...)`, `import module`, qualified record patterns, and varargs annotations) into Valhalla-enabled Java AST analyzers while preserving byte-identical parse trees for standard Java.
 - **Cryptographic supply-chain provenance**: Staging, OIDC signing (`sign-bottles.yml@refs/heads/main`), and fast-forward publishing are privilege-separated across workflows and verifiable online (`brew verify`, `HOMEBREW_VERIFY_ATTESTATIONS=1`) or air-gapped offline (`scripts/verify-provenance.sh --offline`).
 
 ## Capability Domains
 
-- **Code Search, Valhalla Java AST & Hash-Anchored Editing** — structural AST search/rewriting, call-graph orientation, trigram/hybrid code search, file ranking MCP servers, and hash-anchored patching
-- **Local Agent Memory, Hybrid Markdown Search & Token Compression** — local knowledge graphs, vector + BM25 Markdown retrieval, and CLI output token compression
-- **Multi-Agent Coordination, Event Buses & Graph Issue Tracking** — agent mail servers, terminal session multiplexers, pub/sub buses, and Git-backed issue graphs
-- **Architecture Decisions, Jinja2 Templates, Skill Lifecycle & Benchmarking** — ADR governance, MiniJinja CLI and Python 3 template engines, multi-harness skill compilers/validators, and skill evaluation/optimization suites
-- **Evaluation Harnesses, Skill Registries & OpenTelemetry Observability** — live coding-agent trial runners, versioned skill registries, and local OTLP trace collectors/workbenches
-- **Subscription-First Local Gateways & Terminal Coding Agents** — loopback routing and terminal coding agents authenticated via CLI subscriptions without ambient API-key spend
+1. **Code Intelligence, Valhalla Java AST & Safe Editing** (`9` formulae) — structural AST search/rewriting, call-graph orientation, trigram/hybrid code search, file ranking MCP servers, and hash-anchored patching
+2. **Agent Memory, Context Databases & Token Compression** (`6` formulae) — local knowledge graphs, cross-session memory, agent-native context/RAG databases, vector + BM25 Markdown retrieval, and CLI output token compression
+3. **Multi-Agent Orchestration, Messaging & Workspaces** (`12` formulae) — multi-agent control planes, agent mail servers, Tailscale MCP relays, pub/sub NATS buses, terminal session multiplexers, Git worktrees, and Beads task graphs
+4. **Agent Skills, Personas & Design Intelligence** (`9` formulae) — skill managers/compilers/optimizers, OpenAPM (`apm.yml`/`apm.lock.yaml`) skill packs, multi-division persona catalogs, UI/UX & editorial diagram intelligence, and generated Go CLI catalogs
+5. **Evaluation Harnesses & OpenTelemetry Observability** (`7` formulae) — live coding-agent trial runners, workflow/skill benchmarkers, versioned skill registries, and local OTLP trace collectors/workbenches
+6. **Coding Agents, Subscription Gateways & AI Companions** (`4` formulae) — subscription-first OAuth routers, terminal coding agents without API-key spend, and agent-native learning companions
+7. **Governance, Security Hooks, Templating & Build Speed** (`6` formulae) — ADR governance, credential-guarding hooks, sandboxed MiniJinja CLI and Python 3 template engines, content-addressed build caches, and statistical CLI benchmarking
+8. **macOS Native Desktop Casks** (`6` casks) — signed and notarized native macOS terminals, automation tools, Markdown previewers, persona managers, learning apps, and collaborative design workspaces with local-first updater/telemetry controls
 
 ## Packaged Tools
 
 <!-- BEGIN ABOUT_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-This tap currently packages **47** tools: **44** formulae (**44** bottled, **0** source-only) and **3** macOS casks.
+This tap currently packages **59** tools: **53** formulae (**44** bottled, **9** source-only) and **6** macOS casks.
 
 | Tool | Kind | Version | License | Bottles | Summary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [`adrkit`](Formula/adrkit.rb) | Formula | `0.20.0_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mbeacom/adrkit](https://github.com/mbeacom/adrkit) — Architecture governance CLI and MCP server for AI coding agents |
+| [`agency-agents`](Formula/agency-agents.rb) | Formula | `2026.11.09` | `MIT` | source | [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents) — Specialized AI agent persona catalog and multi-tool installer |
 | [`agent-mail`](Formula/agent-mail.rb) | Formula | `0.3.41_1` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) — Asynchronous coordination MCP server and CLI for AI coding agents |
+| [`agent-skills`](Formula/agent-skills.rb) | Formula | `0.6.18` | `MIT` | source | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade software engineering skills and checklists for AI agents |
+| [`agent-tincan`](Formula/agent-tincan.rb) | Formula | `0.32.0` | `MIT` | source | [agenttincan.com](https://agenttincan.com) — Tailscale-based relay and MCP bridge for AI agent collaboration |
 | [`agenthooks`](Formula/agenthooks.rb) | Formula | `0.7.7` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) — Cross-agent hook Go library and credential-scanning hook runner |
 | [`agentsync`](Formula/agentsync.rb) | Formula | `1.53.2` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dallay/agentsync](https://github.com/dallay/agentsync) — Sync AI agent configurations and MCP servers via symbolic links |
 | [`arize-phoenix`](Formula/arize-phoenix.rb) | Formula | `22.0.1` | `Elastic-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
@@ -46,6 +51,8 @@ This tap currently packages **47** tools: **44** formulae (**44** bottled, **0**
 | [`ck`](Formula/ck.rb) | Formula | `0.8.1_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
 | [`claude-mem`](Formula/claude-mem.rb) | Formula | `16.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
 | [`codesearch`](Formula/codesearch.rb) | Formula | `1.8.11` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
+| [`deeptutor`](Formula/deeptutor.rb) | Formula | `1.7.4` | `Apache-2.0` | source | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion CLI and SDK |
+| [`diagram-design`](Formula/diagram-design.rb) | Formula | `2.6.178` | `MIT` | source | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) — Editorial HTML and SVG diagram skill across 52 types for AI coding agents |
 | [`entire-graph`](Formula/entire-graph.rb) | Formula | `0.6.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [entireio/entire-graph](https://github.com/entireio/entire-graph) — Deterministic local code graph for coding agents |
 | [`fff-mcp`](Formula/fff-mcp.rb) | Formula | `0.11.0_1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
 | [`hashline`](Formula/hashline.rb) | Formula | `0.9.24_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [quangdang46/hashline](https://github.com/quangdang46/hashline) — Hash-anchored line editing for AI coding agents |
@@ -62,8 +69,11 @@ This tap currently packages **47** tools: **44** formulae (**44** bottled, **0**
 | [`nats`](Formula/nats.rb) | Formula | `0.5.2_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
 | [`omp`](Formula/omp.rb) | Formula | `19.1.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
 | [`openlit`](Formula/openlit.rb) | Formula | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
+| [`openviking`](Formula/openviking.rb) | Formula | `0.5.6` | `AGPL-3.0-only` | source | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) — Agent-native context database for AI memory, RAG, and skills |
+| [`paperclip`](Formula/paperclip.rb) | Formula | `2026.1117.0` | `MIT` | source | [paperclip.ing](https://paperclip.ing) — Open-source orchestration platform and CLI for teams of AI agents |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | Formula | `1.24.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | Formula | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
+| [`printing-press-library`](Formula/printing-press-library.rb) | Formula | `0.1.27` | `MIT` | source | [printingpress.dev](https://printingpress.dev) — Catalog and installer CLI for Printing Press-generated Go CLIs and skills |
 | [`python-minijinja`](Formula/python-minijinja.rb) | Formula | `3.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [mitsuhiko/minijinja](https://github.com/mitsuhiko/minijinja) — Python bindings for the MiniJinja Rust template engine |
 | [`qmd`](Formula/qmd.rb) | Formula | `2.9.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tobi/qmd](https://github.com/tobi/qmd) — On-device hybrid BM25 and vector search CLI and MCP server |
 | [`ripwire`](Formula/ripwire.rb) | Formula | `0.6.10` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [redhat-et/ripwire](https://github.com/redhat-et/ripwire) — Codebase symbol maps and call graphs for AI agents |
@@ -73,11 +83,15 @@ This tap currently packages **47** tools: **44** formulae (**44** bottled, **0**
 | [`squeez`](Formula/squeez.rb) | Formula | `1.49.3_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [claudioemmanuel/squeez](https://github.com/claudioemmanuel/squeez) — Token compressor and stdio MCP server for AI coding agents |
 | [`tgrep`](Formula/tgrep.rb) | Formula | `1.2.8` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft/tgrep](https://github.com/microsoft/tgrep) — Trigram-indexed grep for fast regex search in large codebases |
 | [`tree-sitter-java-valhalla`](Formula/tree-sitter-java-valhalla.rb) | Formula | `0.23.5` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [tree-sitter/tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) — Tree-sitter Java grammar with JDK 28 Valhalla value classes and records |
+| [`ui-ux-pro-max-cli`](Formula/ui-ux-pro-max-cli.rb) | Formula | `2.15.0` | `MIT` | source | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) — UI/UX design intelligence CLI, searchable database, and agent skills |
 | [`waza`](Formula/waza.rb) | Formula | `0.42.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [microsoft.github.io/waza](https://microsoft.github.io/waza/) — Evaluate and benchmark AI agent workflows, custom agents, and skills |
 | [`worktrunk`](Formula/worktrunk.rb) | Formula | `0.83.0` | `Apache-2.0 OR MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [worktrunk.dev](https://worktrunk.dev) — CLI for Git worktree management, designed for parallel AI agent workflows |
+| [`agency-agents`](Casks/agency-agents.rb) | Cask | `0.3.2` | — | macOS cask | [agencyagents.app](https://agencyagents.app/) — Native desktop manager for installing and tracking AI agent personas |
+| [`deeptutor`](Casks/deeptutor.rb) | Cask | `1.7.4` | — | macOS cask | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion desktop app |
 | [`ghostty`](Casks/ghostty.rb) | Cask | `1.4.0` | — | macOS cask | [ghostty.org](https://ghostty.org/) — Terminal emulator that uses platform-native UI and GPU acceleration |
 | [`hammerspoon`](Casks/hammerspoon.rb) | Cask | `1.1.1` | — | macOS cask | [www.hammerspoon.org](https://www.hammerspoon.org/) — Desktop automation application |
 | [`markdown-preview`](Casks/markdown-preview.rb) | Cask | `0.0.74` | — | macOS cask | [markdownpreview.app](https://markdownpreview.app/) — Markdown previewer with bundled Quick Look extension |
+| [`open-design`](Casks/open-design.rb) | Cask | `0.27.2` | — | macOS cask | [open-design.ai](https://open-design.ai/) — Collaborative AI design agent workspace |
 <!-- END ABOUT_INVENTORY -->
 
 ## Pipeline & Verification
@@ -87,7 +101,8 @@ This tap currently packages **47** tools: **44** formulae (**44** bottled, **0**
 
 ## Quick Links
 
-- [`README.md`](README.md) — quickstart, categorized formula catalog, MCP server registration, bundled skills, and bottle provenance table
+- [`README.md`](README.md) — quickstart, 8-domain taxonomy, categorized formula catalog, MCP server registration, bundled skills, and bottle provenance table
+- [`docs/packages/README.md`](docs/packages/README.md) — per-package `AGENTS.md` guides with configuration paths, upstream vs. tap-hardened defaults, and opt-in setup rules
 - [`AGENTS.md`](AGENTS.md) & [`CLAUDE.md`](CLAUDE.md) — tap maintenance contract for contributors and coding agents
 - [`TOOLS.md`](TOOLS.md) & [`docs/ast-grep.md`](docs/ast-grep.md) — code-intelligence tool routing, static-analysis boundaries, and structural rules
 - [`docs/agent-context.md`](docs/agent-context.md) — formula hardening, Valhalla grammar patch, autobump mechanics, bottle publishing, and workflow security
