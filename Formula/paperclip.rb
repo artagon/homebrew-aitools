@@ -10,6 +10,14 @@ class Paperclip < Formula
     strategy :npm
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/paperclip-2026.1117.0"
+    rebuild 1
+    sha256               arm64_tahoe:  "2b79696a5d59732965189682bda120c053337098dcb1ac7abf49cbd5d8ca88a7"
+    sha256 cellar: :any, arm64_linux:  "e13ca16f4ef519dae33120eccd363aa52e3c08547d915fd2c4ed9513c1579a8b"
+    sha256 cellar: :any, x86_64_linux: "43da94749d2f8a6666614dcefa4e0a03a67431fcac7be4dc99876d57d44f72d3"
+  end
+
   depends_on "node"
 
   preserve_rpath
