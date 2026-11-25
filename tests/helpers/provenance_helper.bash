@@ -49,7 +49,7 @@ prov_reference_parse_formula_json() {
         rebuild = 0
         bottle_sha = ""
       }
-      /^  (def (install|caveats|post_install)|test do)$/ || /^__END__$/ {
+      /^  (def (fetch|install|caveats|post_install)|test do)$/ || /^__END__$/ {
         exit
       }
       in_lc {
@@ -132,20 +132,35 @@ prov_reference_parse_formula_json() {
             raw_tag = substr(primary_url, RSTART, RLENGTH)
             sub(/^archive\/(refs\/tags\/)?/, "", raw_tag)
             sub(/\.(tar\.gz|tar\.xz|tgz|zip)$/, "", raw_tag)
+          } else if (match(primary_url, /^https:\/\/registry\.npmjs\.org\/(@[^\/]+\/)?[^\/]+\/-\/[^\/]+\.(tgz|tar\.gz)$/)) {
+            npm_rest = primary_url
+            sub(/^https:\/\/registry\.npmjs\.org\/(@[^\/]+\/)?/, "", npm_rest)
+            split(npm_rest, npm_parts, "/-/")
+            npm_pkg = npm_parts[1]
+            npm_stem = npm_parts[2]
+            sub(/\.(tgz|tar\.gz)$/, "", npm_stem)
+            if (index(npm_stem, npm_pkg "-") == 1) {
+              npm_ver = substr(npm_stem, length(npm_pkg) + 2)
+              if (npm_ver ~ /^[0-9][0-9A-Za-z.+_-]*$/) {
+                ver = npm_ver
+              }
+            }
           }
-          prefix = formula "-"
-          if (match(raw_tag, /(@|%40)[vV]?[0-9][0-9A-Za-z.+_-]*$/)) {
-            raw_tag = substr(raw_tag, RSTART)
-            sub(/^(@|%40)/, "", raw_tag)
-          } else if (index(raw_tag, prefix) == 1) {
-            raw_tag = substr(raw_tag, length(prefix) + 1)
-          } else if (!(raw_tag ~ /^[vV]?[0-9]/) && raw_tag ~ /^[A-Za-z][A-Za-z0-9._-]*-[vV][0-9][0-9A-Za-z.+_-]*$/) {
-            sub(/^[A-Za-z][A-Za-z0-9._-]*-[vV]/, "", raw_tag)
+          if (ver == "") {
+            prefix = formula "-"
+            if (match(raw_tag, /(@|%40)[vV]?[0-9][0-9A-Za-z.+_-]*$/)) {
+              raw_tag = substr(raw_tag, RSTART)
+              sub(/^(@|%40)/, "", raw_tag)
+            } else if (index(raw_tag, prefix) == 1) {
+              raw_tag = substr(raw_tag, length(prefix) + 1)
+            } else if (!(raw_tag ~ /^[vV]?[0-9]/) && raw_tag ~ /^[A-Za-z][A-Za-z0-9._-]*-[vV][0-9][0-9A-Za-z.+_-]*$/) {
+              sub(/^[A-Za-z][A-Za-z0-9._-]*-[vV]/, "", raw_tag)
+            }
+            if (raw_tag ~ /^[vV][0-9]/) {
+              raw_tag = substr(raw_tag, 2)
+            }
+            ver = raw_tag
           }
-          if (raw_tag ~ /^[vV][0-9]/) {
-            raw_tag = substr(raw_tag, 2)
-          }
-          ver = raw_tag
         }
         pkg_ver = (rev > 0) ? (ver "_" rev) : ver
         reb_suf = (rebuild > 0) ? ("." rebuild) : ""
@@ -1025,6 +1040,54 @@ EOF
   local ref_autoswarm=""
   ref_autoswarm="$(prov_reference_parse_formula_json "$root/repo/Formula/autoswarm.rb")"
   printf '%s\n' "$ref_autoswarm" | jq -e '.version == "0.1.1" and .release_tag == "autoswarm-0.1.1"' >/dev/null
+
+  cat >"$root/repo/Formula/scoped-npm.rb" <<EOF
+class ScopedNpm < Formula
+  desc "Scoped npm registry tarball parsing test"
+  homepage "https://example.com"
+  url "https://registry.npmjs.org/@mvanhorn/printing-press-library/-/printing-press-library-0.1.27.tgz"
+  sha256 "${sha}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/scoped-npm-0.1.27"
+    sha256 arm64_tahoe: "${sha}"
+  end
+
+  def install
+    bin.install "scoped-npm"
+  end
+end
+EOF
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json scoped-npm
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e '.results[0].version == "0.1.27" and .results[0].release_tag == "scoped-npm-0.1.27"' "$PROV_OUT" >/dev/null
+  local ref_scoped_npm=""
+  ref_scoped_npm="$(prov_reference_parse_formula_json "$root/repo/Formula/scoped-npm.rb")"
+  printf '%s\n' "$ref_scoped_npm" | jq -e '.version == "0.1.27" and .release_tag == "scoped-npm-0.1.27"' >/dev/null
+
+  cat >"$root/repo/Formula/paperclip-npm.rb" <<EOF
+class PaperclipNpm < Formula
+  desc "Unscoped npm registry tarball parsing test"
+  homepage "https://example.com"
+  url "https://registry.npmjs.org/paperclipai/-/paperclipai-2026.1117.0.tgz"
+  sha256 "${sha}"
+
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/paperclip-npm-2026.1117.0"
+    sha256 arm64_tahoe: "${sha}"
+  end
+
+  def install
+    bin.install "paperclipai"
+  end
+end
+EOF
+  prov_run_verifier "$root" "$shell_bin" "$root/repo" --parse-only --json paperclip-npm
+  [[ "$PROV_RC" -eq 0 ]]
+  jq -e '.results[0].version == "2026.1117.0" and .results[0].release_tag == "paperclip-npm-2026.1117.0"' "$PROV_OUT" >/dev/null
+  local ref_paperclip_npm=""
+  ref_paperclip_npm="$(prov_reference_parse_formula_json "$root/repo/Formula/paperclip-npm.rb")"
+  printf '%s\n' "$ref_paperclip_npm" | jq -e '.version == "2026.1117.0" and .release_tag == "paperclip-npm-2026.1117.0"' >/dev/null
 }
 
 case_stale_bottle_bump() {
