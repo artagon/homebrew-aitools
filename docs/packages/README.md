@@ -16,3 +16,5 @@ Formula packages also install a local copy at `$(brew --prefix <formula>)/share/
 | `paperclip` | Formula | 3 (Multi-Agent Orchestration) | [`docs/packages/paperclip/AGENTS.md`](paperclip/AGENTS.md) |
 | `printing-press-library` | Formula | 4 (CLI Catalogs) | [`docs/packages/printing-press-library/AGENTS.md`](printing-press-library/AGENTS.md) |
 | `ui-ux-pro-max-cli` | Formula | 4 (Design Intelligence) | [`docs/packages/ui-ux-pro-max-cli/AGENTS.md`](ui-ux-pro-max-cli/AGENTS.md) |
+
+For offline inspection after installing any formula, read `$(brew --prefix <formula>)/share/doc/<formula>/AGENTS.md` or run `brew info artagon/aitools/<formula>`.
