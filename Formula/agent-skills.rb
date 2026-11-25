@@ -11,6 +11,14 @@ class AgentSkills < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-skills-0.6.18"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "101fe601fe8d4a58562d3327f9db90d7acb5b25b6511658c7ca4e06d1556c21a"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "37fe7bdcea0bf5667221762762e28b5dc336c439fc784c05ada296ac588d2d42"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "6bc3507c6b5353308cc456fca9e5498723999cbbbcf8b914ab34b667bef0cc56"
+  end
+
   def install
     pkgshare.install "skills", "agents", "references", "commands", "hooks", "docs",
                      "plugin.json", "AGENTS.md", "CLAUDE.md",
