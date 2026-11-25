@@ -10,6 +10,14 @@ class Openviking < Formula
     strategy :github_releases
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/openviking-0.5.6"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "f9bef78c0a38a507cce2e59b20215fc3d04214d58ca11473bd0bb8b0e199104d"
+    sha256 cellar: :any, arm64_linux:  "d4d4aea0e2b5a7a7c685e1f73eb16c1d4603246e9a01ff8adabb0f07db6b78dc"
+    sha256 cellar: :any, x86_64_linux: "b0e39afd77bb14c810847cf61eefe973ba4ffe59cb9a8da9067b2ca4ebaa0e27"
+  end
+
   depends_on "uv" => :build
 
   # SHA-256-pinned official platform cp310-abi3 wheels (bundling native Rust ov CLI,
