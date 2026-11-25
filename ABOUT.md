@@ -29,7 +29,7 @@ Live formula and macOS cask definitions, upstream versions, SHA-256 checksums, a
 <!-- BEGIN ABOUT_INVENTORY -->
 <!-- Auto-generated from Formula/*.rb and Casks/*.rb by scripts/update-tap-docs.sh (and refreshed automatically by publish.yml). Do not edit manually. -->
 
-This tap currently packages **59** tools: **53** formulae (**49** bottled, **4** source-only) and **6** macOS casks.
+This tap currently packages **59** tools: **53** formulae (**53** bottled, **0** source-only) and **6** macOS casks.
 
 | Tool | Kind | Version | License | Bottles | Summary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -37,7 +37,7 @@ This tap currently packages **59** tools: **53** formulae (**49** bottled, **4**
 | [`agency-agents`](Formula/agency-agents.rb) | Formula | `2026.11.09` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents) — Specialized AI agent persona catalog and multi-tool installer |
 | [`agent-mail`](Formula/agent-mail.rb) | Formula | `0.3.41_1` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/mcp_agent_mail_rust](https://github.com/Dicklesworthstone/mcp_agent_mail_rust) — Asynchronous coordination MCP server and CLI for AI coding agents |
 | [`agent-skills`](Formula/agent-skills.rb) | Formula | `0.6.18` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade software engineering skills and checklists for AI agents |
-| [`agent-tincan`](Formula/agent-tincan.rb) | Formula | `0.32.0` | `MIT` | source | [agenttincan.com](https://agenttincan.com) — Tailscale-based relay and MCP bridge for AI agent collaboration |
+| [`agent-tincan`](Formula/agent-tincan.rb) | Formula | `0.32.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [agenttincan.com](https://agenttincan.com) — Tailscale-based relay and MCP bridge for AI agent collaboration |
 | [`agenthooks`](Formula/agenthooks.rb) | Formula | `0.7.7` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [speakeasy-api/agenthooks](https://github.com/speakeasy-api/agenthooks) — Cross-agent hook Go library and credential-scanning hook runner |
 | [`agentsync`](Formula/agentsync.rb) | Formula | `1.53.2` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dallay/agentsync](https://github.com/dallay/agentsync) — Sync AI agent configurations and MCP servers via symbolic links |
 | [`arize-phoenix`](Formula/arize-phoenix.rb) | Formula | `22.0.1` | `Elastic-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Local-first OpenTelemetry AI observability and evaluation server |
@@ -51,7 +51,7 @@ This tap currently packages **59** tools: **53** formulae (**49** bottled, **4**
 | [`ck`](Formula/ck.rb) | Formula | `0.8.1_1` | `MIT OR Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [BeaconBay/ck](https://github.com/BeaconBay/ck) — Local semantic and hybrid BM25 code search with an MCP server |
 | [`claude-mem`](Formula/claude-mem.rb) | Formula | `16.1.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) — Persistent cross-session memory CLI and local MCP server for coding agents |
 | [`codesearch`](Formula/codesearch.rb) | Formula | `1.8.11` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [flupkede/codesearch](https://github.com/flupkede/codesearch) — Multi-repo semantic code search CLI and MCP server |
-| [`deeptutor`](Formula/deeptutor.rb) | Formula | `1.7.4` | `Apache-2.0` | source | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion CLI and SDK |
+| [`deeptutor`](Formula/deeptutor.rb) | Formula | `1.7.4` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) — Agent-native intelligent learning companion CLI and SDK |
 | [`diagram-design`](Formula/diagram-design.rb) | Formula | `2.6.178` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) — Editorial HTML and SVG diagram skill across 52 types for AI coding agents |
 | [`entire-graph`](Formula/entire-graph.rb) | Formula | `0.6.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [entireio/entire-graph](https://github.com/entireio/entire-graph) — Deterministic local code graph for coding agents |
 | [`fff-mcp`](Formula/fff-mcp.rb) | Formula | `0.11.0_1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [dmtrKovalenko/fff](https://github.com/dmtrKovalenko/fff) — Fast, frecency-ranked file search MCP server for AI agents |
@@ -69,8 +69,8 @@ This tap currently packages **59** tools: **53** formulae (**49** bottled, **4**
 | [`nats`](Formula/nats.rb) | Formula | `0.5.2_1` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [nats-io/natscli](https://github.com/nats-io/natscli) — Utility to interact with and manage NATS messaging systems |
 | [`omp`](Formula/omp.rb) | Formula | `19.1.1` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [omp.sh](https://omp.sh) — Terminal AI coding agent with Rust native core, LSP, and DAP |
 | [`openlit`](Formula/openlit.rb) | Formula | `2.2.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [openlit/openlit](https://github.com/openlit/openlit) — OpenTelemetry collector CLI for AI coding agents |
-| [`openviking`](Formula/openviking.rb) | Formula | `0.5.6` | `AGPL-3.0-only` | source | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) — Agent-native context database for AI memory, RAG, and skills |
-| [`paperclip`](Formula/paperclip.rb) | Formula | `2026.1117.0` | `MIT` | source | [paperclip.ing](https://paperclip.ing) — Open-source orchestration platform and CLI for teams of AI agents |
+| [`openviking`](Formula/openviking.rb) | Formula | `0.5.6` | `AGPL-3.0-only` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) — Agent-native context database for AI memory, RAG, and skills |
+| [`paperclip`](Formula/paperclip.rb) | Formula | `2026.1117.0` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [paperclip.ing](https://paperclip.ing) — Open-source orchestration platform and CLI for teams of AI agents |
 | [`phoenix-cli`](Formula/phoenix-cli.rb) | Formula | `1.24.0` | `Apache-2.0` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [arize.com/docs/phoenix](https://arize.com/docs/phoenix) — Command-line trace, dataset, experiment, and agent setup client for Phoenix |
 | [`pi-agent-rust`](Formula/pi-agent-rust.rb) | Formula | `0.9.0` | Custom (`LICENSE`) | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [Dicklesworthstone/pi_agent_rust](https://github.com/Dicklesworthstone/pi_agent_rust) — Safe-Rust AI coding agent CLI with hashline editing |
 | [`printing-press-library`](Formula/printing-press-library.rb) | Formula | `0.1.27` | `MIT` | `arm64_tahoe` · `arm64_linux` · `x86_64_linux` | [printingpress.dev](https://printingpress.dev) — Catalog and installer CLI for Printing Press-generated Go CLIs and skills |
