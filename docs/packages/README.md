@@ -2,7 +2,7 @@
 
 Each guide below gives AI coding agents and operators the exact config file paths, environment variables, upstream defaults vs. `artagon/aitools` tap-hardened defaults, network/telemetry posture, opt-in activation commands, and caveats for each packaged tool.
 
-Formula packages also install a local copy at `$(brew --prefix <formula>)/share/doc/<formula>/AGENTS.md`.
+Formula packages also install a local copy at `$(brew --prefix <formula>)/share/doc/<formula>/AGENTS.md`. Published 3-OS formula bottles (`arm64_tahoe`, `arm64_linux`, `x86_64_linux`) carry SLSA v1 and Sigstore provenance verifiable via `HOMEBREW_VERIFY_ATTESTATIONS=1` or [`scripts/verify-provenance.sh`](../../scripts/verify-provenance.sh).
 
 | Package | Kind | Domain | Guide |
 | :--- | :--- | :--- | :--- |
