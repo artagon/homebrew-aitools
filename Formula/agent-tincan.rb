@@ -11,6 +11,14 @@ class AgentTincan < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-tincan-0.32.0"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "65067393df662dce4897b4ceb372b284564466a2a4869d3738bd441cd294245c"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "fe86c54b8eae0044a45abfe4914100672cfae0e52d21b4809dcf28eec1c2fa3d"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "19c9545a307ce0abb2353327c54198e4807e4b8681c1e7ba99df9e705b62cbcc"
+  end
+
   depends_on "go" => :build
 
   deny_network_access! [:build, :postinstall]
