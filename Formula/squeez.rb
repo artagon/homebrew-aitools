@@ -1,10 +1,9 @@
 class Squeez < Formula
   desc "Token compressor and stdio MCP server for AI coding agents"
   homepage "https://github.com/claudioemmanuel/squeez"
-  url "https://github.com/claudioemmanuel/squeez/archive/refs/tags/v1.49.3.tar.gz"
-  sha256 "1fc60e2b46a96b0deb8ae9537beeddd1d68a2ace75efba56bb93a5d3c521e74d"
+  url "https://github.com/claudioemmanuel/squeez/archive/refs/tags/v1.50.0.tar.gz"
+  sha256 "04ab618867d1cc7f8bc12dd00a1d3c2cef90b05efc3a679c72db5d0b4b1c2868"
   license "Apache-2.0"
-  revision 1
   head "https://github.com/claudioemmanuel/squeez.git", branch: "main"
 
   livecheck do
