@@ -18,3 +18,5 @@ Formula packages also install a local copy at `$(brew --prefix <formula>)/share/
 | `ui-ux-pro-max-cli` | Formula | 4 (Design Intelligence) | [`docs/packages/ui-ux-pro-max-cli/AGENTS.md`](ui-ux-pro-max-cli/AGENTS.md) |
 
 For offline inspection after installing any formula, read `$(brew --prefix <formula>)/share/doc/<formula>/AGENTS.md` or run `brew info artagon/aitools/<formula>`.
+
+For tap-wide hardening, bottle provenance, and maintenance invariants, see [`docs/agent-context.md`](../agent-context.md).
