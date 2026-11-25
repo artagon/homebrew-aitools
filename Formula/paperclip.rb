@@ -89,12 +89,14 @@ class Paperclip < Formula
     # Remove Windows Pageant helper binary.
     rm(nm/"ssh2/util/pagent.exe") if (nm/"ssh2/util/pagent.exe").exist?
 
-    # Remove optional PostgreSQL extensions and OAuth client modules linking absent
-    # host libraries (Perl/Python/Tcl, pgxml -> libxslt, libpq-oauth -> libcurl).
+    # Remove optional PostgreSQL extensions, PGXS regression test binaries (which lack
+    # $ORIGIN RPATH and link host libpq.so.5 on Linux), and OAuth client modules linking
+    # absent host libraries (Perl/Python/Tcl, pgxml -> libxslt, libpq-oauth -> libcurl).
     pg_lib_dir = epg_pkg/"native/lib"
     pg_lib_dir.glob("libpq-oauth*").each { |entry| rm(entry) } if pg_lib_dir.directory?
     pg_ext_dir = pg_lib_dir/"postgresql"
     if pg_ext_dir.directory?
+      rm_r(pg_ext_dir/"pgxs") if (pg_ext_dir/"pgxs").directory?
       pg_ext_dir.children.each do |entry|
         rm(entry) if entry.basename.to_s.match?(/plperl|plpython|pltcl|pgxml/)
       end
