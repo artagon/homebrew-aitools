@@ -10,6 +10,14 @@ class PrintingPressLibrary < Formula
     strategy :npm
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/printing-press-library-0.1.27"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "061632873665ac39dc13af37d20a6ee8f9efff8c01a5d48e607b616ec0e570bc"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "2041e400aab67701c75c6b8df90a224ba086dcb21497996d658a2cb8ec55b6e7"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "fc09a39ea816f5b45277d0c2643d9dad56aee2eb171bdfe1ecde25136c0fb8c3"
+  end
+
   depends_on "node"
 
   resource "skill" do
