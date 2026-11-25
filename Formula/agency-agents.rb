@@ -11,6 +11,14 @@ class AgencyAgents < Formula
     skip "Upstream repository does not publish versioned release tags"
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agency-agents-2026.11.09"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "c28f9ba022839675f91fc02ad796e0ec30800547d4c3b0169ad9ce02d275c3f4"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "eb9f6dc466112a40a57cd7b261e9a902ef9905ae9d6d762efdfc34b641289062"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "486e650db593430caafe7c672adeb9dbd22b01c10ca72429ad4b4aaa73faac6a"
+  end
+
   def install
     catalog_entries = buildpath.children.reject do |entry|
       entry.basename.to_s.start_with?(".")
