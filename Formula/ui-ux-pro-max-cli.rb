@@ -11,6 +11,14 @@ class UiUxProMaxCli < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ui-ux-pro-max-cli-2.15.0"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "608ea45b4b7e592e24447751bc37abf05b94ee093b984e1cda166524838eb2d7"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "bcb6c24041ecbaca8090ec97163aab144be093851f9c599c818c55360d820a2a"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "6d8ad6ec93f7fe7ad51503ea30e59a1b98708247c6951f1aac5c81c4fc57f00b"
+  end
+
   depends_on "bun" => :build
   depends_on "node"
   depends_on "python@3.13"
