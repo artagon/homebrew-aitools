@@ -11,6 +11,14 @@ class DiagramDesign < Formula
     skip "Upstream publishes versioned commits on main without git tags"
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/diagram-design-2.6.178"
+    rebuild 1
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "fbacb8a09690b564891389c12719d641639d0332c40ad86f1f5abb911a5fadfa"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "e81dfc15350048db50c42f64758a43d3230bff6332c22eba46500c6000149254"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "3e2910c3693125debb50a6d50e1f91b8ead31765b091416886af34afaa831bab"
+  end
+
   depends_on "python@3.13"
 
   def install
