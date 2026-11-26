@@ -1,8 +1,8 @@
 class ClaudeMem < Formula
   desc "Persistent cross-session memory CLI and local MCP server for coding agents"
   homepage "https://github.com/thedotmack/claude-mem"
-  url "https://github.com/thedotmack/claude-mem/archive/refs/tags/v16.1.0.tar.gz"
-  sha256 "23f88d24a4d527a29cd9ec3952bfdba8f0735bf6342bad20c4148d0b86b948c9"
+  url "https://github.com/thedotmack/claude-mem/archive/refs/tags/v17.0.0.tar.gz"
+  sha256 "a0b64f4459a8c2cad5ee350ee92e7f2033d41ac00112d23dd5a37e3de8c59d7d"
   license "Apache-2.0"
   head "https://github.com/thedotmack/claude-mem.git", branch: "main"
 
