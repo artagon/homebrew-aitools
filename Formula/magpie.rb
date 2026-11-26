@@ -1,8 +1,8 @@
 class Magpie < Formula
   desc "Subscription-first local gateway and router for AI coding agents"
   homepage "https://usemagpie.ai"
-  url "https://github.com/yetone/magpie/archive/refs/tags/v0.1.4704.tar.gz"
-  sha256 "46eb7d2bfe5f2a5120a3341150abae86aef8539cd999fa66709c6bccb29d7c3c"
+  url "https://github.com/yetone/magpie/archive/refs/tags/v0.1.4743.tar.gz"
+  sha256 "6344eed4d1d3a18d21c858e4f7c3da9bf5535b77a5aad37de655c63fa36dca1f"
   license "MIT"
   head "https://github.com/yetone/magpie.git", branch: "main"
 
