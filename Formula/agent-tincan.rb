@@ -1,8 +1,8 @@
 class AgentTincan < Formula
   desc "Tailscale-based relay and MCP bridge for AI agent collaboration"
   homepage "https://agenttincan.com"
-  url "https://github.com/mvanhorn/agent-tincan/archive/refs/tags/v0.32.0.tar.gz"
-  sha256 "2f78df6b04225f4289c251ab7095830a984fcdd90a83d15e000d57d7b62ce7d7"
+  url "https://github.com/mvanhorn/agent-tincan/archive/refs/tags/v0.33.0.tar.gz"
+  sha256 "8884f1c20f680ea9389425cfbdb86f88462c55d6c746af711ee063111ce05557"
   license "MIT"
   head "https://github.com/mvanhorn/agent-tincan.git", branch: "main"
 
