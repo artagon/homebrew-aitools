@@ -1,0 +1,23 @@
+id: formula-apm-unique-subdir
+language: Ruby
+severity: error
+message: Stage OpenAPM packages under a unique formula subdirectory (`pkgshare/"apm/#{name}"`).
+note: Bare `pkgshare/"apm"` paths collide under OpenAPM `apm_modules/_local/apm`; always nest under `pkgshare/"apm/#{name}"` (or `pkgshare/"apm/<formula>"`).
+files:
+  - Formula/*.rb
+rule:
+  any:
+    - pattern: pkgshare / $SUBPATH
+    - pattern: opt_pkgshare / $SUBPATH
+  not:
+    inside:
+      kind: binary
+      has:
+        field: right
+        not:
+          regex: '^["''](apm\.yml|apm\.lock(\.ya?ml)?|skills(/.*)?)["'']$'
+      stopBy: neighbor
+constraints:
+  SUBPATH:
+    kind: string
+    regex: '^["'']apm(/|/(apm\.yml|apm\.lock(\.ya?ml)?|skills(/.*)?))?["'']$'

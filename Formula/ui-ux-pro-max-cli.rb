@@ -4,19 +4,12 @@ class UiUxProMaxCli < Formula
   url "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill/archive/refs/tags/v2.15.0.tar.gz"
   sha256 "633f8b71a7bea2e354ac0792ed2ffde0b7995cbf4eac2c852235e1f8f46400f6"
   license "MIT"
+  revision 1
   head "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git", branch: "main"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/ui-ux-pro-max-cli-2.15.0"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "608ea45b4b7e592e24447751bc37abf05b94ee093b984e1cda166524838eb2d7"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "bcb6c24041ecbaca8090ec97163aab144be093851f9c599c818c55360d820a2a"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "6d8ad6ec93f7fe7ad51503ea30e59a1b98708247c6951f1aac5c81c4fc57f00b"
   end
 
   depends_on "bun" => :build
@@ -38,7 +31,7 @@ class UiUxProMaxCli < Formula
 
     pkgshare.install "skill.json"
 
-    apm_dir = pkgshare/"apm"
+    apm_dir = pkgshare/"apm/#{name}"
     (apm_dir/"skills").install ".claude/skills/ui-ux-pro-max"
     (libexec/"assets/skills").children.each do |skill_dir|
       cp_r skill_dir, apm_dir/"skills"/skill_dir.basename if skill_dir.directory?
@@ -49,8 +42,6 @@ class UiUxProMaxCli < Formula
       description: "UI/UX design intelligence skill suite with searchable local style, palette, typography, UX, icon, chart, and stack databases."
       author: NextLevelBuilder
       license: MIT
-      targets:
-        - agent-skills
       dependencies:
         apm: []
         mcp: []
@@ -58,21 +49,16 @@ class UiUxProMaxCli < Formula
       includes:
         - skills
     YAML
-    (apm_dir/"apm.lock.yaml").write <<~YAML
-      lockfile_version: '1'
-      dependencies: []
-      deployments: []
-    YAML
     pkgshare.install_symlink apm_dir/"skills" => "skills"
 
     (doc/"AGENTS.md").write <<~MARKDOWN
       # `ui-ux-pro-max-cli` (`artagon/aitools/ui-ux-pro-max-cli`)
 
       - **Binaries:** `uipro`, `uipro-search`
-      - **Offline design database:** Bundled CSVs under `#{opt_pkgshare}/apm/skills/ui-ux-pro-max/data/` (Python 3.13 stdlib; prefer `uipro-search "..." --json`)
-      - **OpenAPM package:** `#{opt_pkgshare}/apm` (symlink-free `apm.yml`, `apm.lock.yaml`, and 7 skills)
+      - **Offline design database:** Bundled CSVs under `#{opt_pkgshare}/apm/#{name}/skills/ui-ux-pro-max/data/` (Python 3.13 stdlib; prefer `uipro-search "..." --json`)
+      - **OpenAPM package:** `#{opt_pkgshare}/apm/#{name}` (symlink-free `apm.yml` and 7 skills)
       - **Hardening:** `uipro update` is blocked (`exit 2`); `DO_NOT_TRACK=1` and `PYTHONDONTWRITEBYTECODE=1` are set by default.
-      - **Opt-in project init:** `uipro init --ai claude --offline` or `apm install #{opt_pkgshare}/apm --target agent-skills`
+      - **Opt-in project init:** `uipro init --ai claude --offline`, `aitools-skills sync --formula ui-ux-pro-max-cli`, or `apm install -g #{opt_pkgshare}/apm/#{name}`
       - **Upgrade:** `brew upgrade artagon/aitools/ui-ux-pro-max-cli`
     MARKDOWN
 
@@ -131,7 +117,7 @@ class UiUxProMaxCli < Formula
       export PYTHONUTF8="${PYTHONUTF8:-1}"
       export PYTHONDONTWRITEBYTECODE="${PYTHONDONTWRITEBYTECODE:-1}"
 
-      exec "#{python_bin}" "#{opt_pkgshare}/apm/skills/ui-ux-pro-max/scripts/search.py" "$@"
+      exec "#{python_bin}" "#{opt_pkgshare}/apm/#{name}/skills/ui-ux-pro-max/scripts/search.py" "$@"
     SH
     chmod 0755, bin/"uipro-search"
   end
@@ -148,10 +134,10 @@ class UiUxProMaxCli < Formula
       Install skill templates into a project offline when desired:
         uipro init --ai claude --offline
 
-      Bundled agent skills, self-contained OpenAPM package (`apm.yml` + `apm.lock.yaml`),
+      Bundled agent skills, self-contained OpenAPM package (`apm.yml` + `skills/`),
       and package agent guide are staged passively under:
         #{opt_pkgshare}/skills
-        #{opt_pkgshare}/apm
+        #{opt_pkgshare}/apm/#{name}
         #{opt_share}/doc/ui-ux-pro-max-cli/AGENTS.md
 
       This formula does not modify any agent configuration file during install.
@@ -204,12 +190,14 @@ class UiUxProMaxCli < Formula
     assert_path_exists pkgshare/"skills/ui-ux-pro-max/scripts/search.py"
     assert_path_exists pkgshare/"skills/ui-ux-pro-max/data/styles.csv"
     assert_path_exists pkgshare/"skills/brand/SKILL.md"
-    assert_path_exists pkgshare/"apm/skills/ui-ux-pro-max/SKILL.md"
-    refute_predicate pkgshare/"apm/skills", :symlink?
+    assert_path_exists pkgshare/"apm/#{name}/apm.yml"
+    refute_path_exists pkgshare/"apm/#{name}/apm.lock.yaml"
+    assert_path_exists pkgshare/"apm/#{name}/skills/ui-ux-pro-max/SKILL.md"
+    refute_predicate pkgshare/"apm/#{name}/skills", :symlink?
     assert_path_exists doc/"AGENTS.md"
-    assert_match "name: ui-ux-pro-max", (pkgshare/"apm/apm.yml").read
-    assert_match %Q(version: "#{version}"), (pkgshare/"apm/apm.yml").read
-    assert_match "lockfile_version: '1'", (pkgshare/"apm/apm.lock.yaml").read
+    assert_match "name: ui-ux-pro-max", (pkgshare/"apm/#{name}/apm.yml").read
+    assert_match %Q(version: "#{version}"), (pkgshare/"apm/#{name}/apm.yml").read
+    refute_match(/^targets:/, (pkgshare/"apm/#{name}/apm.yml").read)
 
     %w[.claude .codex .gemini .agents].each do |dotfile|
       refute_path_exists testpath/dotfile

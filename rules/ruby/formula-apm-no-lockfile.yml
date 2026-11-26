@@ -1,0 +1,25 @@
+id: formula-apm-no-lockfile
+language: Ruby
+severity: error
+message: Do not write or install `apm.lock.yaml` inside a formula package.
+note: OpenAPM lockfiles belong to the consuming project or `~/.apm`, never inside a formula's `pkgshare/apm/<formula>/` package.
+files:
+  - Formula/*.rb
+rule:
+  kind: call
+  not:
+    inside:
+      pattern: |
+        test do
+          $$$TEST
+        end
+      stopBy: end
+  all:
+    - has:
+        field: method
+        regex: '^(write|install|cp|cp_r|touch)$'
+        stopBy: neighbor
+    - has:
+        kind: string
+        regex: 'apm\.lock(\.ya?ml)?["'']$'
+        stopBy: end

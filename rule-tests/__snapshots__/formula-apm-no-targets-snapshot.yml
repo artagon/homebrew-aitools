@@ -1,0 +1,72 @@
+id: formula-apm-no-targets
+snapshots:
+  "class FlowTargets < Formula\n  def install\n    (pkgshare/\"apm/#{name}/apm.yml\").write <<~YAML\n      name: pinned\n      targets: [claude, codex]\n    YAML\n  end\nend\n":
+    labels:
+    - source: (pkgshare/"apm/#{name}/apm.yml").write <<~YAML
+      style: primary
+      start: 46
+      end: 92
+    - source: write
+      style: secondary
+      start: 79
+      end: 84
+    - source: "\"apm/#{name}/apm.yml\""
+      style: secondary
+      start: 56
+      end: 77
+    - source: |2-
+
+              name: pinned
+              targets: [claude, codex]
+            YAML
+      style: secondary
+      start: 92
+      end: 151
+  "class InlineStringTargets < Formula\n  def install\n    (apm_dir/\"apm.yml\").write \"name: pinned\\ntargets:\\n  - agent-skills\\n\"\n  end\nend\n":
+    labels:
+    - source: "(apm_dir/\"apm.yml\").write \"name: pinned\\ntargets:\\n  - agent-skills\\n\""
+      style: primary
+      start: 54
+      end: 124
+    - source: write
+      style: secondary
+      start: 74
+      end: 79
+    - source: "\"apm.yml\""
+      style: secondary
+      start: 63
+      end: 72
+    - source: "\"name: pinned\\ntargets:\\n  - agent-skills\\n\""
+      style: secondary
+      start: 80
+      end: 124
+    - source: "\"name: pinned\\ntargets:\\n  - agent-skills\\n\""
+      style: secondary
+      start: 80
+      end: 124
+  "class PinnedTargets < Formula\n  def install\n    apm_dir = pkgshare/\"apm/#{name}\"\n    (apm_dir/\"apm.yml\").write <<~YAML\n      name: pinned\n      version: \"#{version}\"\n      targets:\n        - agent-skills\n      includes:\n        - skills\n    YAML\n  end\nend\n":
+    labels:
+    - source: (apm_dir/"apm.yml").write <<~YAML
+      style: primary
+      start: 85
+      end: 118
+    - source: write
+      style: secondary
+      start: 105
+      end: 110
+    - source: "\"apm.yml\""
+      style: secondary
+      start: 94
+      end: 103
+    - source: |2-
+
+              name: pinned
+              version: "#{version}"
+              targets:
+                - agent-skills
+              includes:
+                - skills
+            YAML
+      style: secondary
+      start: 118
+      end: 245

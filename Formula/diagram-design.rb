@@ -5,18 +5,11 @@ class DiagramDesign < Formula
   version "2.6.178"
   sha256 "f5c9d5f9dc11a5ad17296e1076117094c89e1dc7ecb4f93a10db1e1109b9e56c"
   license "MIT"
+  revision 1
   head "https://github.com/cathrynlavery/diagram-design.git", branch: "main"
 
   livecheck do
     skip "Upstream publishes versioned commits on main without git tags"
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/diagram-design-2.6.178"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "fbacb8a09690b564891389c12719d641639d0332c40ad86f1f5abb911a5fadfa"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "e81dfc15350048db50c42f64758a43d3230bff6332c22eba46500c6000149254"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "3e2910c3693125debb50a6d50e1f91b8ead31765b091416886af34afaa831bab"
   end
 
   depends_on "python@3.13"
@@ -29,7 +22,7 @@ class DiagramDesign < Formula
                      ".qoder-plugin", "assets", "commands", "prompts", "skills"
     cp doc/"README.md", pkgshare/"README.md"
 
-    apm_dir = pkgshare/"apm"
+    apm_dir = pkgshare/"apm/#{name}"
     (apm_dir/"skills").mkpath
     cp_r pkgshare/"skills/diagram-design", apm_dir/"skills/diagram-design"
     (apm_dir/"apm.yml").write <<~YAML
@@ -38,8 +31,6 @@ class DiagramDesign < Formula
       description: "Editorial diagram design skill for self-contained HTML and SVG diagrams across 52 diagram types."
       author: Cathryn Lavery
       license: MIT
-      targets:
-        - agent-skills
       dependencies:
         apm: []
         mcp: []
@@ -47,18 +38,13 @@ class DiagramDesign < Formula
       includes:
         - skills
     YAML
-    (apm_dir/"apm.lock.yaml").write <<~YAML
-      lockfile_version: '1'
-      dependencies: []
-      deployments: []
-    YAML
 
     (doc/"AGENTS.md").write <<~MARKDOWN
       # `diagram-design` (`artagon/aitools/diagram-design`)
 
       - **Binary:** `diagram-design` (`--list`, `--path`, `--skill-path`, `--apm-path`, `self-check [--offline] <file>`)
       - **Passive assets:** `#{opt_pkgshare}` (52 HTML/SVG diagram types, stdlib Python 3.13 scripts, native `.claude-plugin`/`.codex-plugin`/`.factory-plugin`/`.qoder-plugin` manifests)
-      - **OpenAPM package:** `#{opt_pkgshare}/apm` (symlink-free `apm.yml`, `apm.lock.yaml`, and `skills/diagram-design/`)
+      - **OpenAPM package:** `#{opt_pkgshare}/apm/#{name}` (symlink-free `apm.yml` and `skills/diagram-design/`)
       - **Offline font rule:** Templates link Google Fonts by default; run `diagram-design self-check --offline <file>` to enforce system-font-only zero-egress diagrams.
       - **Hardening:** Exports `DO_NOT_TRACK=1`, `PYTHONNOUSERSITE=1`, `PYTHONUTF8=1`, `PYTHONDONTWRITEBYTECODE=1`, blocks `update`/`self-update`/`upgrade` (`exit 2`).
       - **Upgrade:** `brew upgrade artagon/aitools/diagram-design`
@@ -77,7 +63,7 @@ class DiagramDesign < Formula
 
       readonly VERSION="#{version}"
       readonly PKGSHARE="#{opt_pkgshare}"
-      readonly APM_DIR="#{opt_pkgshare}/apm"
+      readonly APM_DIR="#{opt_pkgshare}/apm/#{name}"
       readonly SKILL_DIR="#{opt_pkgshare}/skills/diagram-design"
       readonly PYTHON_BIN="#{python_bin}"
 
@@ -237,11 +223,11 @@ class DiagramDesign < Formula
       `export_pdf.py`) requires Playwright if explicitly invoked.
 
       Passive multi-agent plugin assets (Claude Code, Codex, Factory, Qoder, Pi),
-      the Agent Skill, self-contained OpenAPM package (`apm.yml` + `apm.lock.yaml`),
+      the Agent Skill, self-contained OpenAPM package (`apm.yml` + `skills/`),
       and package agent guide are staged under:
         #{opt_pkgshare}
         #{opt_pkgshare}/skills/diagram-design
-        #{opt_pkgshare}/apm
+        #{opt_pkgshare}/apm/#{name}
         #{opt_share}/doc/diagram-design/AGENTS.md
 
       This formula does not modify any agent configuration file during install.
@@ -260,7 +246,7 @@ class DiagramDesign < Formula
     assert_equal opt_pkgshare.to_s, shell_output("#{bin}/diagram-design --path").strip
     assert_equal (opt_pkgshare/"skills/diagram-design").to_s,
                  shell_output("#{bin}/diagram-design --skill-path").strip
-    assert_equal (opt_pkgshare/"apm").to_s, shell_output("#{bin}/diagram-design --apm-path").strip
+    assert_equal (opt_pkgshare/"apm/#{name}").to_s, shell_output("#{bin}/diagram-design --apm-path").strip
 
     listed = shell_output("#{bin}/diagram-design --list")
     assert_match "flowchart", listed
@@ -342,17 +328,17 @@ class DiagramDesign < Formula
       assert_equal version.to_s, JSON.parse(manifest.read)["version"]
     end
 
-    apm_yml = pkgshare/"apm/apm.yml"
-    apm_lock = pkgshare/"apm/apm.lock.yaml"
-    apm_skill = pkgshare/"apm/skills/diagram-design/SKILL.md"
+    apm_yml = pkgshare/"apm/#{name}/apm.yml"
+    apm_lock = pkgshare/"apm/#{name}/apm.lock.yaml"
+    apm_skill = pkgshare/"apm/#{name}/skills/diagram-design/SKILL.md"
     assert_path_exists apm_yml
-    assert_path_exists apm_lock
+    refute_path_exists apm_lock
     assert_path_exists apm_skill
-    refute_predicate pkgshare/"apm/skills/diagram-design", :symlink?
+    refute_predicate pkgshare/"apm/#{name}/skills", :symlink?
+    refute_predicate pkgshare/"apm/#{name}/skills/diagram-design", :symlink?
     assert_match(/^name: diagram-design$/, apm_yml.read)
     assert_match(/^version: "#{Regexp.escape(version.to_s)}"$/, apm_yml.read)
-    assert_match "  - agent-skills", apm_yml.read
-    assert_match "lockfile_version: '1'", apm_lock.read
+    refute_match(/^targets:/, apm_yml.read)
 
     refute_path_exists testpath/".claude"
     refute_path_exists testpath/".codex"

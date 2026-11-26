@@ -1,0 +1,38 @@
+id: formula-apm-no-targets
+language: Ruby
+severity: error
+message: Do not pin `targets:` inside a formula package `apm.yml`.
+note: Native Phase 2 OpenAPM packages omit `targets:` so target selection stays owned by the consumer manifest (`~/.apm/apm.yml` or project `apm.yml`).
+files:
+  - Formula/*.rb
+rule:
+  kind: call
+  not:
+    inside:
+      pattern: |
+        test do
+          $$$TEST
+        end
+      stopBy: end
+  all:
+    - has:
+        field: method
+        regex: '^write$'
+        stopBy: neighbor
+    - has:
+        kind: string
+        regex: 'apm\.yml["'']$'
+        stopBy: end
+    - any:
+        - precedes:
+            kind: heredoc_body
+            regex: '(?m)^\s*targets\s*:'
+            stopBy: neighbor
+        - has:
+            field: arguments
+            kind: argument_list
+            stopBy: neighbor
+            has:
+              kind: string
+              regex: '(?m)(^|\\n)\s*targets\s*:'
+              stopBy: end

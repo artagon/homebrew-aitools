@@ -4,19 +4,12 @@ class Deeptutor < Formula
   url "https://github.com/HKUDS/DeepTutor/archive/refs/tags/v1.7.4.tar.gz"
   sha256 "2dd44ba5e9f1da3c13d81dd1cfe6b876f03b47e5d133b41c3bcd71d4b32f4207"
   license "Apache-2.0"
+  revision 1
   head "https://github.com/HKUDS/DeepTutor.git", branch: "main"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/deeptutor-1.7.4"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "060e52fec6357382d4a83d1bfe533a38afd54f0106c12b92dd9013480b59ec48"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "173abcc75da0762180fa29fb1bda6b22003f33a1e4e75977531ec7f4fa1a4017"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "37e4d5872c99fc77a0ee9c4ccb08c7ec0bd6676413476b6b69dace9cd3a0e111"
   end
 
   depends_on "uv" => :build
@@ -109,7 +102,7 @@ class Deeptutor < Formula
 
     prefix.install "THIRD_PARTY_NOTICES.md"
 
-    apm_dir = pkgshare/"apm"
+    apm_dir = pkgshare/"apm/#{name}"
     (apm_dir/"skills/deeptutor-cli").install "SKILL.md"
     (apm_dir/"apm.yml").write <<~YAML
       name: deeptutor
@@ -117,19 +110,12 @@ class Deeptutor < Formula
       description: "Agent-native skill for configuring, managing, and using the DeepTutor CLI."
       author: HKUDS
       license: Apache-2.0
-      targets:
-        - agent-skills
       dependencies:
         apm: []
         mcp: []
         lsp: []
       includes:
         - skills
-    YAML
-    (apm_dir/"apm.lock.yaml").write <<~YAML
-      lockfile_version: '1'
-      dependencies: []
-      deployments: []
     YAML
     pkgshare.install_symlink apm_dir/"skills" => "skills"
 
@@ -139,7 +125,7 @@ class Deeptutor < Formula
       - **Binary:** `deeptutor` (lightweight core CLI/SDK; for macOS Web UI app use `brew install --cask artagon/aitools/deeptutor`)
       - **Workspace home:** Set `DEEPTUTOR_HOME` or pass `--home <path>` (stores settings under `<DEEPTUTOR_HOME>/data/user/settings/`; prevents `./data/` in CWD)
       - **Hardening:** `serve` and launcher patched to `127.0.0.1` (`DEEPTUTOR_HOST` overrides launcher), `version_check_enabled=False`, `detect_installation()` auto-update disabled, wrapper exports `DEEPTUTOR_VERSION_CHECK_ENABLED=false`, `DO_NOT_TRACK=1`, `NEXT_TELEMETRY_DISABLED=1`, blocks `update`/`self-update`/`upgrade` (`exit 2`), and implements `--version`.
-      - **Passive OpenAPM skill:** `#{opt_pkgshare}/apm` (`skills/deeptutor-cli/SKILL.md`)
+      - **Passive OpenAPM skill:** `#{opt_pkgshare}/apm/#{name}` (`skills/deeptutor-cli/SKILL.md`)
       - **Upgrade:** `brew upgrade artagon/aitools/deeptutor`
     MARKDOWN
 
@@ -246,7 +232,7 @@ class Deeptutor < Formula
 
       Passively staged agent skill, OpenAPM metadata, agent guide, and third-party notices:
         #{opt_pkgshare}/skills/deeptutor-cli/SKILL.md
-        #{opt_pkgshare}/apm/apm.yml
+        #{opt_pkgshare}/apm/#{name}/apm.yml
         #{opt_share}/doc/deeptutor/AGENTS.md
         #{opt_prefix}/THIRD_PARTY_NOTICES.md
 
@@ -316,10 +302,11 @@ class Deeptutor < Formula
 
     assert_path_exists pkgshare/"skills/deeptutor-cli/SKILL.md"
     assert_match "name: deeptutor-cli", (pkgshare/"skills/deeptutor-cli/SKILL.md").read
-    assert_path_exists pkgshare/"apm/apm.yml"
-    assert_match "version: \"#{version}\"", (pkgshare/"apm/apm.yml").read
-    assert_path_exists pkgshare/"apm/apm.lock.yaml"
-    refute_predicate pkgshare/"apm/skills", :symlink?
+    assert_path_exists pkgshare/"apm/#{name}/apm.yml"
+    refute_path_exists pkgshare/"apm/#{name}/apm.lock.yaml"
+    assert_match "version: \"#{version}\"", (pkgshare/"apm/#{name}/apm.yml").read
+    refute_match(/^targets:/, (pkgshare/"apm/#{name}/apm.yml").read)
+    refute_predicate pkgshare/"apm/#{name}/skills", :symlink?
     assert_path_exists doc/"AGENTS.md"
     assert_path_exists prefix/"THIRD_PARTY_NOTICES.md"
 

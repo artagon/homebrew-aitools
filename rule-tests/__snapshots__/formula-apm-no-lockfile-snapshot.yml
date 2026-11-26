@@ -1,0 +1,58 @@
+id: formula-apm-no-lockfile
+snapshots:
+  "class InlineLock < Formula\n  def install\n    File.write(pkgshare/\"apm/#{name}/apm.lock.yaml\", \"lockfile_version: '1'\\n\")\n  end\nend\n":
+    labels:
+    - source: "File.write(pkgshare/\"apm/#{name}/apm.lock.yaml\", \"lockfile_version: '1'\\n\")"
+      style: primary
+      start: 45
+      end: 120
+    - source: write
+      style: secondary
+      start: 50
+      end: 55
+    - source: "\"apm/#{name}/apm.lock.yaml\""
+      style: secondary
+      start: 65
+      end: 92
+  "class InstalledLock < Formula\n  def install\n    (pkgshare/\"apm/#{name}\").install \"apm.lock.yaml\"\n  end\nend\n":
+    labels:
+    - source: (pkgshare/"apm/#{name}").install "apm.lock.yaml"
+      style: primary
+      start: 48
+      end: 96
+    - source: install
+      style: secondary
+      start: 73
+      end: 80
+    - source: "\"apm.lock.yaml\""
+      style: secondary
+      start: 81
+      end: 96
+  "class LegacyLock < Formula\n  def install\n    apm_dir = pkgshare/\"apm/#{name}\"\n    (apm_dir/\"apm.lock.yaml\").write <<~YAML\n      lockfile_version: '1'\n      dependencies: []\n      deployments: []\n    YAML\n  end\nend\n":
+    labels:
+    - source: (apm_dir/"apm.lock.yaml").write <<~YAML
+      style: primary
+      start: 82
+      end: 121
+    - source: write
+      style: secondary
+      start: 108
+      end: 113
+    - source: "\"apm.lock.yaml\""
+      style: secondary
+      start: 91
+      end: 106
+  "class ShortYmlLock < Formula\n  def install\n    (apm_dir/\"apm.lock.yml\").write \"lockfile_version: '1'\\n\"\n  end\nend\n":
+    labels:
+    - source: "(apm_dir/\"apm.lock.yml\").write \"lockfile_version: '1'\\n\""
+      style: primary
+      start: 47
+      end: 103
+    - source: write
+      style: secondary
+      start: 72
+      end: 77
+    - source: "\"apm.lock.yml\""
+      style: secondary
+      start: 56
+      end: 70

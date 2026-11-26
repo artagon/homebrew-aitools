@@ -4,6 +4,7 @@ class AgentSkills < Formula
   url "https://github.com/addyosmani/agent-skills/archive/refs/tags/0.6.18.tar.gz"
   sha256 "68d94627bffa6cc0689ba26d4bcf833ac1c6b0049c2abec1a7261faca440819d"
   license "MIT"
+  revision 1
   head "https://github.com/addyosmani/agent-skills.git", branch: "main"
 
   livecheck do
@@ -11,20 +12,12 @@ class AgentSkills < Formula
     strategy :github_latest
   end
 
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/agent-skills-0.6.18"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "101fe601fe8d4a58562d3327f9db90d7acb5b25b6511658c7ca4e06d1556c21a"
-    sha256 cellar: :any_skip_relocation, arm64_linux:  "37fe7bdcea0bf5667221762762e28b5dc336c439fc784c05ada296ac588d2d42"
-    sha256 cellar: :any_skip_relocation, x86_64_linux: "6bc3507c6b5353308cc456fca9e5498723999cbbbcf8b914ab34b667bef0cc56"
-  end
-
   def install
     pkgshare.install "skills", "agents", "references", "commands", "hooks", "docs",
                      "plugin.json", "AGENTS.md", "CLAUDE.md",
                      ".agents", ".claude", ".claude-plugin", ".codex-plugin", ".gemini", ".opencode"
 
-    apm_dir = pkgshare/"apm"
+    apm_dir = pkgshare/"apm/#{name}"
     apm_dir.mkpath
     cp_r pkgshare/"skills", apm_dir/"skills"
     (apm_dir/"apm.yml").write <<~YAML
@@ -33,8 +26,6 @@ class AgentSkills < Formula
       description: "Production-grade engineering skills for AI coding agents covering the full software development lifecycle from spec to ship."
       author: Addy Osmani
       license: MIT
-      targets:
-        - agent-skills
       dependencies:
         apm: []
         mcp: []
@@ -42,19 +33,14 @@ class AgentSkills < Formula
       includes:
         - skills
     YAML
-    (apm_dir/"apm.lock.yaml").write <<~YAML
-      lockfile_version: '1'
-      dependencies: []
-      deployments: []
-    YAML
 
     (doc/"AGENTS.md").write <<~MARKDOWN
       # `agent-skills` (`artagon/aitools/agent-skills`)
 
       - **Binary:** `addy-agent-skills` (`--list`, `--path`, `--skills-path`, `--apm-path`, `--version`)
       - **Passive assets:** `#{opt_pkgshare}` (26 skills, 5 review personas in `agents/`, 7 checklists in `references/`, 10 TOML `commands/`, passive `hooks/`, native `.claude-plugin`/`.codex-plugin` manifests)
-      - **OpenAPM package:** `#{opt_pkgshare}/apm` (symlink-free `apm.yml`, `apm.lock.yaml`, and `skills/`)
-      - **Opt-in activation:** `apm install "$(addy-agent-skills --apm-path)" --target agent-skills` or `claude --plugin-dir "$(addy-agent-skills --path)"`
+      - **OpenAPM package:** `#{opt_pkgshare}/apm/#{name}` (symlink-free `apm.yml` and `skills/`)
+      - **Opt-in activation:** `aitools-skills sync --formula agent-skills`, `apm install -g "$(addy-agent-skills --apm-path)"`, or `claude --plugin-dir "$(addy-agent-skills --path)"`
       - **Hardening:** Zero hooks activated and zero dotfiles written during install; `DO_NOT_TRACK=1` exported by default.
       - **Upgrade:** `brew upgrade artagon/aitools/agent-skills`
     MARKDOWN
@@ -67,6 +53,7 @@ class AgentSkills < Formula
       export DO_NOT_TRACK="${DO_NOT_TRACK:-1}"
 
       readonly pkgshare="#{opt_pkgshare}"
+      readonly apm_dir="#{opt_pkgshare}/apm/#{name}"
       readonly pkg_version="#{version}"
 
       usage() {
@@ -79,7 +66,7 @@ class AgentSkills < Formula
         --list         List bundled skill names
         --path         Print root pkgshare path (skills, agents, references, plugins)
         --skills-path  Print bundled skills directory path
-        --apm-path     Print self-contained OpenAPM package path (apm.yml + apm.lock.yaml)
+        --apm-path     Print self-contained OpenAPM package path (apm.yml + skills/)
         -V, --version  Print installed package version
         -h, --help     Show this help message
       EOF
@@ -154,7 +141,7 @@ class AgentSkills < Formula
           printf '%s\\n' "${pkgshare}/skills"
           ;;
         apm-path)
-          printf '%s\\n' "${pkgshare}/apm"
+          printf '%s\\n' "${apm_dir}"
           ;;
         *)
           usage
@@ -175,12 +162,12 @@ class AgentSkills < Formula
         addy-agent-skills --apm-path
 
       Portable skills, agent personas, checklists, native plugin manifests,
-      the self-contained OpenAPM package (`apm.yml` + `apm.lock.yaml`), and
+      the self-contained OpenAPM package (`apm.yml` + `skills/`), and
       package agent guide are staged passively under:
         #{opt_pkgshare}/skills
         #{opt_pkgshare}/agents
         #{opt_pkgshare}/references
-        #{opt_pkgshare}/apm
+        #{opt_pkgshare}/apm/#{name}
         #{opt_share}/doc/agent-skills/AGENTS.md
 
       This formula does not activate hooks or modify any agent configuration file
@@ -195,7 +182,7 @@ class AgentSkills < Formula
     assert_equal version.to_s, shell_output("#{bin}/addy-agent-skills --version").strip
     assert_equal opt_pkgshare.to_s, shell_output("#{bin}/addy-agent-skills --path").strip
     assert_equal (opt_pkgshare/"skills").to_s, shell_output("#{bin}/addy-agent-skills --skills-path").strip
-    assert_equal (opt_pkgshare/"apm").to_s, shell_output("#{bin}/addy-agent-skills --apm-path").strip
+    assert_equal (opt_pkgshare/"apm/#{name}").to_s, shell_output("#{bin}/addy-agent-skills --apm-path").strip
     assert_match "Usage: addy-agent-skills", shell_output("#{bin}/addy-agent-skills --help")
 
     listed = shell_output("#{bin}/addy-agent-skills --list").lines.map(&:strip).reject(&:empty?)
@@ -215,12 +202,14 @@ class AgentSkills < Formula
     assert_path_exists pkgshare/"plugin.json"
     assert_path_exists pkgshare/".claude-plugin/plugin.json"
     assert_path_exists pkgshare/".codex-plugin/plugin.json"
-    assert_path_exists pkgshare/"apm/skills/spec-driven-development/SKILL.md"
-    refute_predicate pkgshare/"apm/skills", :symlink?
+    assert_path_exists pkgshare/"apm/#{name}/apm.yml"
+    refute_path_exists pkgshare/"apm/#{name}/apm.lock.yaml"
+    assert_path_exists pkgshare/"apm/#{name}/skills/spec-driven-development/SKILL.md"
+    refute_predicate pkgshare/"apm/#{name}/skills", :symlink?
     assert_path_exists doc/"AGENTS.md"
-    assert_match "name: addyosmani-agent-skills", (pkgshare/"apm/apm.yml").read
-    assert_match %Q(version: "#{version}"), (pkgshare/"apm/apm.yml").read
-    assert_match "lockfile_version: '1'", (pkgshare/"apm/apm.lock.yaml").read
+    assert_match "name: addyosmani-agent-skills", (pkgshare/"apm/#{name}/apm.yml").read
+    assert_match %Q(version: "#{version}"), (pkgshare/"apm/#{name}/apm.yml").read
+    refute_match(/^targets:/, (pkgshare/"apm/#{name}/apm.yml").read)
 
     %w[.claude .codex .gemini .agents].each do |dotfile|
       refute_path_exists testpath/dotfile
