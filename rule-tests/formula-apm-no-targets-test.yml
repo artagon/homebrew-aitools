@@ -1,0 +1,68 @@
+id: formula-apm-no-targets
+valid:
+  - |
+    class CleanApm < Formula
+      def install
+        apm_dir = pkgshare/"apm/#{name}"
+        (apm_dir/"apm.yml").write <<~YAML
+          name: clean-apm
+          version: "#{version}"
+          description: "Package without pinned targets"
+          dependencies:
+            apm: []
+          includes:
+            - skills
+        YAML
+      end
+    end
+  - |
+    class CommentOnlyTargets < Formula
+      def install
+        apm_dir = pkgshare/"apm/#{name}"
+        (apm_dir/"apm.yml").write <<~YAML
+          name: clean-apm
+          # targets: owned by consumer manifest
+          includes:
+            - skills
+        YAML
+      end
+    end
+  - |
+    class TestConsumerManifest < Formula
+      test do
+        (testpath/".apm/apm.yml").write <<~YAML
+          targets:
+            - claude
+        YAML
+      end
+    end
+invalid:
+  - |
+    class PinnedTargets < Formula
+      def install
+        apm_dir = pkgshare/"apm/#{name}"
+        (apm_dir/"apm.yml").write <<~YAML
+          name: pinned
+          version: "#{version}"
+          targets:
+            - agent-skills
+          includes:
+            - skills
+        YAML
+      end
+    end
+  - |
+    class FlowTargets < Formula
+      def install
+        (pkgshare/"apm/#{name}/apm.yml").write <<~YAML
+          name: pinned
+          targets: [claude, codex]
+        YAML
+      end
+    end
+  - |
+    class InlineStringTargets < Formula
+      def install
+        (apm_dir/"apm.yml").write "name: pinned\ntargets:\n  - agent-skills\n"
+      end
+    end

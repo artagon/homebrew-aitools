@@ -5,11 +5,11 @@
 - **Binaries:** `uipro`, `uipro-search`
 - **Passive assets:**
   - Skills: `$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/skills` (7 skills: `ui-ux-pro-max`, `banner-design`, `brand`, `design`, `design-system`, `slides`, `ui-styling`)
-  - OpenAPM package: `$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm` (`apm.yml` + `apm.lock.yaml` + real, symlink-free `skills/`)
+  - OpenAPM package: `$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm/ui-ux-pro-max-cli` (`apm.yml` + real, symlink-free `skills/`)
 
 ## Configuration Paths & State
 
-- **Offline design database:** Bundled CSV datasets (`styles.csv`, palettes, typography, UX rules, charts, stacks) inside `$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm/skills/ui-ux-pro-max/data/`. Runs 100% offline with Homebrew Python 3.13 stdlib.
+- **Offline design database:** Bundled CSV datasets (`styles.csv`, palettes, typography, UX rules, charts, stacks) inside `$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm/ui-ux-pro-max-cli/skills/ui-ux-pro-max/data/`. Runs 100% offline with Homebrew Python 3.13 stdlib.
 - **Project skill install targets (opt-in via `uipro init`):** Writes `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, etc. in the current working directory (or `--global` user dir).
 - **Environment variables:**
   - `DO_NOT_TRACK=1` — Defaulted in both `uipro` and `uipro-search`.
@@ -22,7 +22,7 @@
 | `uipro update` | Runs `npm install -g ui-ux-pro-max-cli@...` | **Blocked (`exit 2`)**; upgrade via `brew upgrade artagon/aitools/ui-ux-pro-max-cli` |
 | `uipro --version` | Git tag lagged npm publish version | Synced to formula release version at build time |
 | Telemetry | None | `DO_NOT_TRACK=1` exported by default |
-| Skill installation | Manual `uipro init` / `npx` | Staged passively + valid symlink-free OpenAPM package (`apm.yml`/`apm.lock.yaml`) |
+| Skill installation | Manual `uipro init` / `npx` | Staged passively + valid symlink-free OpenAPM package (`pkgshare/apm/ui-ux-pro-max-cli/apm.yml`) |
 
 ## Opt-In Setup & Agent Rules
 
@@ -31,9 +31,10 @@
    uipro-search "fintech dashboard minimal" --domain style --json
    uipro-search "saas analytics dashboard" --design-system --json
    ```
-2. **Install via OpenAPM (`apm`):**
+2. **Install via `aitools-skills` or OpenAPM (`apm`):**
    ```sh
-   apm install "$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm" --target agent-skills
+   aitools-skills sync --formula ui-ux-pro-max-cli
+   apm install -g "$(brew --prefix ui-ux-pro-max-cli)/share/ui-ux-pro-max-cli/apm/ui-ux-pro-max-cli"
    ```
 3. **Install into a single project offline via `uipro`:**
    ```sh

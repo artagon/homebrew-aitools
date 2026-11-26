@@ -6,7 +6,7 @@
 - **Cask app:** `Open DeepTutor.app` (`org.deeptutor.open-desktop`, signed & notarized Electron app with bundled local Python + Node Web UI, Apple Silicon + Intel, macOS 13+)
 - **Passive assets (Formula):**
   - Skill: `$(brew --prefix deeptutor)/share/deeptutor/skills/deeptutor-cli/SKILL.md`
-  - OpenAPM package: `$(brew --prefix deeptutor)/share/deeptutor/apm/{apm.yml,apm.lock.yaml,skills/}`
+  - OpenAPM package: `$(brew --prefix deeptutor)/share/deeptutor/apm/deeptutor/{apm.yml,skills/}`
 
 ## Configuration Paths & State
 
@@ -41,4 +41,4 @@
    ```
 2. **Never place literal API keys in setup JSON:** Reference environment variable names via `api_key_env` in `setup.json` and validate with `deeptutor config apply setup.json --check` before applying.
 3. **Full Web UI vs. CLI:** The formula ships the lightweight core wheel (no torch/CUDA/FAISS/Node bloat). For the full desktop Web UI on macOS, install `brew install --cask artagon/aitools/deeptutor`.
-4. **Install skill via OpenAPM:** `apm install "$(brew --prefix deeptutor)/share/deeptutor/apm" --target agent-skills`.
+4. **Install skill via `aitools-skills` or OpenAPM:** `aitools-skills sync --formula deeptutor` or `apm install -g "$(brew --prefix deeptutor)/share/deeptutor/apm/deeptutor"`.

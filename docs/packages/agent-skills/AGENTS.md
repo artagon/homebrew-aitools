@@ -10,7 +10,7 @@
   - `commands/` — 10 TOML lifecycle commands (`/spec`, `/plan`, `/build`, `/test`, `/review`, `/ship`, etc.)
   - `hooks/` — Session hooks (staged passively, **never activated** on install)
   - `.claude-plugin/`, `.codex-plugin/`, `.agents/`, `.claude/`, `.gemini/`, `.opencode/`, `plugin.json`
-  - `apm/` — Self-contained, symlink-free OpenAPM package (`apm.yml` + `apm.lock.yaml` + `skills/`)
+  - `apm/agent-skills/` — Self-contained, symlink-free OpenAPM package (`apm.yml` + `skills/`)
 
 ## Configuration Paths & State
 
@@ -24,7 +24,7 @@
 | :--- | :--- | :--- |
 | Hook activation | Claude plugin activates `hooks/session-start.sh` when enabled | Staged passively under `pkgshare/hooks/`; zero live hooks activated |
 | Live agent config edits | `npx skills add` or marketplace install writes `~/.claude`, `~/.agents`, etc. | Zero dotfile writes on install |
-| OpenAPM metadata | Not shipped upstream | Synthesized symlink-free `pkgshare/apm/{apm.yml,apm.lock.yaml,skills/}` verified with `apm audit` & `apm pack` |
+| OpenAPM metadata | Not shipped upstream | Synthesized symlink-free `pkgshare/apm/agent-skills/{apm.yml,skills/}` (omitting `targets:` and `apm.lock.yaml`) verified with `apm audit --ci` |
 
 ## Opt-In Setup & Agent Rules
 
@@ -35,9 +35,10 @@
    addy-agent-skills --skills-path
    addy-agent-skills --apm-path
    ```
-2. **Install via OpenAPM (`apm`):**
+2. **Install via `aitools-skills` or OpenAPM (`apm`):**
    ```sh
-   apm install "$(addy-agent-skills --apm-path)" --target agent-skills
+   aitools-skills sync --formula agent-skills
+   apm install -g "$(addy-agent-skills --apm-path)"
    ```
 3. **Load as a read-only Claude Code plugin directory (retains `agents/`, `references/`, and commands):**
    ```sh

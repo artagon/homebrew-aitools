@@ -39,6 +39,9 @@ All configured rules have `error` severity, so findings make `scan` exit nonzero
 | `formula-source-sha256` | Ruby (`Formula/*.rb`) | A source `sha256` argument is a double-quoted literal containing 64 lowercase hexadecimal characters, as required by `autobump.sh`. Bottle blocks are excluded. |
 | `formula-cannot-represent-license` | Ruby (`Formula/*.rb`) | Any `Formula` class declaring `license :cannot_represent` installs `"LICENSE"` via `prefix.install` inside `def install`. |
 | `formula-conflicts-same-name` | Ruby (`Formula/*.rb`) | Forbids declaring `conflicts_with` on configured same-named formulae across taps. |
+| `formula-apm-unique-subdir` | Ruby (`Formula/*.rb`) | Rejects bare `pkgshare/"apm"` (and `opt_pkgshare/"apm"`, `pkgshare/"apm/apm.yml"`, `pkgshare/"apm/skills"`) so OpenAPM packages stage under unique `pkgshare/"apm/#{name}"` subdirectories. |
+| `formula-apm-no-lockfile` | Ruby (`Formula/*.rb`) | Rejects writing or installing `apm.lock.yaml` / `apm.lock.yml` inside formula installation code (lockfiles belong to consumers). |
+| `formula-apm-no-targets` | Ruby (`Formula/*.rb`) | Rejects pinning `targets:` inside a formula package `apm.yml` heredoc or string write outside `test do`. |
 | `bash-no-mapfile-readarray` | Bash (`scripts/**/*.sh`, `tests/helpers/**/*.bash`, `tests/**/*.bats`) | Rejects `mapfile` and `readarray` (with or without arguments, and with `builtin`/`command` prefixes), which macOS `/bin/bash` 3.2 lacks. |
 | `bash-no-bash4-features` | Bash (`scripts/**/*.sh`, `tests/helpers/**/*.bash`, `tests/**/*.bats`) | Rejects Bash 4+ `declare`/`local`/`typeset` flags (`-A`, `-n`, `-g`, `-l`, `-u`, `-c`) incompatible with `/bin/bash` 3.2. |
 | `workflow-no-dangerous-triggers` | YAML (`.github/workflows/*.yml`) | Rejects `pull_request_target` and `workflow_run` workflow triggers. |

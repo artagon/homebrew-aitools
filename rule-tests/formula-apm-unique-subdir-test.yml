@@ -1,0 +1,31 @@
+id: formula-apm-unique-subdir
+valid:
+  - |
+    apm_dir = pkgshare/"apm/#{name}"
+  - |
+    apm_dir = pkgshare/"apm/agent-skills"
+  - |
+    apm_dir = pkgshare/"apm"/name
+  - |
+    assert_path_exists pkgshare/"apm/#{name}/apm.yml"
+  - |
+    refute_predicate pkgshare/"apm/#{name}/skills", :symlink?
+  - |
+    assert_equal (opt_pkgshare/"apm/#{name}").to_s, out
+  - |
+    pkgshare.install "skills"
+invalid:
+  - |
+    apm_dir = pkgshare/"apm"
+  - |
+    apm_dir = pkgshare/"apm/"
+  - |
+    assert_equal (opt_pkgshare/"apm").to_s, out
+  - |
+    assert_path_exists pkgshare/"apm/apm.yml"
+  - |
+    refute_predicate pkgshare/"apm/skills", :symlink?
+  - |
+    assert_path_exists pkgshare/"apm/skills/demo/SKILL.md"
+  - |
+    pkgshare/"apm"/"skills"

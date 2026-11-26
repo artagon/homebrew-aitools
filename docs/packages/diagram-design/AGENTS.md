@@ -5,7 +5,7 @@
 - **Binary:** `diagram-design` (`self-check`, `--list`, `--path`, `--skill-path`, `--apm-path`, `--version`)
 - **Passive assets:** `$(brew --prefix diagram-design)/share/diagram-design/`
   - `skills/diagram-design/` (52 diagram type references + stdlib Python helper scripts)
-  - `apm/` (self-contained, symlink-free OpenAPM package: `apm.yml` + `apm.lock.yaml` + `skills/diagram-design/`)
+  - `apm/diagram-design/` (self-contained, symlink-free OpenAPM package: `apm.yml` + `skills/diagram-design/`)
   - `commands/`, `prompts/`, `assets/`, `.claude-plugin/`, `.codex-plugin/`, `.factory-plugin/`, `.qoder-plugin/`, `.agents/`
 
 ## Configuration Paths & State
@@ -23,7 +23,7 @@
 | Server / accounts / telemetry | None (100% local files & scripts) | Unchanged (`DO_NOT_TRACK=1` exported) |
 | External font links in HTML templates | Templates link Google Fonts (`fonts.googleapis.com`) with system-font fallbacks | Documented in caveats; use `diagram-design self-check --offline <file>` to enforce zero external requests |
 | Self-updaters | None | Wrapper blocks `update`/`self-update` (`exit 2`); upgrade via `brew upgrade artagon/aitools/diagram-design` |
-| OpenAPM & plugin staging | Native manifests only | Stages both native manifests (passing `claude plugin validate`) and symlink-free `pkgshare/apm/` (passing `apm audit` & `apm pack`) |
+| OpenAPM & plugin staging | Native manifests only | Stages both native manifests (passing `claude plugin validate`) and symlink-free `pkgshare/apm/diagram-design/` (passing `apm audit --ci`) |
 
 ## Opt-In Setup & Agent Rules
 
@@ -35,9 +35,10 @@
    ```sh
    diagram-design --list
    ```
-3. **Activate via OpenAPM or Claude Code plugin directory:**
+3. **Activate via `aitools-skills`, OpenAPM, or Claude Code plugin directory:**
    ```sh
-   apm install "$(diagram-design --apm-path)" --target agent-skills
+   aitools-skills sync --formula diagram-design
+   apm install -g "$(diagram-design --apm-path)"
    claude --plugin-dir "$(diagram-design --path)"
    ```
 4. **Offline/air-gapped diagrams:** Omit Google Fonts `<link>` tags so diagrams render with system fonts and pass `--offline` checks with zero network requests.

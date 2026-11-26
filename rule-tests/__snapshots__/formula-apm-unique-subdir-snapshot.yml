@@ -1,0 +1,44 @@
+id: formula-apm-unique-subdir
+snapshots:
+  "apm_dir = pkgshare/\"apm\"\n":
+    labels:
+    - source: pkgshare/"apm"
+      style: primary
+      start: 10
+      end: 24
+  "apm_dir = pkgshare/\"apm/\"\n":
+    labels:
+    - source: pkgshare/"apm/"
+      style: primary
+      start: 10
+      end: 25
+  "assert_equal (opt_pkgshare/\"apm\").to_s, out\n":
+    labels:
+    - source: opt_pkgshare/"apm"
+      style: primary
+      start: 14
+      end: 32
+  "assert_path_exists pkgshare/\"apm/apm.yml\"\n":
+    labels:
+    - source: pkgshare/"apm/apm.yml"
+      style: primary
+      start: 19
+      end: 41
+  "assert_path_exists pkgshare/\"apm/skills/demo/SKILL.md\"\n":
+    labels:
+    - source: pkgshare/"apm/skills/demo/SKILL.md"
+      style: primary
+      start: 19
+      end: 54
+  "pkgshare/\"apm\"/\"skills\"\n":
+    labels:
+    - source: pkgshare/"apm"
+      style: primary
+      start: 0
+      end: 14
+  "refute_predicate pkgshare/\"apm/skills\", :symlink?\n":
+    labels:
+    - source: pkgshare/"apm/skills"
+      style: primary
+      start: 17
+      end: 38

@@ -1,0 +1,58 @@
+id: formula-apm-no-lockfile
+valid:
+  - |
+    class Demo < Formula
+      def install
+        apm_dir = pkgshare/"apm/#{name}"
+        (apm_dir/"apm.yml").write <<~YAML
+          name: demo
+          version: "#{version}"
+        YAML
+      end
+
+      test do
+        refute_path_exists pkgshare/"apm/#{name}/apm.lock.yaml"
+      end
+    end
+  - |
+    class CleanupLock < Formula
+      def install
+        rm pkgshare/"apm/#{name}/apm.lock.yaml"
+      end
+    end
+  - |
+    class TestConsumerLock < Formula
+      test do
+        (testpath/".apm/apm.lock.yaml").write "lockfile_version: '1'\n"
+      end
+    end
+invalid:
+  - |
+    class LegacyLock < Formula
+      def install
+        apm_dir = pkgshare/"apm/#{name}"
+        (apm_dir/"apm.lock.yaml").write <<~YAML
+          lockfile_version: '1'
+          dependencies: []
+          deployments: []
+        YAML
+      end
+    end
+  - |
+    class InlineLock < Formula
+      def install
+        File.write(pkgshare/"apm/#{name}/apm.lock.yaml", "lockfile_version: '1'\n")
+      end
+    end
+  - |
+    class InstalledLock < Formula
+      def install
+        (pkgshare/"apm/#{name}").install "apm.lock.yaml"
+      end
+    end
+  - |
+    class ShortYmlLock < Formula
+      def install
+        (apm_dir/"apm.lock.yml").write "lockfile_version: '1'\n"
+      end
+    end
