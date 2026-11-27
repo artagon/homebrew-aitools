@@ -1,8 +1,8 @@
 class Autoswarm < Formula
   desc "Coordinate installed coding agents from one conversation"
   homepage "https://github.com/HKUDS/AutoSwarm"
-  url "https://github.com/HKUDS/AutoSwarm/archive/refs/tags/desk-v0.1.1.tar.gz"
-  sha256 "da40aef34f65c9a0794bd90d5f88cc58cc43d4fa1d254333a160bea038110d9f"
+  url "https://github.com/HKUDS/AutoSwarm/archive/refs/tags/desk-v0.1.2.tar.gz"
+  sha256 "a5b19394f47cd5f60ae56fa575fcd2479b5a985747eb4c6c5ea9479db5cc6a01"
   license "MIT"
   head "https://github.com/HKUDS/AutoSwarm.git", branch: "main"
 
