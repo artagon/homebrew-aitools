@@ -11,6 +11,13 @@ class AitoolsSkills < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/aitools-skills-0.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "1d7e938556b95319e365e08bf20130c09ee300b02a0496f39a35fef6c24f7b4a"
+    sha256 cellar: :any,                 arm64_linux:  "96f2a488f884250af06d2172eeb278f1a43f107010e93e1071c9ed7db1e498cb"
+    sha256 cellar: :any,                 x86_64_linux: "a24eede76cef50df816833433a49bfc00cd37995b8a007f669b0597a6d274a13"
+  end
+
   depends_on "rust" => :build
 
   deny_network_access!
