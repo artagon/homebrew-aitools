@@ -12,6 +12,13 @@ class Deeptutor < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/artagon/homebrew-aitools/releases/download/deeptutor-1.7.4_1"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "264044c994c6071fba788c966bec7cb95684a16d6c5e5d428c6bb5501d9c0fc8"
+    sha256 cellar: :any_skip_relocation, arm64_linux:  "57dd04810d9a480ef307936bfdd6ca9765072b1bde8dcb9e01bfd1db1faf3f49"
+    sha256 cellar: :any_skip_relocation, x86_64_linux: "38c576d20b7ba2afc2d63cdec844d2fa61323c3d5f6104e95b8e6d799a8aac2e"
+  end
+
   depends_on "uv" => :build
 
   on_linux do
