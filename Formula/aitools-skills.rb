@@ -2,7 +2,7 @@ class AitoolsSkills < Formula
   desc "Offline-first Homebrew agent skill registrar for artagon/aitools"
   homepage "https://github.com/artagon/aitools-skills"
   url "https://github.com/artagon/aitools-skills/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "b6936e9cf57e89e0068548db4fd015b7058a1e63d92fa9d0f7523922dd05cb79"
+  sha256 "eb1c42290c05eadc53bff3f02805e02376874bd911860f881e800e4ba78a76f4"
   license "Apache-2.0"
   head "https://github.com/artagon/aitools-skills.git", branch: "main"
 
