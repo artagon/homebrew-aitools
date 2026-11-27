@@ -1,21 +1,14 @@
 class AitoolsSkills < Formula
   desc "Offline-first Homebrew agent skill registrar for artagon/aitools"
   homepage "https://github.com/artagon/aitools-skills"
-  url "https://github.com/artagon/aitools-skills/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "eb1c42290c05eadc53bff3f02805e02376874bd911860f881e800e4ba78a76f4"
+  url "https://github.com/artagon/aitools-skills/archive/refs/tags/v0.1.1.tar.gz"
+  sha256 "f01f0ab1c27989ff044582dad51d12e116e577180cc281c40234462ef7a2b612"
   license "Apache-2.0"
   head "https://github.com/artagon/aitools-skills.git", branch: "main"
 
   livecheck do
     url :stable
     strategy :github_latest
-  end
-
-  bottle do
-    root_url "https://github.com/artagon/homebrew-aitools/releases/download/aitools-skills-0.1.0"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe:  "1d7e938556b95319e365e08bf20130c09ee300b02a0496f39a35fef6c24f7b4a"
-    sha256 cellar: :any,                 arm64_linux:  "96f2a488f884250af06d2172eeb278f1a43f107010e93e1071c9ed7db1e498cb"
-    sha256 cellar: :any,                 x86_64_linux: "a24eede76cef50df816833433a49bfc00cd37995b8a007f669b0597a6d274a13"
   end
 
   depends_on "rust" => :build
