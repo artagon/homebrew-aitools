@@ -1,8 +1,8 @@
 class ArizePhoenix < Formula
   desc "Local-first OpenTelemetry AI observability and evaluation server"
   homepage "https://arize.com/docs/phoenix"
-  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/arize-phoenix-v22.0.1.tar.gz"
-  sha256 "1e25579c5c3174ee2db01df4de27e6a7745b91ae1d7b3547e6ec21536f4cda0a"
+  url "https://github.com/Arize-ai/phoenix/archive/refs/tags/arize-phoenix-v22.1.0.tar.gz"
+  sha256 "e92ec0d734cd6143342c131829678ef222c68c0360d39c2b0b80d6d2f303c786"
   license "Elastic-2.0"
   head "https://github.com/Arize-ai/phoenix.git", branch: "main"
 
