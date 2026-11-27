@@ -1,8 +1,8 @@
 class Kache < Formula
   desc "Zero-copy, content-addressed build cache for Rust, C/C++, and CUDA"
   homepage "https://github.com/kunobi-ninja/kache"
-  url "https://github.com/kunobi-ninja/kache/archive/refs/tags/v2.3.0.tar.gz"
-  sha256 "9ecb2fbf8fd4f4606adb2f02c11d0c2902e00a9c6ac0d96d0671b7e48b644344"
+  url "https://github.com/kunobi-ninja/kache/archive/refs/tags/v2.4.0.tar.gz"
+  sha256 "a04617f36fb1a1acb15c17adb9c2859c8bca8d6846a2ae0c9e74b4e8bebe4c6a"
   license "Apache-2.0"
   head "https://github.com/kunobi-ninja/kache.git", branch: "main"
 
