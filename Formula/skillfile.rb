@@ -1,8 +1,8 @@
 class Skillfile < Formula
   desc "Declarative package manager for AI coding agent skills"
   homepage "https://github.com/eljulians/skillfile"
-  url "https://github.com/eljulians/skillfile/archive/refs/tags/v1.9.3.tar.gz"
-  sha256 "31ab57de895a72c06c395dc5cce4e9d5eccb80a4673d01353d6d3b34a9fbce9b"
+  url "https://github.com/eljulians/skillfile/archive/refs/tags/v1.10.0.tar.gz"
+  sha256 "c708c3b670ee9c1bc94ba76762cb6c14d2a91ceee597ba0923ba5d0b6efb485c"
   license "Apache-2.0"
   head "https://github.com/eljulians/skillfile.git", branch: "main"
 
