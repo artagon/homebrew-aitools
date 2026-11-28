@@ -18,23 +18,23 @@ class Bv < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.27.0/bv_0.27.0_darwin_arm64.tar.gz"
-      sha256 "20aa4711c23819aa15c15a333c88e1e6716c23551e080e8020c042389383b28f"
+      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.29.1/bv_0.29.1_darwin_arm64.tar.gz"
+      sha256 "ab7f37418d972ca30d4160736e1f03792340dffe3b64c7a8fb02cea3e0c8617c"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.27.0/bv_0.27.0_darwin_amd64.tar.gz"
-      sha256 "4a687c9776ee371a4e2d0b201b7a2523acaa1895ce10f0858c33b02fe7a91452"
+      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.29.1/bv_0.29.1_darwin_amd64.tar.gz"
+      sha256 "9c43a830cb7fdc893719564a11036f5c86763cc1c18fe61794601ef66a01a184"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.27.0/bv_0.27.0_linux_arm64.tar.gz"
-      sha256 "13d7f926a059e74213e0129a3bfdbf2a0a6753febb4fbad8925e63ef43f7ec47"
+      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.29.1/bv_0.29.1_linux_arm64.tar.gz"
+      sha256 "a070ae2ad47df8607cbe4337820d0fc70b9f24dda3ee5383ff37c1a675a0dde6"
     end
     on_intel do
-      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.27.0/bv_0.27.0_linux_amd64.tar.gz"
-      sha256 "7a8f640c95cf73586e1bd6af1d6c9b782ff9768fc07ae8b5cea55adceb817bd7"
+      url "https://github.com/Dicklesworthstone/beads_viewer/releases/download/v0.29.1/bv_0.29.1_linux_amd64.tar.gz"
+      sha256 "08a1098406d8f3ef81ac2b692118a8cc59e8c36b4adcf86b1e3612e27887ca4b"
     end
   end
 
